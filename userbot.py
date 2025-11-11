@@ -1,11 +1,43 @@
+import requests
+import threading
+import time
+import os
+
+# Keep-alive system - Render ko sleep se bachane ke liye
+def keep_alive():
+    time.sleep(30)  # App start hone ka wait karo
+    
+    while True:
+        try:
+            render_url = os.environ.get('RENDER_URL')
+            if render_url and 'onrender.com' in render_url:
+                response = requests.get(render_url, timeout=10)
+                print(f"🔄 Keep-alive ping: {response.status_code}")
+            else:
+                # Self-ping if URL not set
+                try:
+                    requests.get('http://localhost:8080', timeout=5)
+                    print("🔄 Self ping sent")
+                except:
+                    print("🔄 Keep-alive active")
+        except Exception as e:
+            print(f"❌ Keep-alive failed: {e}")
+        
+        time.sleep(600)  # Har 10 minute mein ping
+
+# Start keep-alive
+keep_thread = threading.Thread(target=keep_alive, daemon=True)
+keep_thread.start()
+
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 import re
 import json
-import os
 import asyncio
 import logging
 import sys
+from aiohttp import web
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # Setup logging
 logging.basicConfig(
@@ -17,10 +49,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# API credentials
+# API credentials - YAHAN SESSION STRING ADD KARO
 api_id = int(os.environ.get('api_id', 22294121))
 api_hash = os.environ.get('api_hash', '0f7fa7216b26e3f52699dc3c5a560d2a')
-session_string = os.environ.get('SESSION_STRING', '')
+session_string = os.environ.get('SESSION_STRING', '1AZWarzwBu0-LovZ8Z49vquFuHumXjYjVhvOy3BsxrrYp5qtVtPo9hkNYZ19qtGw3KCZLwNXOAwAaraKF6N8vtJkjOUpmc112-i289RtR6nuJaTorpJ1yXQzGvJ-RF14DUVnc-c_UYF4PR64wPaTSF-0qDYH3F_NcV2lbyJJSqxN96NauXuuxdhl1bYAtPoV58-e2RRdmF3G5Ozp55n-RPu9GO0Q_ZU7U865ekQrCwQDrkF77GKyv1RXo97S_B4iAgQDDaXSlLWqkYqozkEoZUSrRAYs1mpoYItir7l9is-TV4FAW9gz8e2N4pwKsJ9tDwBMK8snMHDhdtsvRuEO1WyALndXBnTc=')
 
 if not session_string:
     logger.error("❌ SESSION_STRING environment variable not set!")
@@ -96,11 +128,10 @@ async def delete_after_delay(event, delay_seconds=60):
 @client.on(events.NewMessage)
 async def handle_all_messages(event):
     try:
-        # Safety checks
         if not event.is_group:
             return
         
-        if not event.sender:  # Fix for 'NoneType' error
+        if not event.sender:
             return
             
         group_id = str(event.chat_id)
@@ -113,7 +144,6 @@ async def handle_all_messages(event):
         
         message_text = event.message.text or event.message.caption
         
-        # Check if sender is a bot
         if event.sender.bot:
             sender_username = event.sender.username
             if sender_username:
@@ -140,7 +170,6 @@ async def handle_all_messages(event):
                     except Exception as e:
                         logger.error(f"❌ Error deleting message: {e}")
         
-        # Check for bot links in user messages
         if message_text and contains_any_link(message_text):
             for pattern in ALL_LINK_PATTERNS:
                 matches = re.findall(pattern, message_text)
@@ -319,7 +348,7 @@ async def show_groups(event):
                     message += f"✅ {chat.title} (ID: `{group_id}`)\n"
                 except:
                     message += f"✅ Unknown Group (ID: `{group_id}`)\n"
-            message += f"\n📊 Total: {len(data['allowed_gots'])} groups"
+            message += f"\n📊 Total: {len(data['allowed_groups'])} groups"
         else:
             message += "❌ Koi group allowed list mein nahi hai\n"
         
@@ -327,18 +356,15 @@ async def show_groups(event):
     except Exception as e:
         logger.error(f"❌ Error in show_groups: {e}")
 
-# Simple HTTP server for Render port requirement
-from http.server import HTTPServer, BaseHTTPRequestHandler
-import threading
-
+# HTTP Server for Render port requirement
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b'UserBot is running!')
+        self.wfile.write(b'UserBot is running with keep-alive!')
     
     def log_message(self, format, *args):
-        pass  # Disable logging
+        pass
 
 def start_http_server():
     server = HTTPServer(('0.0.0.0', 8080), SimpleHandler)
@@ -353,7 +379,8 @@ async def main():
     await client.start()
     me = await client.get_me()
     logger.info(f"🤖 Userbot started successfully for: {me.first_name} (ID: {me.id})")
-    logger.info("🚀 UserBot is now running 24/7!")
+    logger.info("🔄 Keep-alive system active")
+    logger.info("🚀 UserBot is now running 24/7 without sleep!")
     
     await client.run_until_disconnected()
 
