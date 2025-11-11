@@ -393,3 +393,8 @@ if __name__ == '__main__':
         logger.info("👋 Userbot stopped by user")
     except Exception as e:
         logger.error(f"❌ Fatal error: {e}")
+# Keep the main process alive for Render
+import time
+print("🟢 Bot started successfully! Keeping process alive...")
+while True:
+    time.sleep(3600)
