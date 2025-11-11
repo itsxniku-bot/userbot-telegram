@@ -2,6 +2,8 @@ import requests
 import threading
 import time
 import os
+import http.server
+import socketserver
 
 # Keep-alive system - Render ko sleep se bachane ke liye
 def keep_alive():
@@ -36,8 +38,6 @@ import json
 import asyncio
 import logging
 import sys
-from aiohttp import web
-from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # Setup logging
 logging.basicConfig(
@@ -356,20 +356,22 @@ async def show_groups(event):
     except Exception as e:
         logger.error(f"❌ Error in show_groups: {e}")
 
-# HTTP Server for Render port requirement
-class SimpleHandler(BaseHTTPRequestHandler):
+# HTTP Server for Render port requirement - SIMPLE VERSION
+class SimpleHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
+        self.send_header('Content-type', 'text/html')
         self.end_headers()
         self.wfile.write(b'UserBot is running with keep-alive!')
     
     def log_message(self, format, *args):
-        pass
+        print(f"HTTP: {format % args}")
 
 def start_http_server():
-    server = HTTPServer(('0.0.0.0', 8080), SimpleHandler)
-    logger.info("🌐 HTTP server started on port 8080")
-    server.serve_forever()
+    PORT = 8080
+    with socketserver.TCPServer(("", PORT), SimpleHandler) as httpd:
+        print(f"🌐 HTTP server started on port {PORT}")
+        httpd.serve_forever()
 
 # Start HTTP server in background
 http_thread = threading.Thread(target=start_http_server, daemon=True)
