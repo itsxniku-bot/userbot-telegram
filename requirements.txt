@@ -1,3 +1,2 @@
-telethon
-aiohttp
-requests
+telethon==1.28.5
+requests==2.31.0
