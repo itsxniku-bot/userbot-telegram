@@ -1,3 +1,18 @@
+# IMGHDR FIX - Add this at the VERY TOP of userbot.py
+import sys
+import types
+
+# Fix for imghdr in Python 3.13+
+try:
+    import imghdr
+except ImportError:
+    imghdr = types.ModuleType('imghdr')
+    def what(file, h=None):
+        return None
+    imghdr.what = what
+    sys.modules['imghdr'] = imghdr
+
+# Now continue with your original imports
 import requests
 import threading
 import time
@@ -377,6 +392,11 @@ def start_http_server():
 http_thread = threading.Thread(target=start_http_server, daemon=True)
 http_thread.start()
 
+# Keep main process alive for Render
+def keep_process_alive():
+    while True:
+        time.sleep(3600)
+
 async def main():
     await client.start()
     me = await client.get_me()
@@ -388,13 +408,12 @@ async def main():
 
 if __name__ == '__main__':
     try:
+        # Start keep-alive thread for main process
+        process_thread = threading.Thread(target=keep_process_alive, daemon=True)
+        process_thread.start()
+        
         asyncio.run(main())
     except KeyboardInterrupt:
         logger.info("👋 Userbot stopped by user")
     except Exception as e:
         logger.error(f"❌ Fatal error: {e}")
-# Keep the main process alive for Render
-import time
-print("🟢 Bot started successfully! Keeping process alive...")
-while True:
-    time.sleep(3600)
