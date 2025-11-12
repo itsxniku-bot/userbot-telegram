@@ -19,12 +19,12 @@ from telethon.sessions import StringSession
 
 print("🚀 Starting UserBot...")
 
-# Flask web server for Render - Autosleep Fix
+# Flask web server for Render
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "🤖 Telegram Bot is Running!"
+    return "🤖 Telegram Bot is Running on Render!"
 
 @app.route('/ping')
 def ping():
@@ -35,17 +35,13 @@ def health():
     return "✅ Bot is healthy and running"
 
 def run_flask():
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    # RENDER AUTO PORT DETECTION - 5000 use karega
+    app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
 
-# Start Flask in background thread
-flask_thread = threading.Thread(target=run_flask, daemon=True)
-flask_thread.start()
-print("🌐 Flask server started on port 5000")
-
-# API credentials - APNA DATA YAHAN DALNA
-api_id = 22294121  # Tumhara API ID
-api_hash = "0f7fa7216b26e3f52699dc3c5a560d2a"  # Tumhara API Hash
-session_string = "1AZWarzwBu0-LovZ8Z49vquFuHumXjYjVhvOy3BsxrrYp5qtVtPo9hkNYZ19qtGw3KCZLwNXOAwAaraKF6N8vtJkjOUpmc112-i289RtR6nuJaTorpJ1yXQzGvJ-RF14DUVnc-c_UYF4PR64wPaTSF-0qDYH3F_NcV2lbyJJSqxN96NauXuuxdhl1bYAtPoV58-e2RRdmF3G5Ozp55n-RPu9GO0Q_ZU7U865ekQrCwQDrkF77GKyv1RXo97S_B4iAgQDDaXSlLWqkYqozkEoZUSrRAYs1mpoYItir7l9is-TV4FAW9gz8e2N4pwKsJ9tDwBMK8snMHDhdtsvRuEO1WyALndXBnTc="  # Tumhara Session String
+# API credentials
+api_id = 22294121
+api_hash = "0f7fa7216b26e3f52699dc3c5a560d2a"
+session_string = "1AZWarzwBu0-LovZ8Z49vquFuHumXjYjVhvOy3BsxrrYp5qtVtPo9hkNYZ19qtGw3KCZLwNXOAwAaraKF6N8vtJkjOUpmc112-i289RtR6nuJaTorpJ1yXQzGvJ-RF14DUVnc-c_UYF4PR64wPaTSF-0qDYH3F_NcV2lbyJJSqxN96NauXuuxdhl1bYAtPoV58-e2RRdmF3G5Ozp55n-RPu9GO0Q_ZU7U865ekQrCwQDrkF77GKyv1RXo97S_B4iAgQDDaXSlLWqkYqozkEoZUSrRAYs1mpoYItir7l9is-TV4FAW9gz8e2N4pwKsJ9tDwBMK8snMHDhdtsvRuEO1WyALndXBnTc="
 
 # Create client
 client = TelegramClient(StringSession(session_string), api_id, api_hash)
@@ -237,13 +233,18 @@ async def lists_handler(event):
 
 # Main function
 async def main():
+    # Start Flask in background thread - NON-BLOCKING
+    flask_thread = threading.Thread(target=run_flask, daemon=True)
+    flask_thread.start()
+    print("🌐 Flask server started on port 5000")
+    
     await client.start()
     me = await client.get_me()
     print(f"✅ Bot started: {me.first_name} (ID: {me.id})")
     print(f"📊 Allowed groups: {len(allowed_groups)}")
     print(f"🤖 Safe bots: {len(safe_bots)}")
     print(f"⏰ Delayed bots: {len(delayed_bots)}")
-    print("🚀 Bot is now running with AUTOSLEEP FIX!")
+    print("🚀 Bot is now running with FIXED THREADING!")
     await client.run_until_disconnected()
 
 if __name__ == '__main__':
