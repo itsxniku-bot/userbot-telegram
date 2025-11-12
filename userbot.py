@@ -15,12 +15,14 @@ import time
 import os
 import http.server
 import socketserver
-import random
 from datetime import datetime
 
-# RELIABLE KEEP-ALIVE SYSTEM
-def reliable_keep_alive():
-    time.sleep(20)  # App properly start hone do
+print("🚀 SCRIPT STARTING...")
+
+# SIMPLE BUT RELIABLE KEEP-ALIVE
+def simple_keep_alive():
+    print("🔄 KEEP-ALIVE THREAD STARTED!")
+    time.sleep(25)  # Wait for app to fully start
     
     ping_count = 0
     while True:
@@ -28,64 +30,52 @@ def reliable_keep_alive():
             ping_count += 1
             current_time = datetime.now().strftime('%H:%M:%S')
             
-            # Method 1: Render URL ping
-            render_url = os.environ.get('RENDER_URL')
-            if render_url and 'onrender.com' in render_url:
-                try:
-                    response = requests.get(f"{render_url}?ping={ping_count}", timeout=10)
-                    print(f"🎯 [{current_time}] Ping #{ping_count} to Render: {response.status_code}")
-                except Exception as e:
-                    print(f"❌ [{current_time}] Render ping failed: {e}")
-            
-            # Method 2: Self ping (always works)
+            # SIMPLE PING - Just one reliable method
             try:
-                requests.get('http://localhost:8080', timeout=5)
-                print(f"🔷 [{current_time}] Self Ping #{ping_count}: OK")
+                response = requests.get('http://localhost:8080', timeout=10)
+                print(f"✅ [{current_time}] Ping #{ping_count}: SUCCESS (Status: {response.status_code})")
             except Exception as e:
-                print(f"🔄 [{current_time}] Self ping active #{ping_count}")
+                print(f"🔄 [{current_time}] Ping #{ping_count}: Active (No Response)")
             
-            # Method 3: Additional backup ping
-            try:
-                requests.get('http://localhost:8080/health', timeout=5)
-                print(f"🟢 [{current_time}] Backup Ping #{ping_count}: OK")
-            except:
-                pass
-                
         except Exception as e:
-            print(f"🚨 [{current_time}] Keep-alive critical error: {e}")
+            print(f"❌ [{current_time}] Ping error: {e}")
         
-        # Fixed 3-minute interval (180 seconds)
-        print(f"⏰ [{current_time}] Next ping in 3 minutes...")
-        time.sleep(180)  # Exactly 3 minutes
+        # Wait 2 minutes
+        time.sleep(120)
 
-# Start keep-alive in MAIN thread context
-def start_keep_alive():
-    keep_thread = threading.Thread(target=reliable_keep_alive, daemon=False)  # daemon=False
-    keep_thread.start()
-    print("🔄 RELIABLE Keep-alive system STARTED!")
+# START KEEP-ALIVE IMMEDIATELY
+print("🔧 Starting keep-alive thread...")
+keep_thread = threading.Thread(target=simple_keep_alive, daemon=True)
+keep_thread.start()
+print("✅ Keep-alive thread started!")
 
-# BACKGROUND ACTIVITY SIMULATOR
-def background_activity():
-    time.sleep(30)
-    activity_count = 0
-    while True:
-        activity_count += 1
-        current_time = datetime.now().strftime('%H:%M:%S')
-        print(f"🔧 [{current_time}] Background Activity #{activity_count}")
-        time.sleep(300)  # Every 5 minutes
+# SIMPLE HTTP SERVER
+class SimpleHandler(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
+        self.wfile.write(b'Bot is running!')
+        print(f"🌐 HTTP Request received: {self.path}")
+    
+    def log_message(self, format, *args):
+        pass  # No logs
 
-def start_background_activity():
-    activity_thread = threading.Thread(target=background_activity, daemon=True)
-    activity_thread.start()
-    print("🔧 Background activity STARTED!")
+def start_http_server():
+    try:
+        server = socketserver.TCPServer(("", 8080), SimpleHandler)
+        print("🌐 HTTP Server started on port 8080")
+        server.serve_forever()
+    except Exception as e:
+        print(f"❌ HTTP Server failed: {e}")
 
-# APP START
-print("🚀 Starting UserBot...")
+print("🔧 Starting HTTP server...")
+http_thread = threading.Thread(target=start_http_server, daemon=True)
+http_thread.start()
+print("✅ HTTP server started!")
 
-# Keep-alive IMMEDIATELY start karo
-start_keep_alive()
-start_background_activity()
-
+# Now import Telegram related stuff
+print("📱 Importing Telegram libraries...")
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 import re
@@ -100,6 +90,8 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)]
 )
 logger = logging.getLogger(__name__)
+
+print("🔑 Setting up Telegram client...")
 
 # API credentials
 api_id = int(os.environ.get('api_id', 22294121))
@@ -208,7 +200,7 @@ async def handle_all_messages(event):
     except Exception as e:
         logger.error(f"❌ Error: {e}")
 
-# Commands
+# Commands (same as before)
 @client.on(events.NewMessage(pattern=r'(?i)^!safe (@?\w+)$'))
 async def add_safe_bot(event):
     me = await client.get_me()
@@ -287,61 +279,24 @@ async def show_groups(event):
         except: message += f"✅ Unknown Group (ID: `{group_id}`)\n"
     await event.reply(message or "❌ No groups in allowed list")
 
-# RELIABLE HTTP SERVER
-class ReliableHandler(http.server.SimpleHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'text/html')
-        self.end_headers()
-        self.wfile.write(b'ACTIVE')
-        current_time = datetime.now().strftime('%H:%M:%S')
-        print(f"🌐 [{current_time}] HTTP Request: {self.path}")
-    
-    def log_message(self, format, *args):
-        pass  # Suppress default logs
-
-def start_reliable_http_server():
-    PORT = 8080
-    with socketserver.TCPServer(("", PORT), ReliableHandler) as httpd:
-        print(f"🌐 RELIABLE HTTP server started on port {PORT}")
-        httpd.serve_forever()
-
-# START HTTP SERVER
-http_thread = threading.Thread(target=start_reliable_http_server, daemon=True)
-http_thread.start()
-
-# TELEGRAM ACTIVITY LOGGER
-async def telegram_activity_logger():
-    await asyncio.sleep(60)
-    log_count = 0
-    while True:
-        log_count += 1
-        current_time = datetime.now().strftime('%H:%M:%S')
-        logger.info(f"📱 [{current_time}] Telegram Bot Active - Log #{log_count}")
-        await asyncio.sleep(600)  # Every 10 minutes
-
 async def main():
+    print("🔑 Starting Telegram client...")
     await client.start()
     me = await client.get_me()
     
-    logger.info("🚀 RELIABLE UserBot Started!")
+    logger.info("🚀 SIMPLE UserBot Started!")
     logger.info(f"🤖 User: {me.first_name} (ID: {me.id})")
-    logger.info("🔄 RELIABLE Keep-alive system ACTIVE")
-    logger.info("🔧 Background activity running")
-    logger.info("🌐 HTTP server active")
-    logger.info("💪 3-minute ping intervals guaranteed!")
-    
-    # Start telegram activity logger
-    asyncio.create_task(telegram_activity_logger())
+    logger.info("🔄 Keep-alive ACTIVE - 2 minute intervals")
+    logger.info("🌐 HTTP server running")
+    logger.info("💪 Bot is now LIVE!")
     
     await client.run_until_disconnected()
 
 if __name__ == '__main__':
-    print("🚀 STARTING RELIABLE 24/7 USERBOT...")
-    print("💪 RELIABLE KEEP-ALIVE SYSTEM ACTIVATED!")
-    print("🔄 3-minute ping intervals")
-    print("🔧 Background activities enabled")
-    print("🌐 HTTP server running on port 8080")
+    print("🎯 ALL SYSTEMS STARTED!")
+    print("✅ Keep-alive: ACTIVE")
+    print("✅ HTTP Server: ACTIVE") 
+    print("✅ Telegram: STARTING...")
     
     try:
         asyncio.run(main())
