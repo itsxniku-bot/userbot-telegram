@@ -27,7 +27,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-print("🚀 STARTING ADVANCED USERBOT...")
+print("🚀 STARTING AUTO-RECONNECT USERBOT...")
 
 # KEEP-ALIVE SYSTEM
 def keep_alive():
@@ -41,9 +41,8 @@ def keep_alive():
             requests.get('http://localhost:8080', timeout=5)
         except:
             pass
-        time.sleep(180)  # 3 minutes
+        time.sleep(180)
 
-# Start keep-alive
 keep_thread = threading.Thread(target=keep_alive, daemon=True)
 keep_thread.start()
 logger.info("🔄 Keep-alive system started")
@@ -61,9 +60,16 @@ if not session_string:
     logger.error("❌ SESSION_STRING environment variable not set!")
     sys.exit(1)
 
-# Initialize Client
-client = TelegramClient(StringSession(session_string), api_id, api_hash)
-logger.info("🔧 Telegram client initialized")
+# Initialize Client with auto-reconnect
+client = TelegramClient(
+    StringSession(session_string), 
+    api_id, 
+    api_hash,
+    connection_retries=999,
+    retry_delay=5,
+    auto_reconnect=True
+)
+logger.info("🔧 Telegram client initialized with auto-reconnect")
 
 # BOT CONFIGURATION
 ALL_LINK_PATTERNS = [
@@ -82,7 +88,6 @@ def load_data():
         if os.path.exists('bot_data.json'):
             with open('bot_data.json', 'r') as f:
                 data = json.load(f)
-                # Ensure all keys exist
                 for key in default_data:
                     if key not in data:
                         data[key] = default_data[key]
@@ -132,24 +137,74 @@ async def delete_after_delay(event, delay_seconds=60):
     except Exception as e:
         logger.error(f"Error in delayed deletion: {e}")
 
+# AUTO-RECONNECT HANDLER
+async def auto_reconnect_monitor():
+    """Monitor connection and auto-reconnect if needed"""
+    await asyncio.sleep(60)  # Wait for initial connection
+    
+    reconnect_attempts = 0
+    max_reconnect_attempts = 50
+    
+    while True:
+        try:
+            # Check if client is connected
+            if not client.is_connected():
+                logger.warning("🔌 Connection lost! Attempting to reconnect...")
+                reconnect_attempts += 1
+                
+                if reconnect_attempts <= max_reconnect_attempts:
+                    try:
+                        await client.connect()
+                        logger.info("✅ Reconnected successfully!")
+                        reconnect_attempts = 0  # Reset counter on success
+                    except Exception as e:
+                        logger.error(f"❌ Reconnect attempt {reconnect_attempts} failed: {e}")
+                        if reconnect_attempts >= max_reconnect_attempts:
+                            logger.error("🚨 Maximum reconnect attempts reached!")
+                else:
+                    logger.error("🚨 Too many reconnect failures, waiting before retry...")
+                    await asyncio.sleep(300)  # Wait 5 minutes before retrying
+                    reconnect_attempts = 0
+            else:
+                # Connection is healthy
+                if reconnect_attempts > 0:
+                    logger.info("❤️ Connection restored and stable")
+                    reconnect_attempts = 0
+                
+        except Exception as e:
+            logger.error(f"❌ Reconnect monitor error: {e}")
+        
+        await asyncio.sleep(30)  # Check every 30 seconds
+
+# HEALTH MONITOR
+async def health_monitor():
+    await asyncio.sleep(60)
+    check_count = 0
+    
+    while True:
+        check_count += 1
+        try:
+            if client.is_connected():
+                me = await client.get_me()
+                logger.info(f"❤️ Health Check #{check_count}: OK - {me.first_name}")
+            else:
+                logger.warning(f"💔 Health Check #{check_count}: DISCONNECTED")
+        except Exception as e:
+            logger.error(f"💔 Health Check #{check_count} FAILED: {e}")
+        
+        await asyncio.sleep(300)  # 5 minutes
+
 # MAIN MESSAGE HANDLER
 @client.on(events.NewMessage)
 async def handle_all_messages(event):
     try:
-        # Ignore private chats
-        if not event.is_group:
-            return
-        
-        # Check if sender exists
-        if not event.sender:
+        if not event.is_group or not event.sender:
             return
             
-        # Check group permission
         group_id = str(event.chat_id)
         if not is_group_allowed(group_id):
             return
         
-        # Get bot info
         me = await client.get_me()
         if event.sender_id == me.id:
             return
@@ -160,11 +215,9 @@ async def handle_all_messages(event):
         if event.sender.bot:
             sender_username = event.sender.username
             if sender_username:
-                # Safe bots are allowed
                 if is_safe_bot(sender_username):
                     return
                 
-                # Delayed bots - delete links immediately, others after delay
                 if is_delayed_bot(sender_username):
                     if contains_any_link(message_text):
                         try:
@@ -178,7 +231,6 @@ async def handle_all_messages(event):
                         logger.info(f"⏰ Scheduled deletion for: {sender_username}")
                         return
                 else:
-                    # Regular bots - delete immediately
                     try:
                         await event.delete()
                         logger.info(f"🗑️ Deleted message from: {sender_username}")
@@ -213,11 +265,8 @@ async def add_safe_bot(event):
         
         bot_username = event.pattern_match.group(1).replace('@', '')
         data = load_data()
-        
-        # Remove from delayed list if present
         data['delayed_bots'] = [b for b in data['delayed_bots'] if b.lower() != bot_username.lower()]
         
-        # Add to safe list if not already there
         if bot_username.lower() not in [b.lower() for b in data['safe_bots']]:
             data['safe_bots'].append(bot_username)
             save_data(data)
@@ -237,11 +286,8 @@ async def add_delayed_bot(event):
         
         bot_username = event.pattern_match.group(1).replace('@', '')
         data = load_data()
-        
-        # Remove from safe list if present
         data['safe_bots'] = [b for b in data['safe_bots'] if b.lower() != bot_username.lower()]
         
-        # Add to delayed list if not already there
         if bot_username.lower() not in [b.lower() for b in data['delayed_bots']]:
             data['delayed_bots'].append(bot_username)
             save_data(data)
@@ -374,42 +420,47 @@ async def show_groups(event):
     except Exception as e:
         logger.error(f"Error in show_groups: {e}")
 
-# HEALTH MONITOR
-async def health_monitor():
-    await asyncio.sleep(60)
-    check_count = 0
-    while True:
-        check_count += 1
-        try:
-            me = await client.get_me()
-            logger.info(f"❤️ Health Check #{check_count}: OK - {me.first_name}")
-        except Exception as e:
-            logger.error(f"💔 Health Check #{check_count} FAILED: {e}")
-        await asyncio.sleep(300)  # 5 minutes
-
-# MAIN FUNCTION
+# MAIN FUNCTION WITH ULTIMATE RECONNECT
 async def main():
-    try:
-        await client.start()
-        me = await client.get_me()
-        
-        logger.info(f"🤖 Userbot started successfully for: {me.first_name} (ID: {me.id})")
-        logger.info("🔄 Keep-alive system active")
-        logger.info("❤️ Health monitor started")
-        logger.info("🚀 UserBot is now running!")
-        
-        # Start health monitor
-        asyncio.create_task(health_monitor())
-        
-        await client.run_until_disconnected()
-        
-    except Exception as e:
-        logger.error(f"Fatal error: {e}")
+    max_start_attempts = 10
+    start_attempt = 0
+    
+    while start_attempt < max_start_attempts:
+        try:
+            start_attempt += 1
+            logger.info(f"🔑 Connection attempt {start_attempt}/{max_start_attempts}...")
+            
+            await client.start()
+            me = await client.get_me()
+            
+            logger.info(f"🤖 Userbot started successfully for: {me.first_name} (ID: {me.id})")
+            logger.info("🔄 Keep-alive system active")
+            logger.info("🔌 Auto-reconnect monitor started")
+            logger.info("❤️ Health monitor started")
+            logger.info("🚀 UserBot is now running with AUTO-RECONNECT!")
+            
+            # Start monitoring services
+            asyncio.create_task(auto_reconnect_monitor())
+            asyncio.create_task(health_monitor())
+            
+            # Keep the client running
+            await client.run_until_disconnected()
+            
+        except Exception as e:
+            logger.error(f"🚨 Startup attempt {start_attempt} failed: {e}")
+            
+            if start_attempt >= max_start_attempts:
+                logger.error("🚨 Maximum startup attempts reached! Bot stopping.")
+                break
+                
+            wait_time = min(2 ** start_attempt, 60)  # Exponential backoff, max 60 seconds
+            logger.info(f"🔄 Retrying in {wait_time} seconds...")
+            await asyncio.sleep(wait_time)
 
 if __name__ == '__main__':
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        logger.info("Userbot stopped by user")
+        logger.info("👋 Userbot stopped by user")
     except Exception as e:
-        logger.error(f"Fatal error: {e}")
+        logger.error(f"🚨 Fatal error: {e}")
