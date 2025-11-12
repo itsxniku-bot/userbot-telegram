@@ -19,35 +19,53 @@ from datetime import datetime
 
 print("🚀 SCRIPT STARTING...")
 
-# SIMPLE BUT RELIABLE KEEP-ALIVE
-def simple_keep_alive():
+# DEBUG KEEP-ALIVE - With exception handling
+def debug_keep_alive():
     print("🔄 KEEP-ALIVE THREAD STARTED!")
-    time.sleep(25)  # Wait for app to fully start
     
     ping_count = 0
     while True:
         try:
             ping_count += 1
             current_time = datetime.now().strftime('%H:%M:%S')
+            print(f"🔄 [{current_time}] Keep-alive loop #{ping_count} - BEFORE PING")
             
-            # SIMPLE PING - Just one reliable method
-            try:
-                response = requests.get('http://localhost:8080', timeout=10)
-                print(f"✅ [{current_time}] Ping #{ping_count}: SUCCESS (Status: {response.status_code})")
-            except Exception as e:
-                print(f"🔄 [{current_time}] Ping #{ping_count}: Active (No Response)")
+            # Try multiple ping methods
+            success = False
+            for i in range(3):
+                try:
+                    response = requests.get(f'http://localhost:8080/ping_{ping_count}', timeout=5)
+                    print(f"✅ [{current_time}] Ping #{ping_count}.{i+1}: SUCCESS (Status: {response.status_code})")
+                    success = True
+                    break
+                except requests.exceptions.ConnectionError:
+                    print(f"❌ [{current_time}] Ping #{ping_count}.{i+1}: Connection failed")
+                except Exception as e:
+                    print(f"⚠️ [{current_time}] Ping #{ping_count}.{i+1}: Error - {e}")
+            
+            if not success:
+                print(f"🔴 [{current_time}] ALL PING METHODS FAILED!")
+            
+            print(f"🔄 [{current_time}] Keep-alive loop #{ping_count} - AFTER PING")
             
         except Exception as e:
-            print(f"❌ [{current_time}] Ping error: {e}")
+            print(f"🚨 [{current_time}] KEEP-ALIVE CRITICAL ERROR: {e}")
+            print("🔄 Restarting keep-alive in 30 seconds...")
+            time.sleep(30)
+            continue
         
-        # Wait 2 minutes
-        time.sleep(120)
+        # Wait 1 minute (for testing)
+        print(f"⏰ [{current_time}] Waiting 60 seconds for next ping...")
+        time.sleep(60)
 
 # START KEEP-ALIVE IMMEDIATELY
 print("🔧 Starting keep-alive thread...")
-keep_thread = threading.Thread(target=simple_keep_alive, daemon=True)
-keep_thread.start()
-print("✅ Keep-alive thread started!")
+try:
+    keep_thread = threading.Thread(target=debug_keep_alive, daemon=True)
+    keep_thread.start()
+    print("✅ Keep-alive thread started successfully!")
+except Exception as e:
+    print(f"❌ Failed to start keep-alive: {e}")
 
 # SIMPLE HTTP SERVER
 class SimpleHandler(http.server.BaseHTTPRequestHandler):
@@ -56,7 +74,8 @@ class SimpleHandler(http.server.BaseHTTPRequestHandler):
         self.send_header('Content-type', 'text/html')
         self.end_headers()
         self.wfile.write(b'Bot is running!')
-        print(f"🌐 HTTP Request received: {self.path}")
+        current_time = datetime.now().strftime('%H:%M:%S')
+        print(f"🌐 [{current_time}] HTTP Request: {self.path}")
     
     def log_message(self, format, *args):
         pass  # No logs
@@ -70,11 +89,25 @@ def start_http_server():
         print(f"❌ HTTP Server failed: {e}")
 
 print("🔧 Starting HTTP server...")
-http_thread = threading.Thread(target=start_http_server, daemon=True)
-http_thread.start()
-print("✅ HTTP server started!")
+try:
+    http_thread = threading.Thread(target=start_http_server, daemon=True)
+    http_thread.start()
+    print("✅ HTTP server started!")
+except Exception as e:
+    print(f"❌ Failed to start HTTP server: {e}")
 
-# Now import Telegram related stuff
+# Test if threads are alive
+def check_threads():
+    time.sleep(10)
+    print("🔍 THREAD STATUS CHECK:")
+    print(f"   Keep-alive thread alive: {keep_thread.is_alive()}")
+    print(f"   HTTP server thread alive: {http_thread.is_alive()}")
+
+print("🔧 Starting thread monitor...")
+monitor_thread = threading.Thread(target=check_threads, daemon=True)
+monitor_thread.start()
+
+# REST OF YOUR TELEGRAM CODE (SAME AS BEFORE)
 print("📱 Importing Telegram libraries...")
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
@@ -96,7 +129,7 @@ print("🔑 Setting up Telegram client...")
 # API credentials
 api_id = int(os.environ.get('api_id', 22294121))
 api_hash = os.environ.get('api_hash', '0f7fa7216b26e3f52699dc3c5a560d2a')
-session_string = os.environ.get('SESSION_STRING', '1AZWarzwBu0-LovZ8Z49vquFuHumXjYjVhvOy3BsxrrYp5qtVtPo9hkNYZ19qtGw3KCZLwNXOAwAaraKF6N8vtJkjOUpmc112-i289RtR6nuJaTorpJ1yXQzGvJ-RF14DUVnc-c_UYF4PR64wPaTSF-0qDYH3F_NcV2lbyJJSqxN96NauXuuxdhl1bYAtPoV58-e2RRdmF3G5Ozp55n-RPu9GO0Q_ZU7U865ekQrCwQDrkF77GKyv1RXo97S_B4iAgQDDaXSlLWqkYqozkEoZUSrRAYs1mpoYItir7l9is-TV4FAW9gz8e2N4pwKsJ9tDwBMK8snMHDhdtsvRuEO1WyALndXBnTc=')
+session_string = os.environ.get('SESSION_STRING', 'YOUR_SESSION')
 
 if not session_string:
     logger.error("❌ SESSION_STRING not set!")
@@ -104,199 +137,34 @@ if not session_string:
 
 client = TelegramClient(StringSession(session_string), api_id, api_hash)
 
-# Bot configuration
-ALL_LINK_PATTERNS = [
-    r't\.me/(\w+)', r'@(\w+)', r'https?://t\.me/(\w+)',
-    r'https?://telegram\.me/(\w+)', r'https?://wa\.me/(\w+)',
-    r'https?://chat\.whatsapp\.com/(\w+)', r'https?://facebook\.com/(\w+)',
-    r'https?://instagram\.com/(\w+)', r'https?://youtube\.com/(\w+)',
-    r'https?://twitter\.com/(\w+)', r'https?://([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})',
-    r'www\.([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})'
-]
-
-def load_data():
-    default_data = {'safe_bots': [], 'allowed_groups': [], 'delayed_bots': []}
-    if os.path.exists('bot_data.json'):
-        try:
-            with open('bot_data.json', 'r') as f:
-                return json.load(f)
-        except: pass
-    return default_data
-
-def save_data(data):
-    try:
-        with open('bot_data.json', 'w') as f:
-            json.dump(data, f, indent=2)
-    except: pass
-
-def is_safe_bot(bot_username):
-    data = load_data()
-    return bot_username.lower().replace('@', '') in [b.lower() for b in data['safe_bots']]
-
-def is_delayed_bot(bot_username):
-    data = load_data()
-    return bot_username.lower().replace('@', '') in [b.lower() for b in data['delayed_bots']]
-
-def is_group_allowed(group_id):
-    data = load_data()
-    return str(group_id) in data['allowed_groups']
-
-def contains_any_link(message_text):
-    if not message_text: return False
-    for pattern in ALL_LINK_PATTERNS:
-        if re.search(pattern, message_text, re.IGNORECASE):
-            return True
-    return False
-
-def is_authorized_user(user_id, me):
-    return user_id == me.id
-
-async def delete_after_delay(event, delay_seconds=60):
-    await asyncio.sleep(delay_seconds)
-    try:
-        await event.delete()
-        logger.info(f"⏰ Deleted message after {delay_seconds} seconds")
-    except: pass
-
-@client.on(events.NewMessage)
-async def handle_all_messages(event):
-    try:
-        if not event.is_group or not event.sender: return
-        
-        group_id = str(event.chat_id)
-        if not is_group_allowed(group_id): return
-        
-        me = await client.get_me()
-        if event.sender_id == me.id: return
-        
-        message_text = event.message.text or event.message.caption
-        
-        if event.sender.bot:
-            sender_username = event.sender.username
-            if sender_username:
-                if is_safe_bot(sender_username): return
-                
-                if is_delayed_bot(sender_username):
-                    if contains_any_link(message_text):
-                        await event.delete()
-                        logger.info(f"🗑️ Deleted message with link from: {sender_username}")
-                    else:
-                        asyncio.create_task(delete_after_delay(event, 60))
-                        logger.info(f"⏰ Scheduled deletion for: {sender_username}")
-                else:
-                    await event.delete()
-                    logger.info(f"🗑️ Deleted message from: {sender_username}")
-                return
-        
-        if message_text and contains_any_link(message_text):
-            for pattern in ALL_LINK_PATTERNS:
-                matches = re.findall(pattern, message_text)
-                for match in matches:
-                    if isinstance(match, str) and match.lower().endswith('bot'):
-                        if not is_safe_bot(match):
-                            await event.delete()
-                            logger.info(f"🗑️ Deleted message with bot link: {match}")
-                            return
-    except Exception as e:
-        logger.error(f"❌ Error: {e}")
-
-# Commands (same as before)
-@client.on(events.NewMessage(pattern=r'(?i)^!safe (@?\w+)$'))
-async def add_safe_bot(event):
-    me = await client.get_me()
-    if not is_authorized_user(event.sender_id, me): return
-    bot_username = event.pattern_match.group(1).replace('@', '')
-    data = load_data()
-    if bot_username.lower() not in [b.lower() for b in data['safe_bots']]:
-        data['safe_bots'].append(bot_username)
-        save_data(data)
-        await event.reply(f"✅ @{bot_username} added to safe list!")
-
-@client.on(events.NewMessage(pattern=r'(?i)^!delayed (@?\w+)$'))
-async def add_delayed_bot(event):
-    me = await client.get_me()
-    if not is_authorized_user(event.sender_id, me): return
-    bot_username = event.pattern_match.group(1).replace('@', '')
-    data = load_data()
-    if bot_username.lower() not in [b.lower() for b in data['delayed_bots']]:
-        data['delayed_bots'].append(bot_username)
-        save_data(data)
-        await event.reply(f"⏰ @{bot_username} added to delayed list!")
-
-@client.on(events.NewMessage(pattern=r'(?i)^!remove (@?\w+)$'))
-async def remove_bot(event):
-    me = await client.get_me()
-    if not is_authorized_user(event.sender_id, me): return
-    bot_username = event.pattern_match.group(1).replace('@', '')
-    data = load_data()
-    removed_from = []
-    for list_name in ['safe_bots', 'delayed_bots']:
-        original = len(data[list_name])
-        data[list_name] = [b for b in data[list_name] if b.lower() != bot_username.lower()]
-        if len(data[list_name]) < original: removed_from.append(list_name)
-    if removed_from:
-        save_data(data)
-        await event.reply(f"✅ @{bot_username} removed from: {', '.join(removed_from)}")
-
-@client.on(events.NewMessage(pattern=r'(?i)^!showbots$'))
-async def show_bots(event):
-    me = await client.get_me()
-    if not is_authorized_user(event.sender_id, me): return
-    data = load_data()
-    message = "🤖 **Bot Lists:**\n\n🛡️ **Safe Bots:**\n"
-    message += "\n".join([f"✅ @{bot}" for bot in data['safe_bots']]) or "❌ None\n"
-    message += "\n⏰ **Delayed Bots:**\n"
-    message += "\n".join([f"⏰ @{bot}" for bot in data['delayed_bots']]) or "❌ None"
-    await event.reply(message)
-
-@client.on(events.NewMessage(pattern=r'(?i)^!allow$'))
-async def allow_group(event):
-    me = await client.get_me()
-    if not is_authorized_user(event.sender_id, me) or not event.is_group: return
-    group_id = str(event.chat_id)
-    data = load_data()
-    if group_id not in data['allowed_groups']:
-        data['allowed_groups'].append(group_id)
-        save_data(data)
-        await event.reply(f"✅ Group **{event.chat.title}** added to allowed list!")
-
-@client.on(events.NewMessage(pattern=r'(?i)^!groupid$'))
-async def get_group_id(event):
-    me = await client.get_me()
-    if not is_authorized_user(event.sender_id, me) or not event.is_group: return
-    await event.reply(f"🏠 **Group Info:**\n\n📝 Name: {event.chat.title}\n🆔 ID: `{event.chat_id}`")
-
-@client.on(events.NewMessage(pattern=r'(?i)^!showgroups$'))
-async def show_groups(event):
-    me = await client.get_me()
-    if not is_authorized_user(event.sender_id, me): return
-    data = load_data()
-    message = "🏠 **Allowed Groups:**\n\n"
-    for group_id in data['allowed_groups']:
-        try:
-            chat = await client.get_entity(int(group_id))
-            message += f"✅ {chat.title} (ID: `{group_id}`)\n"
-        except: message += f"✅ Unknown Group (ID: `{group_id}`)\n"
-    await event.reply(message or "❌ No groups in allowed list")
+# ... (REST OF YOUR BOT CODE EXACTLY SAME AS BEFORE)
+# [Include all your bot functions, commands, etc. exactly as you had them]
 
 async def main():
     print("🔑 Starting Telegram client...")
     await client.start()
     me = await client.get_me()
     
-    logger.info("🚀 SIMPLE UserBot Started!")
+    logger.info("🚀 DEBUG UserBot Started!")
     logger.info(f"🤖 User: {me.first_name} (ID: {me.id})")
-    logger.info("🔄 Keep-alive ACTIVE - 2 minute intervals")
-    logger.info("🌐 HTTP server running")
-    logger.info("💪 Bot is now LIVE!")
+    logger.info("🔄 Debug keep-alive ACTIVE")
+    
+    # Periodic status check
+    async def status_check():
+        check_count = 0
+        while True:
+            check_count += 1
+            current_time = datetime.now().strftime('%H:%M:%S')
+            logger.info(f"📊 [{current_time}] Status Check #{check_count} - Bot Active")
+            await asyncio.sleep(300)  # Every 5 minutes
+    
+    asyncio.create_task(status_check())
     
     await client.run_until_disconnected()
 
 if __name__ == '__main__':
-    print("🎯 ALL SYSTEMS STARTED!")
-    print("✅ Keep-alive: ACTIVE")
-    print("✅ HTTP Server: ACTIVE") 
-    print("✅ Telegram: STARTING...")
+    print("🎯 DEBUG MODE STARTED!")
+    print("🔍 We'll identify why keep-alive stops")
     
     try:
         asyncio.run(main())
