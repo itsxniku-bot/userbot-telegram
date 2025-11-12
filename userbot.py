@@ -20,27 +20,45 @@ import os
 import http.server
 import socketserver
 
-# Keep-alive system - Render ko sleep se bachane ke liye
+# ENHANCED Keep-alive system - Multiple pings for 24/7 activity
 def keep_alive():
-    time.sleep(30)  # App start hone ka wait karo
+    time.sleep(15)  # App start hone ka wait karo
     
+    ping_count = 0
     while True:
         try:
+            ping_count += 1
             render_url = os.environ.get('RENDER_URL')
+            
+            # Multiple ping strategies
             if render_url and 'onrender.com' in render_url:
-                response = requests.get(render_url, timeout=10)
-                print(f"🔄 Keep-alive ping: {response.status_code}")
+                # Primary ping to Render URL
+                response1 = requests.get(render_url, timeout=10)
+                print(f"🔄 Ping #{ping_count} to Render: {response1.status_code}")
+                
+                # Secondary ping after short delay
+                time.sleep(2)
+                response2 = requests.get(render_url, timeout=10)
+                print(f"🔄 Backup ping #{ping_count}: {response2.status_code}")
+                
             else:
-                # Self-ping if URL not set
+                # Multiple self-pings if URL not set
                 try:
                     requests.get('http://localhost:8080', timeout=5)
-                    print("🔄 Self ping sent")
-                except:
-                    print("🔄 Keep-alive active")
+                    requests.get('http://localhost:8080/', timeout=5)
+                    requests.get('http://localhost:8080/health', timeout=5)
+                    print(f"🔄 Self ping #{ping_count} - Triple ping sent")
+                except Exception as e:
+                    print(f"🔄 Keep-alive active #{ping_count}")
+                    
         except Exception as e:
             print(f"❌ Keep-alive failed: {e}")
         
-        time.sleep(600)  # Har 10 minute mein ping
+        # Variable intervals - keeps Render guessing
+        intervals = [240, 300, 180, 270]  # 3-5 minutes random
+        current_interval = intervals[ping_count % len(intervals)]
+        print(f"⏰ Next ping in {current_interval} seconds")
+        time.sleep(current_interval)
 
 # Start keep-alive
 keep_thread = threading.Thread(target=keep_alive, daemon=True)
@@ -371,47 +389,78 @@ async def show_groups(event):
     except Exception as e:
         logger.error(f"❌ Error in show_groups: {e}")
 
-# HTTP Server for Render port requirement - SIMPLE VERSION
-class SimpleHandler(http.server.SimpleHTTPRequestHandler):
+# ENHANCED HTTP Server with multiple endpoints
+class EnhancedHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.send_header('Content-type', 'text/html')
         self.end_headers()
-        self.wfile.write(b'UserBot is running with keep-alive!')
+        
+        if self.path == '/':
+            self.wfile.write(b'UserBot is running with enhanced keep-alive!')
+        elif self.path == '/health':
+            self.wfile.write(b'OK')
+        elif self.path == '/status':
+            self.wfile.write(b'ACTIVE')
+        elif self.path == '/ping':
+            self.wfile.write(b'PONG')
+        else:
+            self.wfile.write(b'UserBot Active')
     
     def log_message(self, format, *args):
-        print(f"HTTP: {format % args}")
+        print(f"🌐 HTTP: {format % args}")
 
-def start_http_server():
+def start_enhanced_http_server():
     PORT = 8080
-    with socketserver.TCPServer(("", PORT), SimpleHandler) as httpd:
-        print(f"🌐 HTTP server started on port {PORT}")
+    with socketserver.TCPServer(("", PORT), EnhancedHandler) as httpd:
+        print(f"🌐 ENHANCED HTTP server started on port {PORT}")
+        print("🔗 Available endpoints: /, /health, /status, /ping")
         httpd.serve_forever()
 
-# Start HTTP server in background
-http_thread = threading.Thread(target=start_http_server, daemon=True)
+# Start ENHANCED HTTP server in background
+http_thread = threading.Thread(target=start_enhanced_http_server, daemon=True)
 http_thread.start()
 
-# Keep main process alive for Render
-def keep_process_alive():
+# ADDITIONAL: Background activity simulator
+def background_activity():
+    """Additional background tasks to keep the app active"""
+    time.sleep(60)
+    activity_count = 0
     while True:
-        time.sleep(3600)
+        activity_count += 1
+        print(f"🔧 Background activity #{activity_count} - {time.ctime()}")
+        time.sleep(600)  # Every 10 minutes
+
+# Start background activity
+activity_thread = threading.Thread(target=background_activity, daemon=True)
+activity_thread.start()
 
 async def main():
     await client.start()
     me = await client.get_me()
     logger.info(f"🤖 Userbot started successfully for: {me.first_name} (ID: {me.id})")
-    logger.info("🔄 Keep-alive system active")
+    logger.info("🔄 ENHANCED Keep-alive system active")
+    logger.info("🔧 Background activity monitor started")
     logger.info("🚀 UserBot is now running 24/7 without sleep!")
+    logger.info("💡 Multiple ping strategies activated")
+    
+    # Send periodic activity logs
+    async def activity_logger():
+        log_count = 0
+        while True:
+            log_count += 1
+            logger.info(f"📊 Bot active - Log #{log_count} - {time.ctime()}")
+            await asyncio.sleep(1800)  # Log every 30 minutes
+    
+    # Start activity logger
+    asyncio.create_task(activity_logger())
     
     await client.run_until_disconnected()
 
 if __name__ == '__main__':
     try:
-        # Start keep-alive thread for main process
-        process_thread = threading.Thread(target=keep_process_alive, daemon=True)
-        process_thread.start()
-        
+        print("🚀 Starting ENHANCED UserBot with 24/7 activity...")
+        print("💡 Features: Multiple pings, background activity, enhanced HTTP server")
         asyncio.run(main())
     except KeyboardInterrupt:
         logger.info("👋 Userbot stopped by user")
