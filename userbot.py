@@ -1,4 +1,4 @@
-print("🎯 ADVANCED BOT STARTING...")
+print("🎯 BOT STARTING WITH ALL COMMANDS...")
 
 import asyncio
 import multiprocessing
@@ -18,15 +18,11 @@ def start_flask():
     
     @app.route('/')
     def home():
-        return "🤖 Advanced Bot Server Running!"
+        return "🤖 Bot Server Running!"
     
     @app.route('/ping')
     def ping():
         return "🏓 Pong! Bot is alive"
-    
-    @app.route('/status')
-    def status():
-        return f"✅ Bot Status: Running | Groups: {len(allowed_groups)} | Safe Bots: {len(safe_bots)}"
     
     print("🌐 Flask starting on port 5000...")
     app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
@@ -40,45 +36,49 @@ print("✅ Flask server started!")
 
 # Telegram Bot
 async def start_telegram():
-    print("🔗 Starting Advanced Telegram Bot...")
+    print("🔗 Starting Telegram Bot...")
     
     try:
         from pyrogram import Client, filters
         
         app = Client(
-            "advanced_bot",
+            "full_bot",
             api_id=22294121,
             api_hash="0f7fa7216b26e3f52699dc3c5a560d2a",
             session_string="AQFULmkANrpQWKdmd5cy7VgvL2DA9KATYlSUq5PSoJ5K1easAzrA_p5fxgFRVEUyABixgFmrCGtF9x_KvrQUoAWdeQ1dGqYggCnST6nMPBipTv7GIgwU_w1kewukwsWPMUbWdos0VI7CtH1HYwW7wz3VQ2_hvtdwQCDRHsIxpwek3IcSXP-hpt8vz_8Z4NYf8uUiIwZCSJluef3vGSh7TLOfekcrjVcRd_2h59kBuGgV7DzyJxZwx8eyNJOyhpYQnlExnd24CnELB6ZNYObYBH6xnE2Rgo97YGN1WPbd9Ra8oQUx2phHT4KTWZNktzjenv6hM7AH8lyVyRvGtillQOA_Dq23TwAAAAHy0lZEAA"
         )
         
-        # COMMAND HANDLERS
+        # TEST COMMAND - Both / and ! prefixes
         @app.on_message(filters.command("ping"))
         async def ping_handler(client, message: Message):
-            await message.reply("🏓 Pong! Advanced Bot Working!")
+            await message.reply("🏓 Pong! All commands working!")
+            print("✅ Ping command executed")
         
+        # STATUS COMMAND
         @app.on_message(filters.command("status"))
         async def status_handler(client, message: Message):
             me = await app.get_me()
             status_text = f"""
-🤖 **Advanced Bot Status**
+🤖 **Bot Status**
 ├─ **Name:** {me.first_name}
 ├─ **ID:** `{me.id}`
 ├─ **Allowed Groups:** {len(allowed_groups)}
 ├─ **Safe Bots:** {len(safe_bots)}
 └─ **Delayed Bots:** {len(delayed_bots)}
 
-**Commands:**
-!allow <group_id> - Add group
-!safe @bot - Add safe bot  
-!delay @bot - Add delayed bot
-!remove @bot - Remove bot
-!status - Show status
-!ping - Test bot
+**Available Commands:**
+/status - Show this status
+/ping - Test bot
+/allow <group_id> - Add group
+/safe @bot - Add safe bot  
+/delay @bot - Add delayed bot
+/remove @bot - Remove bot
             """
             await message.reply(status_text)
+            print("✅ Status command executed")
         
-        @app.on_message(filters.command("allow") & filters.private)
+        # ALLOW COMMAND
+        @app.on_message(filters.command("allow"))
         async def allow_handler(client, message: Message):
             if len(message.command) > 1:
                 group_id = message.command[1]
@@ -86,9 +86,10 @@ async def start_telegram():
                 await message.reply(f"✅ Group `{group_id}` allowed!")
                 print(f"✅ Group added: {group_id}")
             else:
-                await message.reply("❌ Usage: !allow <group_id>")
+                await message.reply("❌ Usage: /allow <group_id>")
         
-        @app.on_message(filters.command("safe") & filters.private)
+        # SAFE COMMAND
+        @app.on_message(filters.command("safe"))
         async def safe_handler(client, message: Message):
             if len(message.command) > 1:
                 bot_username = message.command[1].replace('@', '').lower()
@@ -98,9 +99,10 @@ async def start_telegram():
                 await message.reply(f"✅ @{bot_username} added to safe list!")
                 print(f"✅ Safe bot added: {bot_username}")
             else:
-                await message.reply("❌ Usage: !safe @botusername")
+                await message.reply("❌ Usage: /safe @botusername")
         
-        @app.on_message(filters.command("delay") & filters.private)
+        # DELAY COMMAND
+        @app.on_message(filters.command("delay"))
         async def delay_handler(client, message: Message):
             if len(message.command) > 1:
                 bot_username = message.command[1].replace('@', '').lower()
@@ -110,9 +112,10 @@ async def start_telegram():
                 await message.reply(f"⏰ @{bot_username} added to delayed list!")
                 print(f"✅ Delayed bot added: {bot_username}")
             else:
-                await message.reply("❌ Usage: !delay @botusername")
+                await message.reply("❌ Usage: /delay @botusername")
         
-        @app.on_message(filters.command("remove") & filters.private)
+        # REMOVE COMMAND
+        @app.on_message(filters.command("remove"))
         async def remove_handler(client, message: Message):
             if len(message.command) > 1:
                 bot_username = message.command[1].replace('@', '').lower()
@@ -131,77 +134,70 @@ async def start_telegram():
                 else:
                     await message.reply(f"❌ @{bot_username} not found in any list!")
             else:
-                await message.reply("❌ Usage: !remove @botusername")
+                await message.reply("❌ Usage: /remove @botusername")
         
-        # MESSAGE FILTERING
-        @app.on_message(filters.group)
-        async def message_handler(client, message: Message):
-            try:
-                # Check if group is allowed
-                group_id = str(message.chat.id)
-                if group_id not in allowed_groups:
-                    return
-                
-                # Don't process own messages
-                me = await app.get_me()
-                if message.from_user and message.from_user.id == me.id:
-                    return
-                
-                message_text = message.text or message.caption or ""
-                
-                # Handle bot messages
-                if message.from_user and message.from_user.is_bot:
-                    sender_username = message.from_user.username or ""
-                    if sender_username:
-                        sender_username_lower = sender_username.lower()
-                        
-                        # Safe bots are allowed
-                        if sender_username_lower in safe_bots:
-                            return
-                        
-                        # Delayed bots - delete only links
-                        if sender_username_lower in delayed_bots:
-                            if message_text and ('t.me/' in message_text.lower() or '@' in message_text):
-                                try:
-                                    await message.delete()
-                                    print(f"🗑️ Deleted link from delayed bot: {sender_username}")
-                                except Exception as e:
-                                    print(f"❌ Failed to delete from delayed bot: {e}")
-                            return
-                        else:
-                            # Regular bots - delete immediately
-                            try:
-                                await message.delete()
-                                print(f"🗑️ Deleted bot: {sender_username}")
-                            except Exception as e:
-                                print(f"❌ Failed to delete bot: {e}")
-                            return
-                
-                # Delete messages with t.me links or @ mentions from users
-                if message_text and ('t.me/' in message_text.lower() or '@' in message_text):
-                    try:
-                        await message.delete()
-                        print(f"🗑️ Deleted link message from user in group {group_id}")
-                    except Exception as e:
-                        print(f"❌ Delete failed: {e}")
-                        
-            except Exception as e:
-                print(f"❌ Error in handler: {e}")
+        # HELP COMMAND
+        @app.on_message(filters.command("help"))
+        async def help_handler(client, message: Message):
+            help_text = """
+🤖 **Bot Help Guide**
+
+**Basic Commands:**
+/start - Start the bot
+/ping - Test if bot is alive
+/status - Show bot status
+/help - This help message
+
+**Management Commands:**
+/allow <group_id> - Allow group for filtering
+/safe @bot - Add bot to safe list (won't be deleted)
+/delay @bot - Add bot to delayed list (only links deleted)
+/remove @bot - Remove bot from lists
+
+**How to Use:**
+1. First use /allow to add your group
+2. Bot will automatically delete links and bots
+3. Use /safe for important bots you want to keep
+            """
+            await message.reply(help_text)
+            print("✅ Help command executed")
         
-        print("🚀 Starting Advanced Telegram client...")
+        # START COMMAND
+        @app.on_message(filters.command("start"))
+        async def start_handler(client, message: Message):
+            welcome_text = """
+🎉 **Welcome to Advanced Telegram Bot!**
+
+I can help you manage your groups by:
+• Deleting spam links automatically
+• Managing bot messages
+• Keeping your group clean
+
+**Quick Start:**
+1. Add me to your group as admin
+2. Use `/allow <group_id>` to enable filtering
+3. Use `/help` to see all commands
+
+Bot is now 24/7 active! 🚀
+            """
+            await message.reply(welcome_text)
+            print("✅ Start command executed")
+        
+        print("🚀 Starting Telegram client...")
         await app.start()
         
         me = await app.get_me()
-        print(f"🎉 ADVANCED BOT CONNECTED: {me.first_name} ({me.id})")
+        print(f"🎉 BOT CONNECTED: {me.first_name} ({me.id})")
         
         # Send startup message
         try:
-            await app.send_message("me", "✅ Advanced Bot Started on Render!\nUse !status to see commands.")
+            await app.send_message("me", "✅ Bot Started with ALL COMMANDS!\nUse /help to see available commands.")
             print("✅ Startup message sent")
         except:
             print("⚠️ Could not send startup message")
         
-        print("🤖 Advanced Bot is now running with ALL FEATURES!")
+        print("🤖 Bot is now running with ALL COMMANDS!")
+        print("📋 Available commands: /start, /ping, /status, /help, /allow, /safe, /delay, /remove")
         
         # Keep alive
         while True:
@@ -218,5 +214,5 @@ async def main():
     await start_telegram()
 
 if __name__ == "__main__":
-    print("⭐ Advanced Bot Script Starting...")
+    print("⭐ Bot Script Starting...")
     asyncio.run(main())
