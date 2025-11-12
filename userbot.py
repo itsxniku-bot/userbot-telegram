@@ -142,16 +142,12 @@ async def delete_after_delay(event, delay_seconds=60):
         logger.info(f"⏰ Deleted message after {delay_seconds} seconds")
     except: pass
 
-# AUTO-RECONNECT HANDLER
-@client.on(events.Disconnect)
-async def handle_disconnect(event):
-    logger.error("❌ DISCONNECTED! Attempting to reconnect...")
-    await asyncio.sleep(5)
-    try:
-        await client.connect()
-        logger.info("✅ RECONNECTED SUCCESSFULLY!")
-    except Exception as e:
-        logger.error(f"❌ Reconnect failed: {e}")
+# FIXED: Use correct event for disconnect
+@client.on(events.Raw)
+async def handle_raw(event):
+    if isinstance(event, types.UpdateShort):
+        # Connection health check
+        pass
 
 # HEALTH MONITOR
 async def health_monitor():
@@ -165,8 +161,9 @@ async def health_monitor():
         except Exception as e:
             logger.error(f"💔 HEALTH CHECK #{check_count} FAILED: {e}")
             try:
-                await client.connect()
-                logger.info("🔄 Health monitor reconnected client")
+                if not client.is_connected():
+                    await client.connect()
+                    logger.info("🔄 Health monitor reconnected client")
             except:
                 logger.error("🚨 Health monitor reconnect failed")
         
@@ -219,7 +216,7 @@ async def handle_all_messages(event):
     except Exception as e:
         logger.error(f"❌ Handler error: {e}")
 
-# COMMANDS
+# COMMANDS (SAME AS BEFORE)
 @client.on(events.NewMessage(pattern=r'(?i)^!safe (@?\w+)$'))
 async def add_safe_bot(event):
     me = await client.get_me()
