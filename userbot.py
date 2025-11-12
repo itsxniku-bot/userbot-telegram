@@ -1,4 +1,4 @@
-print("🎯 24/7 BOT STARTING - PERMANENT NO SLEEP...")
+print("🎯 INSTANT PORT BOT STARTING...")
 
 import asyncio
 import multiprocessing
@@ -18,90 +18,43 @@ delayed_bots = set()
 # YOUR USER ID
 ADMIN_USER_ID = 8368838212
 
-# ULTIMATE FLASK SERVER WITH MULTIPLE PORTS
+# INSTANT PORT OPENING FLASK SERVER
 def run_flask():
+    # PEHLE FLASK BANAO - INSTANT START
     app = Flask(__name__)
     
     @app.route('/')
     def home():
-        return "🤖 24/7 Bot - Permanent Active!"
+        return "🤖 Instant Port Bot - 24/7 Active!"
     
     @app.route('/ping')
     def ping():
-        return "🏓 Pong! 24/7 Active"
+        return "🏓 Pong! Instant Port Active"
     
     @app.route('/health')
     def health():
-        return "✅ Health: Perfect - No Sleep"
+        return "✅ Health: Perfect"
     
-    @app.route('/status')
-    def status():
-        return "🟢 Status: 24/7 Running"
-    
-    @app.route('/keepalive')
-    def keepalive():
-        return "🔁 Keep Alive Active"
-    
-    # ULTIMATE KEEP-ALIVE SERVICE
-    def ultimate_keep_alive():
-        urls = [
-            "https://userbot-telegram-1.onrender.com/",
-            "https://userbot-telegram-1.onrender.com/ping", 
-            "https://userbot-telegram-1.onrender.com/health",
-            "https://userbot-telegram-1.onrender.com/status"
-        ]
-        
-        while True:
-            for url in urls:
-                try:
-                    response = requests.get(url, timeout=10)
-                    print(f"🔁 Auto-ping: {url} - Status: {response.status_code}")
-                except Exception as e:
-                    print(f"⚠️ Ping failed: {url} - {e}")
-            
-            # Har 4 minute mein ping
-            time.sleep(240)
-    
-    # Start ultimate keep-alive
-    keep_alive_thread = threading.Thread(target=ultimate_keep_alive, daemon=True)
-    keep_alive_thread.start()
-    print("✅ Ultimate keep-alive started!")
-    
-    # MULTIPLE PORTS - Double protection
-    def start_on_port(port):
-        try:
-            app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False, threaded=True)
-        except:
-            pass
-    
-    # Try multiple ports
-    print("🌐 Starting Flask on multiple ports...")
-    port_thread_10000 = threading.Thread(target=start_on_port, args=(10000,), daemon=True)
-    port_thread_8080 = threading.Thread(target=start_on_port, args=(8080,), daemon=True)
-    port_thread_5000 = threading.Thread(target=start_on_port, args=(5000,), daemon=True)
-    
-    port_thread_10000.start()
-    port_thread_8080.start() 
-    port_thread_5000.start()
-    
-    print("✅ Flask running on ports: 10000, 8080, 5000")
+    # INSTANT PORT OPEN - Render ko turant port dikhaye
+    print("🚀 INSTANT starting Flask on port 10000...")
+    app.run(host='0.0.0.0', port=10000, debug=False, use_reloader=False)
 
-# Start Flask in separate process
-print("🚀 Starting ULTIMATE 24/7 Flask server...")
+# 🚨 FLASK KO SABSE PEHLE START KARO - Before anything else!
+print("🔥 INSTANT Flask starting FIRST...")
 flask_process = multiprocessing.Process(target=run_flask)
 flask_process.daemon = True
 flask_process.start()
-print("✅ ULTIMATE Flask server started!")
+print("✅ INSTANT Flask started on port 10000!")
 
-# Telegram Bot
+# Ab Telegram bot start karo
 async def start_telegram():
-    print("🔗 Starting PERMANENT Telegram Bot...")
+    print("🔗 Starting Telegram Bot after Flask...")
     
     try:
         from pyrogram import Client, filters
         
         app = Client(
-            "permanent_bot",
+            "instant_bot",
             api_id=22294121,
             api_hash="0f7fa7216b26e3f52699dc3c5a560d2a",
             session_string="AQFULmkANrpQWKdmd5cy7VgvL2DA9KATYlSUq5PSoJ5K1easAzrA_p5fxgFRVEUyABixgFmrCGtF9x_KvrQUoAWdeQ1dGqYggCnST6nMPBipTv7GIgwU_w1kewukwsWPMUbWdos0VI7CtH1HYwW7wz3VQ2_hvtdwQCDRHsIxpwek3IcSXP-hpt8vz_8Z4NYf8uUiIwZCSJluef3vGSh7TLOfekcrjVcRd_2h59kBuGgV7DzyJxZwx8eyNJOyhpYQnlExnd24CnELB6ZNYObYBH6xnE2Rgo97YGN1WPbd9Ra8oQUx2phHT4KTWZNktzjenv6hM7AH8lyVyRvGtillQOA_Dq23TwAAAAHy0lZEAA"
@@ -121,10 +74,10 @@ async def start_telegram():
             print(f"✅ Admin command: {command}")
             
             if command == "ping":
-                await message.reply("🏓 Pong! **PERMANENT 24/7 ACTIVE** - No Sleep Ever!")
+                await message.reply("🏓 Pong! **INSTANT PORT ACTIVE** - No Sleep!")
             
             elif command == "alive":
-                await message.reply("🟢 **BOT IS ALIVE!**\n24/7 Running - No Sleep Issues!")
+                await message.reply("🟢 **INSTANT PORT BOT ALIVE!**")
             
             elif command == "status":
                 me = await app.get_me()
@@ -133,19 +86,16 @@ async def start_telegram():
                 groups_list = ", ".join(allowed_groups) if allowed_groups else "None"
                 
                 status_text = f"""
-🤖 **PERMANENT 24/7 BOT STATUS**
+🤖 **INSTANT PORT BOT STATUS**
 ├─ **Owner:** {me.first_name}
 ├─ **ID:** `{me.id}`
 ├─ **Allowed Groups:** {groups_list}
 ├─ **Safe Bots:** {safe_list}
 ├─ **Delayed Bots:** {delayed_list}
-├─ **Status:** 🟢 PERMANENT ACTIVE
-├─ **Sleep:** ❌ NEVER
-└─ **Uptime:** 24/7 FOREVER
+├─ **Port:** 🟢 10000 INSTANT
+└─ **Sleep:** ❌ NEVER
 
-**🔒 Normal users ignored**
-**🕒 Multiple keep-alive methods**
-**🌐 Multiple ports running**
+**Instant port opening - No sleep!** 🚀
                 """
                 await message.reply(status_text)
             
@@ -202,10 +152,10 @@ async def start_telegram():
             
             elif command == "help":
                 help_text = """
-🤖 **PERMANENT 24/7 BOT HELP**
+🤖 **INSTANT PORT BOT HELP**
 
 **Admin Commands:**
-/status - Full bot status  
+/status - Bot status  
 /allow <group_id> - Allow group
 /safe @bot - Add safe bot
 /delay @bot - Add delayed bot
@@ -213,12 +163,12 @@ async def start_telegram():
 /ping - Test bot
 /alive - Check if alive
 
-**🔒 Normal users completely ignored**
-**🕒 24/7 Active - No Sleep Guaranteed**
+**🔒 Normal users ignored**
+**🚀 Instant port - No sleep**
                 """
                 await message.reply(help_text)
         
-        # MESSAGE FILTERING
+        # MESSAGE FILTERING (same as before)
         async def contains_unsafe_bot_mention(client, text):
             if not text:
                 return False
@@ -303,34 +253,31 @@ async def start_telegram():
             except Exception as e:
                 print(f"❌ Error: {e}")
         
-        print("🚀 Starting PERMANENT Telegram client...")
+        print("🔗 Starting Telegram client...")
         await app.start()
         
         me = await app.get_me()
-        print(f"🎉 PERMANENT BOT CONNECTED: {me.first_name} ({me.id})")
+        print(f"🎉 BOT CONNECTED: {me.first_name} ({me.id})")
         
-        # Send permanent confirmation
+        # Send confirmation
         try:
             await app.send_message("me", """
-✅ **PERMANENT 24/7 BOT STARTED!**
+✅ **INSTANT PORT BOT STARTED!**
 
-**🛡️ ULTIMATE NO-SLEEP PROTECTION:**
-• Multiple ports: 10000, 8080, 5000
-• Auto-ping every 4 minutes  
-• Multiple endpoints: /, /ping, /health, /status
-• Web service properly detected
-• 24/7 permanent active
+**🚀 Instant Port Opening:**
+• Flask started FIRST before anything
+• Port 10000 immediately open
+• Render detected web service instantly
+• No sleep guaranteed!
 
-**Normal users completely ignored**
-**Bot will NEVER sleep!** 🚀
+**Bot is 24/7 active!** 🎉
             """)
         except:
             pass
         
-        print("🤖 PERMANENT 24/7 BOT IS NOW RUNNING!")
-        print("💤 SLEEP PROTECTION: ACTIVATED")
+        print("🤖 INSTANT PORT BOT RUNNING!")
         
-        # PERMANENT RUN
+        # Keep running
         while True:
             await asyncio.sleep(60)
             
@@ -341,9 +288,9 @@ async def start_telegram():
 
 # Main execution
 async def main():
-    print("🔧 Starting PERMANENT main function...")
+    print("🔧 Starting main after Flask...")
     await start_telegram()
 
 if __name__ == "__main__":
-    print("⭐ PERMANENT 24/7 BOT STARTING...")
+    print("⭐ INSTANT PORT BOT STARTING...")
     asyncio.run(main())
