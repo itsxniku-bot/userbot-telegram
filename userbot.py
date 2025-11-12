@@ -11,19 +11,41 @@ except ImportError:
 
 import os
 import asyncio
+import threading
+import re
+from flask import Flask
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 
 print("🚀 Starting UserBot...")
 
-# API credentials
-api_id = int(os.environ.get('api_id', 22294121))
-api_hash = os.environ.get('api_hash', '0f7fa7216b26e3f52699dc3c5a560d2a')
-session_string = os.environ.get('SESSION_STRING', '1AZWarzwBu0-LovZ8Z49vquFuHumXjYjVhvOy3BsxrrYp5qtVtPo9hkNYZ19qtGw3KCZLwNXOAwAaraKF6N8vtJkjOUpmc112-i289RtR6nuJaTorpJ1yXQzGvJ-RF14DUVnc-c_UYF4PR64wPaTSF-0qDYH3F_NcV2lbyJJSqxN96NauXuuxdhl1bYAtPoV58-e2RRdmF3G5Ozp55n-RPu9GO0Q_ZU7U865ekQrCwQDrkF77GKyv1RXo97S_B4iAgQDDaXSlLWqkYqozkEoZUSrRAYs1mpoYItir7l9is-TV4FAW9gz8e2N4pwKsJ9tDwBMK8snMHDhdtsvRuEO1WyALndXBnTc=')
+# Flask web server for Render - Autosleep Fix
+app = Flask(__name__)
 
-if not session_string:
-    print("❌ SESSION_STRING not set!")
-    exit(1)
+@app.route('/')
+def home():
+    return "🤖 Telegram Bot is Running!"
+
+@app.route('/ping')
+def ping():
+    return "🏓 Pong! Bot is alive"
+
+@app.route('/health')
+def health():
+    return "✅ Bot is healthy and running"
+
+def run_flask():
+    app.run(host='0.0.0.0', port=5000, debug=False)
+
+# Start Flask in background thread
+flask_thread = threading.Thread(target=run_flask, daemon=True)
+flask_thread.start()
+print("🌐 Flask server started on port 5000")
+
+# API credentials - APNA DATA YAHAN DALNA
+api_id = 22294121  # Tumhara API ID
+api_hash = "0f7fa7216b26e3f52699dc3c5a560d2a"  # Tumhara API Hash
+session_string = "1AZWarzwBu0-LovZ8Z49vquFuHumXjYjVhvOy3BsxrrYp5qtVtPo9hkNYZ19qtGw3KCZLwNXOAwAaraKF6N8vtJkjOUpmc112-i289RtR6nuJaTorpJ1yXQzGvJ-RF14DUVnc-c_UYF4PR64wPaTSF-0qDYH3F_NcV2lbyJJSqxN96NauXuuxdhl1bYAtPoV58-e2RRdmF3G5Ozp55n-RPu9GO0Q_ZU7U865ekQrCwQDrkF77GKyv1RXo97S_B4iAgQDDaXSlLWqkYqozkEoZUSrRAYs1mpoYItir7l9is-TV4FAW9gz8e2N4pwKsJ9tDwBMK8snMHDhdtsvRuEO1WyALndXBnTc="  # Tumhara Session String
 
 # Create client
 client = TelegramClient(StringSession(session_string), api_id, api_hash)
@@ -32,6 +54,9 @@ client = TelegramClient(StringSession(session_string), api_id, api_hash)
 allowed_groups = set()
 safe_bots = set()
 delayed_bots = set()
+
+# Link pattern for detection
+LINK_PATTERN = re.compile(r't\.me/|@\w+', re.IGNORECASE)
 
 # Main message handler
 @client.on(events.NewMessage)
@@ -51,46 +76,48 @@ async def handle_messages(event):
         if event.sender_id == me.id:
             return
             
-        message_text = event.message.text or event.message.caption
+        message_text = event.message.text or event.message.caption or ""
         
         # Handle bot messages
-        if event.sender.bot:
-            sender_username = event.sender.username
+        if event.sender and event.sender.bot:
+            sender_username = event.sender.username or ""
             if sender_username:
+                sender_username_lower = sender_username.lower()
+                
                 # Safe bots are allowed
-                if sender_username.lower() in safe_bots:
+                if sender_username_lower in safe_bots:
                     return
                 
                 # Delayed bots - delete links immediately
-                if sender_username.lower() in delayed_bots:
-                    if message_text and ('t.me/' in message_text.lower() or '@' in message_text):
+                if sender_username_lower in delayed_bots:
+                    if message_text and LINK_PATTERN.search(message_text):
                         try:
                             await event.delete()
                             print(f"🗑️ Deleted link from delayed bot: {sender_username}")
-                        except:
-                            pass
+                        except Exception as e:
+                            print(f"❌ Failed to delete from delayed bot: {e}")
                     return
                 else:
                     # Regular bots - delete immediately
                     try:
                         await event.delete()
-                        print(f"🗑️ Deleted bot: {sender_username}")
-                    except:
-                        pass
+                        print(f"🗑️ Deleted bot message: {sender_username}")
+                    except Exception as e:
+                        print(f"❌ Failed to delete bot: {e}")
             return
             
-        # Delete messages containing t.me links
-        if message_text and ('t.me/' in message_text.lower() or '@' in message_text):
+        # Delete messages containing t.me links or @mentions
+        if message_text and LINK_PATTERN.search(message_text):
             try:
                 await event.delete()
-                print(f"🗑️ Deleted link message")
-            except:
-                pass
+                print(f"🗑️ Deleted link message from user")
+            except Exception as e:
+                print(f"❌ Failed to delete user message: {e}")
                 
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"❌ Error in handler: {e}")
 
-# Bot Management Commands
+# BOT MANAGEMENT COMMANDS
 @client.on(events.NewMessage(pattern=r'^!safe (@?\w+)$'))
 async def safe_handler(event):
     me = await client.get_me()
@@ -104,8 +131,8 @@ async def safe_handler(event):
         delayed_bots.remove(bot_username)
     await event.reply(f"✅ @{bot_username} added to safe list!")
 
-@client.on(events.NewMessage(pattern=r'^!delayed (@?\w+)$'))
-async def delayed_handler(event):
+@client.on(events.NewMessage(pattern=r'^!delay (@?\w+)$'))
+async def delay_handler(event):
     me = await client.get_me()
     if event.sender_id != me.id:
         return
@@ -139,126 +166,84 @@ async def remove_handler(event):
     else:
         await event.reply(f"❌ @{bot_username} not found in any list!")
 
-@client.on(events.NewMessage(pattern='!showbots'))
-async def showbots_handler(event):
-    me = await client.get_me()
-    if event.sender_id != me.id:
-        return
-        
-    message = "🤖 **Bot Lists:**\n\n🛡️ **Safe Bots:**\n"
-    if safe_bots:
-        for bot in safe_bots:
-            message += f"✅ @{bot}\n"
-    else:
-        message += "❌ None\n"
-    
-    message += "\n⏰ **Delayed Bots:**\n"
-    if delayed_bots:
-        for bot in delayed_bots:
-            message += f"⏰ @{bot}\n"
-    else:
-        message += "❌ None"
-    
-    await event.reply(message)
-
-# Group Management Commands
-@client.on(events.NewMessage(pattern='!allow'))
+@client.on(events.NewMessage(pattern=r'^!allow (-?\d+)$'))
 async def allow_handler(event):
-    if not event.is_group:
-        return
-        
     me = await client.get_me()
     if event.sender_id != me.id:
         return
         
-    group_id = str(event.chat_id)
+    group_id = event.pattern_match.group(1)
     allowed_groups.add(group_id)
-    await event.reply(f"✅ Group **{event.chat.title}** allowed!")
+    await event.reply(f"✅ Group ID `{group_id}` allowed!")
 
-@client.on(events.NewMessage(pattern='!groupid'))
-async def groupid_handler(event):
-    if not event.is_group:
-        return
-        
+@client.on(events.NewMessage(pattern=r'^!disallow (-?\d+)$'))
+async def disallow_handler(event):
     me = await client.get_me()
     if event.sender_id != me.id:
         return
         
-    await event.reply(f"🏠 **Group Info:**\n\n📝 Name: {event.chat.title}\n🆔 ID: `{event.chat_id}`")
-
-@client.on(events.NewMessage(pattern='!showgroups'))
-async def showgroups_handler(event):
-    me = await client.get_me()
-    if event.sender_id != me.id:
-        return
-        
-    message = "🏠 **Allowed Groups:**\n\n"
-    if allowed_groups:
-        for group_id in allowed_groups:
-            try:
-                chat = await client.get_entity(int(group_id))
-                message += f"✅ {chat.title} (ID: `{group_id}`)\n"
-            except:
-                message += f"✅ Unknown Group (ID: `{group_id}`)\n"
+    group_id = event.pattern_match.group(1)
+    if group_id in allowed_groups:
+        allowed_groups.remove(group_id)
+        await event.reply(f"✅ Group ID `{group_id}` removed!")
     else:
-        message += "❌ No groups allowed yet"
-    
-    await event.reply(message)
+        await event.reply(f"❌ Group ID `{group_id}` not in allowed list!")
 
-# Utility Commands
+# STATUS COMMANDS
 @client.on(events.NewMessage(pattern='!ping'))
 async def ping_handler(event):
-    await event.reply('🏓 Pong!')
+    await event.reply('🏓 Pong! Bot is alive!')
 
 @client.on(events.NewMessage(pattern='!status'))
 async def status_handler(event):
     me = await client.get_me()
     status_text = f"""
-🤖 **Bot Status:** ACTIVE
-👤 **User:** {me.first_name}
-🆔 **ID:** {me.id}
+🤖 **Bot Status**
+├─ **Name:** {me.first_name}
+├─ **ID:** `{me.id}`
+├─ **Allowed Groups:** {len(allowed_groups)}
+├─ **Safe Bots:** {len(safe_bots)}
+└─ **Delayed Bots:** {len(delayed_bots)}
 
-📊 **Statistics:**
-• Safe Bots: {len(safe_bots)}
-• Delayed Bots: {len(delayed_bots)}
-• Allowed Groups: {len(allowed_groups)}
+**Commands:**
+!allow <group_id> - Add group
+!disallow <group_id> - Remove group  
+!safe @bot - Add safe bot
+!delay @bot - Add delayed bot
+!remove @bot - Remove bot
+!status - This message
 """
     await event.reply(status_text)
 
-@client.on(events.NewMessage(pattern='!help'))
-async def help_handler(event):
-    help_text = """
-🤖 **Bot Commands:**
+@client.on(events.NewMessage(pattern='!lists'))
+async def lists_handler(event):
+    safe_list = "\n".join([f"• @{bot}" for bot in safe_bots]) or "None"
+    delayed_list = "\n".join([f"• @{bot}" for bot in delayed_bots]) or "None"
+    groups_list = "\n".join([f"• `{group}`" for group in allowed_groups]) or "None"
+    
+    lists_text = f"""
+📋 **Bot Lists**
 
-🔧 **Bot Management:**
-• `!safe @username` - Add bot to safe list
-• `!delayed @username` - Add bot to delayed list  
-• `!remove @username` - Remove bot from lists
-• `!showbots` - Show all bot lists
+**🤖 Safe Bots:**
+{safe_list}
 
-🏠 **Group Management:**
-• `!allow` - Add current group to allowed list
-• `!groupid` - Get current group ID
-• `!showgroups` - Show allowed groups
+**⏰ Delayed Bots:**
+{delayed_list}
 
-ℹ️ **Utility:**
-• `!ping` - Check if bot is alive
-• `!status` - Show bot status
-• `!help` - Show this help
-
-⚡ **Auto Features:**
-• Deletes messages from unauthorized bots
-• Deletes messages with suspicious links
-• Delayed deletion for specific bots
+**👥 Allowed Groups:**
+{groups_list}
 """
-    await event.reply(help_text)
+    await event.reply(lists_text)
 
 # Main function
 async def main():
     await client.start()
     me = await client.get_me()
     print(f"✅ Bot started: {me.first_name} (ID: {me.id})")
-    print("🚀 Bot is now running with ALL COMMANDS!")
+    print(f"📊 Allowed groups: {len(allowed_groups)}")
+    print(f"🤖 Safe bots: {len(safe_bots)}")
+    print(f"⏰ Delayed bots: {len(delayed_bots)}")
+    print("🚀 Bot is now running with AUTOSLEEP FIX!")
     await client.run_until_disconnected()
 
 if __name__ == '__main__':
