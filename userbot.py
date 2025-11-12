@@ -1,14 +1,3 @@
-# IMGHDR FIX
-import sys
-import types
-try:
-    import imghdr
-except ImportError:
-    imghdr = types.ModuleType('imghdr')
-    def what(file, h=None): return None
-    imghdr.what = what
-    sys.modules['imghdr'] = imghdr
-
 import requests
 import threading
 import time
@@ -17,35 +6,24 @@ import re
 import json
 from datetime import datetime
 
-print("🚀 STARTING ULTIMATE BOT...")
+print("🚀 STARTING BOT...")
 
-# ULTIMATE KEEP-ALIVE
-def ultimate_keep_alive():
-    print("🔄 ULTIMATE KEEP-ALIVE STARTED")
-    time.sleep(15)
-    
+# SIMPLE KEEP-ALIVE
+def keep_alive():
+    time.sleep(10)
     count = 0
     while True:
         count += 1
+        current_time = datetime.now().strftime('%H:%M:%S')
+        print(f"✅ [{current_time}] KEEP-ALIVE #{count}")
         try:
-            current_time = datetime.now().strftime('%H:%M:%S')
-            print(f"✅ [{current_time}] KEEP-ALIVE ACTIVE #{count}")
-            
-            # Multiple ping methods
-            try:
-                requests.get('http://localhost:8080', timeout=5)
-            except:
-                pass
-                
-        except Exception as e:
-            print(f"❌ Keep-alive error: {e}")
-        
-        time.sleep(120)  # 2 minutes
+            requests.get('http://localhost:8080', timeout=5)
+        except:
+            pass
+        time.sleep(120)
 
-keep_thread = threading.Thread(target=ultimate_keep_alive)
-keep_thread.daemon = True
-keep_thread.start()
-print("✅ Ultimate keep-alive started")
+threading.Thread(target=keep_alive, daemon=True).start()
+print("✅ Keep-alive started")
 
 # TELEGRAM BOT
 from telethon import TelegramClient, events
@@ -65,9 +43,7 @@ api_id = int(os.environ.get('api_id', 22294121))
 api_hash = os.environ.get('api_hash', '0f7fa7216b26e3f52699dc3c5a560d2a')
 session_string = os.environ.get('SESSION_STRING', '1AZWarzwBu0-LovZ8Z49vquFuHumXjYjVhvOy3BsxrrYp5qtVtPo9hkNYZ19qtGw3KCZLwNXOAwAaraKF6N8vtJkjOUpmc112-i289RtR6nuJaTorpJ1yXQzGvJ-RF14DUVnc-c_UYF4PR64wPaTSF-0qDYH3F_NcV2lbyJJSqxN96NauXuuxdhl1bYAtPoV58-e2RRdmF3G5Ozp55n-RPu9GO0Q_ZU7U865ekQrCwQDrkF77GKyv1RXo97S_B4iAgQDDaXSlLWqkYqozkEoZUSrRAYs1mpoYItir7l9is-TV4FAW9gz8e2N4pwKsJ9tDwBMK8snMHDhdtsvRuEO1WyALndXBnTc=')
 
-# SIMPLE CLIENT - No complex settings that cause errors
 client = TelegramClient(StringSession(session_string), api_id, api_hash)
-print("🔧 Simple client configured")
 
 # BOT DATA FUNCTIONS
 def load_data():
@@ -99,15 +75,14 @@ def is_group_allowed(group_id):
 
 def contains_any_link(message_text):
     if not message_text: return False
-    ALL_LINK_PATTERNS = [
+    patterns = [
         r't\.me/(\w+)', r'@(\w+)', r'https?://t\.me/(\w+)',
         r'https?://telegram\.me/(\w+)', r'https?://wa\.me/(\w+)',
         r'https?://chat\.whatsapp\.com/(\w+)', r'https?://facebook\.com/(\w+)',
         r'https?://instagram\.com/(\w+)', r'https?://youtube\.com/(\w+)',
-        r'https?://twitter\.com/(\w+)', r'https?://([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})',
-        r'www\.([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})'
+        r'https?://twitter\.com/(\w+)'
     ]
-    for pattern in ALL_LINK_PATTERNS:
+    for pattern in patterns:
         if re.search(pattern, message_text, re.IGNORECASE):
             return True
     return False
@@ -121,29 +96,6 @@ async def delete_after_delay(event, delay_seconds=60):
         await event.delete()
         logger.info(f"⏰ Deleted message after {delay_seconds} seconds")
     except: pass
-
-# SIMPLE HEALTH MONITOR - No complex events
-async def simple_health_monitor():
-    await asyncio.sleep(60)
-    check_count = 0
-    while True:
-        check_count += 1
-        try:
-            # Simple check - if client is connected
-            if client.is_connected():
-                me = await client.get_me()
-                logger.info(f"❤️ HEALTH CHECK #{check_count}: OK - {me.first_name}")
-            else:
-                logger.warning(f"💔 HEALTH CHECK #{check_count}: Client disconnected")
-                try:
-                    await client.connect()
-                    logger.info("🔄 Health monitor reconnected client")
-                except Exception as e:
-                    logger.error(f"🚨 Reconnect failed: {e}")
-        except Exception as e:
-            logger.error(f"💔 HEALTH CHECK #{check_count} FAILED: {e}")
-        
-        await asyncio.sleep(300)  # 5 minutes
 
 # MAIN MESSAGE HANDLER
 @client.on(events.NewMessage)
@@ -177,11 +129,7 @@ async def handle_all_messages(event):
                 return
         
         if message_text and contains_any_link(message_text):
-            for pattern in [
-                r't\.me/(\w+)', r'@(\w+)', r'https?://t\.me/(\w+)',
-                r'https?://telegram\.me/(\w+)', r'https?://wa\.me/(\w+)',
-                r'https?://chat\.whatsapp\.com/(\w+)'
-            ]:
+            for pattern in [r't\.me/(\w+)', r'@(\w+)']:
                 matches = re.findall(pattern, message_text)
                 for match in matches:
                     if isinstance(match, str) and match.lower().endswith('bot'):
@@ -190,7 +138,7 @@ async def handle_all_messages(event):
                             logger.info(f"🗑️ Deleted message with bot link: {match}")
                             return
     except Exception as e:
-        logger.error(f"❌ Handler error: {e}")
+        logger.error(f"❌ Error: {e}")
 
 # COMMANDS
 @client.on(events.NewMessage(pattern=r'(?i)^!safe (@?\w+)$'))
@@ -271,28 +219,29 @@ async def show_groups(event):
         except: message += f"✅ Unknown Group (ID: `{group_id}`)\n"
     await event.reply(message or "❌ No groups in allowed list")
 
-# SIMPLE MAIN FUNCTION
-async def simple_main():
-    try:
-        print("🔑 Starting Telegram client...")
-        await client.start()
-        
-        me = await client.get_me()
-        logger.info(f"🤖 BOT STARTED: {me.first_name} (ID: {me.id})")
-        logger.info("🔄 Keep-alive ACTIVE")
-        logger.info("❤️ Health monitor STARTED")
-        
-        # Start health monitor
-        asyncio.create_task(simple_health_monitor())
-        
-        print("🎯 BOT OPERATIONAL!")
-        await client.run_until_disconnected()
-        
-    except Exception as e:
-        logger.error(f"🚨 FATAL ERROR: {e}")
-        print(f"🚨 Bot stopped: {e}")
+# HEALTH MONITOR
+async def health_monitor():
+    await asyncio.sleep(60)
+    check_count = 0
+    while True:
+        check_count += 1
+        try:
+            me = await client.get_me()
+            logger.info(f"❤️ HEALTH CHECK #{check_count}: OK - {me.first_name}")
+        except Exception as e:
+            logger.error(f"💔 HEALTH CHECK #{check_count} FAILED: {e}")
+        await asyncio.sleep(300)
+
+async def main():
+    await client.start()
+    me = await client.get_me()
+    logger.info(f"🤖 BOT STARTED: {me.first_name} (ID: {me.id})")
+    logger.info("🔄 Keep-alive ACTIVE")
+    logger.info("❤️ Health monitor STARTED")
+    
+    asyncio.create_task(health_monitor())
+    await client.run_until_disconnected()
 
 if __name__ == '__main__':
-    print("🚀 STARTING SIMPLE & STABLE BOT...")
-    print("💪 Features: Keep-alive, Health monitor, Simple design")
-    asyncio.run(simple_main())
+    print("🎯 BOT STARTING...")
+    asyncio.run(main())
