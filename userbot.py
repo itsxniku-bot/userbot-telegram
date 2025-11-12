@@ -17,12 +17,12 @@ import re
 import json
 from datetime import datetime
 
-print("🚀 STARTING...")
+print("🚀 STARTING ULTIMATE BOT...")
 
-# KEEP-ALIVE
-def keep_alive():
-    print("🔄 KEEP-ALIVE STARTED")
-    time.sleep(10)
+# ULTIMATE KEEP-ALIVE
+def ultimate_keep_alive():
+    print("🔄 ULTIMATE KEEP-ALIVE STARTED")
+    time.sleep(15)
     
     count = 0
     while True:
@@ -30,19 +30,34 @@ def keep_alive():
         try:
             current_time = datetime.now().strftime('%H:%M:%S')
             print(f"✅ [{current_time}] KEEP-ALIVE ACTIVE #{count}")
-            requests.get('http://localhost:8080', timeout=5)
-        except: 
-            print(f"🔄 [{current_time}] Keep-alive active #{count}")
-        time.sleep(120)
+            
+            # Multiple ping methods
+            try:
+                requests.get('http://localhost:8080', timeout=5)
+            except:
+                pass
+                
+            try:
+                render_url = os.environ.get('RENDER_URL')
+                if render_url:
+                    requests.get(render_url, timeout=5)
+            except:
+                pass
+                
+        except Exception as e:
+            print(f"❌ Keep-alive error: {e}")
+        
+        time.sleep(120)  # 2 minutes
 
-thread = threading.Thread(target=keep_alive)
-thread.daemon = True
-thread.start()
-print("✅ Keep-alive started")
+keep_thread = threading.Thread(target=ultimate_keep_alive)
+keep_thread.daemon = True
+keep_thread.start()
+print("✅ Ultimate keep-alive started")
 
-# TELEGRAM BOT
+# TELEGRAM BOT WITH AUTO-RECONNECT
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
+from telethon.network import ConnectionTcpFull
 import asyncio
 import logging
 
@@ -58,18 +73,23 @@ api_id = int(os.environ.get('api_id', 22294121))
 api_hash = os.environ.get('api_hash', '0f7fa7216b26e3f52699dc3c5a560d2a')
 session_string = os.environ.get('SESSION_STRING', '1AZWarzwBu0-LovZ8Z49vquFuHumXjYjVhvOy3BsxrrYp5qtVtPo9hkNYZ19qtGw3KCZLwNXOAwAaraKF6N8vtJkjOUpmc112-i289RtR6nuJaTorpJ1yXQzGvJ-RF14DUVnc-c_UYF4PR64wPaTSF-0qDYH3F_NcV2lbyJJSqxN96NauXuuxdhl1bYAtPoV58-e2RRdmF3G5Ozp55n-RPu9GO0Q_ZU7U865ekQrCwQDrkF77GKyv1RXo97S_B4iAgQDDaXSlLWqkYqozkEoZUSrRAYs1mpoYItir7l9is-TV4FAW9gz8e2N4pwKsJ9tDwBMK8snMHDhdtsvRuEO1WyALndXBnTc=')
 
-client = TelegramClient(StringSession(session_string), api_id, api_hash)
+# ULTIMATE CLIENT SETTINGS
+client = TelegramClient(
+    StringSession(session_string),
+    api_id,
+    api_hash,
+    connection=ConnectionTcpFull,
+    connection_retries=999,  # Almost unlimited retries
+    retry_delay=3,          # 3 seconds between retries
+    auto_reconnect=True,    # Auto reconnect enabled
+    timeout=60,             # 60 seconds timeout
+    request_retries=10,     # Retry failed requests
+    flood_sleep_threshold=60 # Handle flood waits
+)
 
-# Bot configuration
-ALL_LINK_PATTERNS = [
-    r't\.me/(\w+)', r'@(\w+)', r'https?://t\.me/(\w+)',
-    r'https?://telegram\.me/(\w+)', r'https?://wa\.me/(\w+)',
-    r'https?://chat\.whatsapp\.com/(\w+)', r'https?://facebook\.com/(\w+)',
-    r'https?://instagram\.com/(\w+)', r'https?://youtube\.com/(\w+)',
-    r'https?://twitter\.com/(\w+)', r'https?://([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})',
-    r'www\.([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})'
-]
+print("🔧 Client configured with auto-reconnect")
 
+# BOT DATA FUNCTIONS
 def load_data():
     default_data = {'safe_bots': [], 'allowed_groups': [], 'delayed_bots': []}
     if os.path.exists('bot_data.json'):
@@ -99,6 +119,14 @@ def is_group_allowed(group_id):
 
 def contains_any_link(message_text):
     if not message_text: return False
+    ALL_LINK_PATTERNS = [
+        r't\.me/(\w+)', r'@(\w+)', r'https?://t\.me/(\w+)',
+        r'https?://telegram\.me/(\w+)', r'https?://wa\.me/(\w+)',
+        r'https?://chat\.whatsapp\.com/(\w+)', r'https?://facebook\.com/(\w+)',
+        r'https?://instagram\.com/(\w+)', r'https?://youtube\.com/(\w+)',
+        r'https?://twitter\.com/(\w+)', r'https?://([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})',
+        r'www\.([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})'
+    ]
     for pattern in ALL_LINK_PATTERNS:
         if re.search(pattern, message_text, re.IGNORECASE):
             return True
@@ -113,6 +141,36 @@ async def delete_after_delay(event, delay_seconds=60):
         await event.delete()
         logger.info(f"⏰ Deleted message after {delay_seconds} seconds")
     except: pass
+
+# AUTO-RECONNECT HANDLER
+@client.on(events.Disconnect)
+async def handle_disconnect(event):
+    logger.error("❌ DISCONNECTED! Attempting to reconnect...")
+    await asyncio.sleep(5)
+    try:
+        await client.connect()
+        logger.info("✅ RECONNECTED SUCCESSFULLY!")
+    except Exception as e:
+        logger.error(f"❌ Reconnect failed: {e}")
+
+# HEALTH MONITOR
+async def health_monitor():
+    await asyncio.sleep(60)
+    check_count = 0
+    while True:
+        check_count += 1
+        try:
+            me = await client.get_me()
+            logger.info(f"❤️ HEALTH CHECK #{check_count}: OK - {me.first_name}")
+        except Exception as e:
+            logger.error(f"💔 HEALTH CHECK #{check_count} FAILED: {e}")
+            try:
+                await client.connect()
+                logger.info("🔄 Health monitor reconnected client")
+            except:
+                logger.error("🚨 Health monitor reconnect failed")
+        
+        await asyncio.sleep(300)  # 5 minutes
 
 # MAIN MESSAGE HANDLER
 @client.on(events.NewMessage)
@@ -146,7 +204,11 @@ async def handle_all_messages(event):
                 return
         
         if message_text and contains_any_link(message_text):
-            for pattern in ALL_LINK_PATTERNS:
+            for pattern in [
+                r't\.me/(\w+)', r'@(\w+)', r'https?://t\.me/(\w+)',
+                r'https?://telegram\.me/(\w+)', r'https?://wa\.me/(\w+)',
+                r'https?://chat\.whatsapp\.com/(\w+)'
+            ]:
                 matches = re.findall(pattern, message_text)
                 for match in matches:
                     if isinstance(match, str) and match.lower().endswith('bot'):
@@ -155,9 +217,9 @@ async def handle_all_messages(event):
                             logger.info(f"🗑️ Deleted message with bot link: {match}")
                             return
     except Exception as e:
-        logger.error(f"❌ Error: {e}")
+        logger.error(f"❌ Handler error: {e}")
 
-# YOUR COMMANDS
+# COMMANDS
 @client.on(events.NewMessage(pattern=r'(?i)^!safe (@?\w+)$'))
 async def add_safe_bot(event):
     me = await client.get_me()
@@ -236,13 +298,40 @@ async def show_groups(event):
         except: message += f"✅ Unknown Group (ID: `{group_id}`)\n"
     await event.reply(message or "❌ No groups in allowed list")
 
-async def main():
-    await client.start()
-    me = await client.get_me()
-    logger.info(f"🤖 Bot started for: {me.first_name} (ID: {me.id})")
-    logger.info("🔄 Keep-alive active")
-    await client.run_until_disconnected()
+# ULTIMATE MAIN FUNCTION
+async def ultimate_main():
+    max_retries = 999
+    retry_count = 0
+    
+    while retry_count < max_retries:
+        try:
+            print(f"🔑 Attempting connection #{retry_count + 1}...")
+            await client.start()
+            
+            me = await client.get_me()
+            logger.info(f"🤖 ULTIMATE BOT STARTED: {me.first_name} (ID: {me.id})")
+            logger.info("🔄 Auto-reconnect ENABLED")
+            logger.info("❤️ Health monitor ACTIVE")
+            logger.info("💪 Maximum stability configured")
+            
+            # Start health monitor
+            asyncio.create_task(health_monitor())
+            
+            print("🎯 BOT FULLY OPERATIONAL!")
+            await client.run_until_disconnected()
+            
+        except Exception as e:
+            retry_count += 1
+            logger.error(f"🚨 CONNECTION FAILED #{retry_count}: {e}")
+            
+            if retry_count >= max_retries:
+                logger.error("🚨 MAXIMUM RETRIES REACHED! Bot stopping.")
+                break
+                
+            logger.info(f"🔄 Retrying in 10 seconds... ({retry_count}/{max_retries})")
+            await asyncio.sleep(10)
 
 if __name__ == '__main__':
-    print("🎯 BOT STARTING...")
-    asyncio.run(main())
+    print("🚀 STARTING ULTIMATE BOT WITH AUTO-RECONNECT...")
+    print("💪 Features: Auto-reconnect, Health monitor, Unlimited retries")
+    asyncio.run(ultimate_main())
