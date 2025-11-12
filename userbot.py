@@ -11,7 +11,7 @@ except ImportError:
 
 import os
 import asyncio
-import threading
+import multiprocessing
 import re
 from flask import Flask
 from telethon import TelegramClient, events
@@ -19,24 +19,29 @@ from telethon.sessions import StringSession
 
 print("🚀 Starting UserBot...")
 
-# Flask web server for Render
-app = Flask(__name__)
-
-@app.route('/')
-def home():
-    return "🤖 Telegram Bot is Running on Render!"
-
-@app.route('/ping')
-def ping():
-    return "🏓 Pong! Bot is alive"
-
-@app.route('/health')
-def health():
-    return "✅ Bot is healthy and running"
-
+# Flask function for separate process
 def run_flask():
-    # RENDER AUTO PORT DETECTION - 5000 use karega
+    app = Flask(__name__)
+    
+    @app.route('/')
+    def home():
+        return "🤖 Telegram Bot is Running on Render!"
+    
+    @app.route('/ping')
+    def ping():
+        return "🏓 Pong! Bot is alive"
+    
+    @app.route('/health')
+    def health():
+        return "✅ Bot is healthy and running"
+    
+    print("🌐 Starting Flask server on port 5000...")
     app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
+
+# Start Flask in separate process
+flask_process = multiprocessing.Process(target=run_flask, daemon=True)
+flask_process.start()
+print("🌐 Flask server started in separate process")
 
 # API credentials
 api_id = 22294121
@@ -233,18 +238,14 @@ async def lists_handler(event):
 
 # Main function
 async def main():
-    # Start Flask in background thread - NON-BLOCKING
-    flask_thread = threading.Thread(target=run_flask, daemon=True)
-    flask_thread.start()
-    print("🌐 Flask server started on port 5000")
-    
+    print("🔗 Connecting to Telegram...")
     await client.start()
     me = await client.get_me()
     print(f"✅ Bot started: {me.first_name} (ID: {me.id})")
     print(f"📊 Allowed groups: {len(allowed_groups)}")
     print(f"🤖 Safe bots: {len(safe_bots)}")
     print(f"⏰ Delayed bots: {len(delayed_bots)}")
-    print("🚀 Bot is now running with FIXED THREADING!")
+    print("🚀 Bot is now running with MULTIPROCESSING FIX!")
     await client.run_until_disconnected()
 
 if __name__ == '__main__':
