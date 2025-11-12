@@ -1,4 +1,4 @@
-print("🎯 BOT STARTING WITH DELETE FIX...")
+print("🎯 BOT STARTING WITH ADVANCED FILTERING...")
 
 import asyncio
 import multiprocessing
@@ -42,75 +42,119 @@ async def start_telegram():
         from pyrogram import Client, filters
         
         app = Client(
-            "delete_bot",
+            "advanced_bot",
             api_id=22294121,
             api_hash="0f7fa7216b26e3f52699dc3c5a560d2a",
             session_string="AQFULmkANrpQWKdmd5cy7VgvL2DA9KATYlSUq5PSoJ5K1easAzrA_p5fxgFRVEUyABixgFmrCGtF9x_KvrQUoAWdeQ1dGqYggCnST6nMPBipTv7GIgwU_w1kewukwsWPMUbWdos0VI7CtH1HYwW7wz3VQ2_hvtdwQCDRHsIxpwek3IcSXP-hpt8vz_8Z4NYf8uUiIwZCSJluef3vGSh7TLOfekcrjVcRd_2h59kBuGgV7DzyJxZwx8eyNJOyhpYQnlExnd24CnELB6ZNYObYBH6xnE2Rgo97YGN1WPbd9Ra8oQUx2phHT4KTWZNktzjenv6hM7AH8lyVyRvGtillQOA_Dq23TwAAAAHy0lZEAA"
         )
         
-        # TEST COMMANDS
+        # COMMANDS
         @app.on_message(filters.command("ping"))
         async def ping_handler(client, message: Message):
-            await message.reply("🏓 Pong! Delete feature active!")
+            await message.reply("🏓 Pong! Advanced filtering active!")
         
         @app.on_message(filters.command("status"))
         async def status_handler(client, message: Message):
             me = await app.get_me()
-            groups_list = ", ".join(allowed_groups) if allowed_groups else "None"
+            safe_list = ", ".join([f"@{bot}" for bot in safe_bots]) if safe_bots else "None"
+            delayed_list = ", ".join([f"@{bot}" for bot in delayed_bots]) if delayed_bots else "None"
+            
             status_text = f"""
-🤖 **Bot Status - DELETE ENABLED**
+🤖 **Advanced Filter Bot**
 ├─ **Name:** {me.first_name}
 ├─ **ID:** `{me.id}`
 ├─ **Allowed Groups:** {len(allowed_groups)}
-├─ **Groups:** {groups_list}
-├─ **Safe Bots:** {len(safe_bots)}
-└─ **Delayed Bots:** {len(delayed_bots)}
+├─ **Safe Bots:** {safe_list}
+├─ **Delayed Bots:** {delayed_list}
 
-**✅ Bot is ready to delete messages!**
+**🔧 Filter Rules:**
+• Normal users: Delete unsafe bot links
+• Regular bots: Delete all messages
+• Delayed bots: Delete links immediately, normal messages after 30s
+• Safe bots: No deletion
             """
             await message.reply(status_text)
-            print("✅ Status command executed")
         
-        # ALLOW COMMAND - SIMPLE VERSION
         @app.on_message(filters.command("allow"))
         async def allow_handler(client, message: Message):
             if len(message.command) > 1:
                 group_id = message.command[1]
                 allowed_groups.add(group_id)
-                await message.reply(f"✅ Group `{group_id}` allowed!\n\nNow add me to that group as ADMIN with Delete Messages permission.")
+                await message.reply(f"✅ Group `{group_id}` allowed!")
                 print(f"✅ Group added: {group_id}")
-                print(f"📋 Allowed groups: {allowed_groups}")
             else:
-                await message.reply("❌ Usage: /allow <group_id>\n\nGet group ID from @RawDataBot")
+                await message.reply("❌ Usage: /allow <group_id>")
         
-        # TEST DELETE COMMAND
-        @app.on_message(filters.command("testdelete"))
-        async def test_delete_handler(client, message: Message):
-            if message.reply_to_message:
-                try:
-                    await message.reply_to_message.delete()
-                    await message.reply("✅ Message deleted successfully!")
-                    print("✅ Test delete successful")
-                except Exception as e:
-                    await message.reply(f"❌ Delete failed: {e}")
-                    print(f"❌ Delete failed: {e}")
+        @app.on_message(filters.command("safe"))
+        async def safe_handler(client, message: Message):
+            if len(message.command) > 1:
+                bot_username = message.command[1].replace('@', '').lower()
+                safe_bots.add(bot_username)
+                if bot_username in delayed_bots:
+                    delayed_bots.remove(bot_username)
+                await message.reply(f"✅ @{bot_username} added to safe list!")
+                print(f"✅ Safe bot added: {bot_username}")
             else:
-                await message.reply("❌ Reply to a message with /testdelete to test deletion")
+                await message.reply("❌ Usage: /safe @botusername")
         
-        # SIMPLE MESSAGE HANDLER - DELETE ALL LINKS
+        @app.on_message(filters.command("delay"))
+        async def delay_handler(client, message: Message):
+            if len(message.command) > 1:
+                bot_username = message.command[1].replace('@', '').lower()
+                delayed_bots.add(bot_username)
+                if bot_username in safe_bots:
+                    safe_bots.remove(bot_username)
+                await message.reply(f"⏰ @{bot_username} added to delayed list!")
+                print(f"✅ Delayed bot added: {bot_username}")
+            else:
+                await message.reply("❌ Usage: /delay @botusername")
+        
+        @app.on_message(filters.command("remove"))
+        async def remove_handler(client, message: Message):
+            if len(message.command) > 1:
+                bot_username = message.command[1].replace('@', '').lower()
+                removed_from = []
+                
+                if bot_username in safe_bots:
+                    safe_bots.remove(bot_username)
+                    removed_from.append('safe')
+                
+                if bot_username in delayed_bots:
+                    delayed_bots.remove(bot_username)
+                    removed_from.append('delayed')
+                
+                if removed_from:
+                    await message.reply(f"✅ @{bot_username} removed from: {', '.join(removed_from)}")
+                else:
+                    await message.reply(f"❌ @{bot_username} not found in any list!")
+            else:
+                await message.reply("❌ Usage: /remove @botusername")
+        
+        # Function to check if message contains unsafe bot mention
+        def contains_unsafe_bot_mention(text):
+            if not text:
+                return False
+            
+            # Find all @mentions in the message
+            mentions = re.findall(r'@(\w+)', text)
+            
+            for mention in mentions:
+                mention_lower = mention.lower()
+                # If mentioned bot is NOT in safe list, it's unsafe
+                if mention_lower not in safe_bots:
+                    return True
+            
+            return False
+        
+        # ADVANCED MESSAGE HANDLER
         @app.on_message(filters.group)
-        async def delete_links_handler(client, message: Message):
+        async def advanced_handler(client, message: Message):
             try:
                 group_id = str(message.chat.id)
-                print(f"🔍 Checking message in group: {group_id}")
-                print(f"📋 Allowed groups: {allowed_groups}")
                 
                 # Check if group is allowed
                 if group_id not in allowed_groups:
-                    print(f"❌ Group {group_id} not in allowed list")
                     return
-                
-                print(f"✅ Group {group_id} is allowed")
                 
                 # Don't process own messages
                 me = await app.get_me()
@@ -118,36 +162,62 @@ async def start_telegram():
                     return
                 
                 message_text = message.text or message.caption or ""
-                print(f"📝 Message text: {message_text}")
+                has_links = 't.me/' in message_text.lower() or 'http' in message_text.lower()
+                has_unsafe_mention = contains_unsafe_bot_mention(message_text)
                 
-                # Check for links
-                has_links = 't.me/' in message_text.lower() or 'http' in message_text.lower() or '@' in message_text
-                
-                if has_links:
-                    print(f"🔗 Link detected in message")
-                    try:
-                        await message.delete()
-                        print(f"🗑️ SUCCESS: Deleted link message in group {group_id}")
+                # Handle BOT messages
+                if message.from_user and message.from_user.is_bot:
+                    sender_username = message.from_user.username or ""
+                    print(f"🤖 Bot message: {sender_username}")
+                    
+                    if sender_username:
+                        sender_username_lower = sender_username.lower()
                         
-                        # Notify in private (optional)
+                        # Safe bots - NO DELETE
+                        if sender_username_lower in safe_bots:
+                            print(f"✅ Safe bot allowed: {sender_username}")
+                            return
+                        
+                        # Delayed bots - Delete links immediately, normal messages after 30s
+                        if sender_username_lower in delayed_bots:
+                            if has_links or has_unsafe_mention:
+                                try:
+                                    await message.delete()
+                                    print(f"🗑️ Immediately deleted link from delayed bot: {sender_username}")
+                                except Exception as e:
+                                    print(f"❌ Failed to delete from delayed bot: {e}")
+                            else:
+                                # Normal message - delete after 30 seconds
+                                async def delete_after_delay():
+                                    await asyncio.sleep(30)
+                                    try:
+                                        await message.delete()
+                                        print(f"⏰ Deleted normal message from delayed bot after 30s: {sender_username}")
+                                    except:
+                                        pass
+                                
+                                asyncio.create_task(delete_after_delay())
+                            return
+                        else:
+                            # Regular bots - DELETE ALL MESSAGES IMMEDIATELY
+                            try:
+                                await message.delete()
+                                print(f"🗑️ Deleted all messages from regular bot: {sender_username}")
+                            except Exception as e:
+                                print(f"❌ Failed to delete bot: {e}")
+                            return
+                
+                # Handle NORMAL USER messages
+                elif message.from_user:
+                    print(f"👤 Normal user: {message.from_user.first_name}")
+                    
+                    # Delete if contains unsafe bot mention or links to unsafe bots
+                    if has_unsafe_mention:
                         try:
-                            await app.send_message(
-                                "me", 
-                                f"🗑️ Deleted link in group {group_id}\nMessage: {message_text[:100]}..."
-                            )
-                        except:
-                            pass
-                            
-                    except Exception as e:
-                        print(f"❌ DELETE FAILED: {e}")
-                        # Send error to private
-                        try:
-                            await app.send_message(
-                                "me",
-                                f"❌ Delete failed in {group_id}\nError: {e}\nMake sure I have delete permissions!"
-                            )
-                        except:
-                            pass
+                            await message.delete()
+                            print(f"🗑️ Deleted user message with unsafe bot mention")
+                        except Exception as e:
+                            print(f"❌ Failed to delete user message: {e}")
                 
             except Exception as e:
                 print(f"❌ Error in handler: {e}")
@@ -158,25 +228,23 @@ async def start_telegram():
         me = await app.get_me()
         print(f"🎉 BOT CONNECTED: {me.first_name} ({me.id})")
         
-        # Send startup message with instructions
+        # Send startup message
         try:
             await app.send_message("me", """
-✅ **Bot Started with DELETE Feature!**
+✅ **Advanced Filter Bot Started!**
 
-**To Setup:**
-1. Get your group ID from @RawDataBot
-2. Use `/allow <group_id>` 
-3. Add me to group as ADMIN
-4. Give me DELETE MESSAGES permission
-5. Test with /testdelete
+**🎯 Filter Rules:**
+• 👤 Normal users: Delete unsafe bot mentions
+• 🤖 Regular bots: Delete all messages immediately  
+• ⏰ Delayed bots: Delete links immediately, normal messages after 30s
+• ✅ Safe bots: No deletion
 
-Bot will auto-delete links! 🚀
+**Use /safe @bot to protect important bots!** 🛡️
             """)
-            print("✅ Startup message sent")
         except:
-            print("⚠️ Could not send startup message")
+            pass
         
-        print("🤖 Bot is now running with DELETE FEATURE!")
+        print("🤖 Advanced Filter Bot is now running!")
         
         # Keep alive
         while True:
@@ -192,9 +260,6 @@ async def main():
     print("🔧 Starting main function...")
     await start_telegram()
 
-if __name__ == "__main__":
-    print("⭐ Bot Script Starting...")
-    asyncio.run(main())
 if __name__ == "__main__":
     print("⭐ Bot Script Starting...")
     asyncio.run(main())
