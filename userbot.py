@@ -1,4 +1,4 @@
-print("🎯 BOT STARTING WITH ADVANCED FILTERING...")
+print("🎯 BOT STARTING WITH BOT-ONLY MENTION DELETE...")
 
 import asyncio
 import multiprocessing
@@ -42,7 +42,7 @@ async def start_telegram():
         from pyrogram import Client, filters
         
         app = Client(
-            "advanced_bot",
+            "bot_mention_delete",
             api_id=22294121,
             api_hash="0f7fa7216b26e3f52699dc3c5a560d2a",
             session_string="AQFULmkANrpQWKdmd5cy7VgvL2DA9KATYlSUq5PSoJ5K1easAzrA_p5fxgFRVEUyABixgFmrCGtF9x_KvrQUoAWdeQ1dGqYggCnST6nMPBipTv7GIgwU_w1kewukwsWPMUbWdos0VI7CtH1HYwW7wz3VQ2_hvtdwQCDRHsIxpwek3IcSXP-hpt8vz_8Z4NYf8uUiIwZCSJluef3vGSh7TLOfekcrjVcRd_2h59kBuGgV7DzyJxZwx8eyNJOyhpYQnlExnd24CnELB6ZNYObYBH6xnE2Rgo97YGN1WPbd9Ra8oQUx2phHT4KTWZNktzjenv6hM7AH8lyVyRvGtillQOA_Dq23TwAAAAHy0lZEAA"
@@ -51,7 +51,7 @@ async def start_telegram():
         # COMMANDS
         @app.on_message(filters.command("ping"))
         async def ping_handler(client, message: Message):
-            await message.reply("🏓 Pong! Advanced filtering active!")
+            await message.reply("🏓 Pong! Bot-mention delete active!")
         
         @app.on_message(filters.command("status"))
         async def status_handler(client, message: Message):
@@ -60,7 +60,7 @@ async def start_telegram():
             delayed_list = ", ".join([f"@{bot}" for bot in delayed_bots]) if delayed_bots else "None"
             
             status_text = f"""
-🤖 **Advanced Filter Bot**
+🤖 **Bot-Mention Delete Bot**
 ├─ **Name:** {me.first_name}
 ├─ **ID:** `{me.id}`
 ├─ **Allowed Groups:** {len(allowed_groups)}
@@ -68,10 +68,11 @@ async def start_telegram():
 ├─ **Delayed Bots:** {delayed_list}
 
 **🔧 Filter Rules:**
-• Normal users: Delete unsafe bot links
-• Regular bots: Delete all messages
-• Delayed bots: Delete links immediately, normal messages after 30s
-• Safe bots: No deletion
+• 👤 Normal users: Delete ONLY unsafe bot mentions
+• 👥 Normal user mentions: NO DELETE
+• 🤖 Regular bots: Delete all messages immediately  
+• ⏰ Delayed bots: Delete links immediately, normal messages after 30s
+• ✅ Safe bots: No deletion
             """
             await message.reply(status_text)
         
@@ -130,8 +131,8 @@ async def start_telegram():
             else:
                 await message.reply("❌ Usage: /remove @botusername")
         
-        # Function to check if message contains unsafe bot mention
-        def contains_unsafe_bot_mention(text):
+        # Function to check if message contains unsafe BOT mention
+        async def contains_unsafe_bot_mention(client, text, chat_id):
             if not text:
                 return False
             
@@ -140,15 +141,32 @@ async def start_telegram():
             
             for mention in mentions:
                 mention_lower = mention.lower()
-                # If mentioned bot is NOT in safe list, it's unsafe
-                if mention_lower not in safe_bots:
+                
+                # If mentioned username is in safe list, it's safe
+                if mention_lower in safe_bots:
+                    continue
+                
+                # If mentioned username is in delayed list, it's unsafe
+                if mention_lower in delayed_bots:
                     return True
+                
+                # Check if the mentioned username belongs to a BOT
+                try:
+                    user = await client.get_users(mention)
+                    if user.is_bot and mention_lower not in safe_bots:
+                        print(f"🔍 Unsafe bot mention found: @{mention}")
+                        return True
+                except:
+                    # If we can't get user info, assume it's a bot if not in safe list
+                    if mention_lower not in safe_bots:
+                        print(f"⚠️ Could not verify @{mention}, treating as unsafe")
+                        return True
             
             return False
         
-        # ADVANCED MESSAGE HANDLER
+        # ADVANCED MESSAGE HANDLER - BOT-ONLY MENTION DELETE
         @app.on_message(filters.group)
-        async def advanced_handler(client, message: Message):
+        async def bot_mention_handler(client, message: Message):
             try:
                 group_id = str(message.chat.id)
                 
@@ -163,7 +181,10 @@ async def start_telegram():
                 
                 message_text = message.text or message.caption or ""
                 has_links = 't.me/' in message_text.lower() or 'http' in message_text.lower()
-                has_unsafe_mention = contains_unsafe_bot_mention(message_text)
+                has_unsafe_bot_mention = await contains_unsafe_bot_mention(client, message_text, message.chat.id)
+                
+                print(f"📝 Message from {message.from_user.first_name if message.from_user else 'Unknown'}: {message_text[:100]}...")
+                print(f"🔍 Has unsafe bot mention: {has_unsafe_bot_mention}")
                 
                 # Handle BOT messages
                 if message.from_user and message.from_user.is_bot:
@@ -180,7 +201,7 @@ async def start_telegram():
                         
                         # Delayed bots - Delete links immediately, normal messages after 30s
                         if sender_username_lower in delayed_bots:
-                            if has_links or has_unsafe_mention:
+                            if has_links or has_unsafe_bot_mention:
                                 try:
                                     await message.delete()
                                     print(f"🗑️ Immediately deleted link from delayed bot: {sender_username}")
@@ -211,13 +232,15 @@ async def start_telegram():
                 elif message.from_user:
                     print(f"👤 Normal user: {message.from_user.first_name}")
                     
-                    # Delete if contains unsafe bot mention or links to unsafe bots
-                    if has_unsafe_mention:
+                    # Delete ONLY if contains unsafe BOT mention
+                    if has_unsafe_bot_mention:
                         try:
                             await message.delete()
-                            print(f"🗑️ Deleted user message with unsafe bot mention")
+                            print(f"🗑️ Deleted user message with unsafe BOT mention")
                         except Exception as e:
                             print(f"❌ Failed to delete user message: {e}")
+                    else:
+                        print(f"✅ Normal user message allowed (no unsafe bot mentions)")
                 
             except Exception as e:
                 print(f"❌ Error in handler: {e}")
@@ -231,20 +254,21 @@ async def start_telegram():
         # Send startup message
         try:
             await app.send_message("me", """
-✅ **Advanced Filter Bot Started!**
+✅ **Bot-Mention Delete Bot Started!**
 
-**🎯 Filter Rules:**
-• 👤 Normal users: Delete unsafe bot mentions
+**🎯 New Filter Rules:**
+• 👤 Normal users: Delete ONLY unsafe BOT mentions
+• 👥 Normal user mentions: NO DELETE (safe)
 • 🤖 Regular bots: Delete all messages immediately  
 • ⏰ Delayed bots: Delete links immediately, normal messages after 30s
 • ✅ Safe bots: No deletion
 
-**Use /safe @bot to protect important bots!** 🛡️
+**Now normal user mentions are completely safe!** 🛡️
             """)
         except:
             pass
         
-        print("🤖 Advanced Filter Bot is now running!")
+        print("🤖 Bot-Mention Delete Bot is now running!")
         
         # Keep alive
         while True:
