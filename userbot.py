@@ -1,4 +1,4 @@
-print("🎯 BOT STARTING WITH ADMIN-ONLY COMMANDS...")
+print("🎯 24/7 BOT STARTING - NO SLEEP...")
 
 import asyncio
 import multiprocessing
@@ -6,46 +6,67 @@ import re
 from flask import Flask
 from pyrogram import Client, filters
 from pyrogram.types import Message
+import threading
+import requests
 
 # Bot data storage
 allowed_groups = set()
 safe_bots = set()
 delayed_bots = set()
 
-# YOUR USER ID - YAHAN APNA USER ID DALNA
-ADMIN_USER_ID = 8368838212  # Tumhara User ID yahan dalo
+# YOUR USER ID
+ADMIN_USER_ID = 8368838212
 
-# Flask Server
-def start_flask():
+# PROPER FLASK SERVER FOR RENDER (PORT 10000)
+def run_flask():
     app = Flask(__name__)
     
     @app.route('/')
     def home():
-        return "🤖 Bot Server Running!"
+        return "🤖 24/7 Bot Server Running - No Sleep!"
     
     @app.route('/ping')
     def ping():
-        return "🏓 Pong! Bot is alive"
+        return "🏓 Pong! Bot is 24/7 active"
     
-    print("🌐 Flask starting on port 5000...")
-    app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
+    @app.route('/health')
+    def health():
+        return "✅ Bot Health: Perfect - No Sleep"
+    
+    # Auto-ping to keep service alive
+    def keep_alive():
+        while True:
+            try:
+                requests.get("https://userbot-telegram-1.onrender.com/ping", timeout=10)
+                print("🔁 Auto-ping sent to prevent sleep")
+            except:
+                print("⚠️ Auto-ping failed")
+            threading.Event().wait(300)  # Ping every 5 minutes
+    
+    # Start keep-alive in background
+    keep_alive_thread = threading.Thread(target=keep_alive, daemon=True)
+    keep_alive_thread.start()
+    
+    print("🌐 24/7 Flask starting on port 10000...")
+    # RENDER KA DEFAULT PORT 10000 HAI
+    app.run(host='0.0.0.0', port=10000, debug=False, use_reloader=False)
 
-# Start Flask in background
-print("🚀 Starting Flask server...")
-flask_process = multiprocessing.Process(target=start_flask)
+# Start Flask in separate process
+print("🚀 Starting 24/7 Flask server...")
+flask_process = multiprocessing.Process(target=run_flask)
 flask_process.daemon = True
 flask_process.start()
-print("✅ Flask server started!")
+print("✅ 24/7 Flask server started on port 10000!")
 
 # Telegram Bot
 async def start_telegram():
-    print("🔗 Starting Telegram Bot...")
+    print("🔗 Starting 24/7 Telegram Bot...")
     
     try:
         from pyrogram import Client, filters
         
         app = Client(
-            "admin_bot",
+            "24_7_bot",
             api_id=22294121,
             api_hash="0f7fa7216b26e3f52699dc3c5a560d2a",
             session_string="AQFULmkANrpQWKdmd5cy7VgvL2DA9KATYlSUq5PSoJ5K1easAzrA_p5fxgFRVEUyABixgFmrCGtF9x_KvrQUoAWdeQ1dGqYggCnST6nMPBipTv7GIgwU_w1kewukwsWPMUbWdos0VI7CtH1HYwW7wz3VQ2_hvtdwQCDRHsIxpwek3IcSXP-hpt8vz_8Z4NYf8uUiIwZCSJluef3vGSh7TLOfekcrjVcRd_2h59kBuGgV7DzyJxZwx8eyNJOyhpYQnlExnd24CnELB6ZNYObYBH6xnE2Rgo97YGN1WPbd9Ra8oQUx2phHT4KTWZNktzjenv6hM7AH8lyVyRvGtillQOA_Dq23TwAAAAHy0lZEAA"
@@ -55,124 +76,108 @@ async def start_telegram():
         def is_admin(user_id):
             return user_id == ADMIN_USER_ID
         
-        # PUBLIC COMMANDS - Har koi use kar sakta hai
-        @app.on_message(filters.command("ping"))
-        async def ping_handler(client, message: Message):
-            await message.reply("🏓 Pong! Bot is active!")
-        
-        @app.on_message(filters.command("help"))
-        async def help_handler(client, message: Message):
-            help_text = """
-🤖 **Bot Help**
-
-**Public Commands:**
-/ping - Check if bot is alive
-/help - Show this help
-
-**Admin Commands:** (Only bot owner can use)
-/status - Bot status
-/allow <group_id> - Allow group
-/safe @bot - Add safe bot
-/delay @bot - Add delayed bot  
-/remove @bot - Remove bot
-            """
-            await message.reply(help_text)
-        
-        # ADMIN-ONLY COMMANDS - Sirf tum use kar sakte ho
-        @app.on_message(filters.command("status"))
-        async def status_handler(client, message: Message):
+        # COMMAND HANDLER - SIRF ADMIN KE LIYE
+        @app.on_message(filters.command(["ping", "status", "allow", "safe", "delay", "remove", "help"]))
+        async def command_handler(client, message: Message):
+            # Agar normal user hai toh COMPLETELY IGNORE
             if not is_admin(message.from_user.id):
-                await message.reply("❌ This command is for bot owner only!")
-                return
-                
-            me = await app.get_me()
-            safe_list = ", ".join([f"@{bot}" for bot in safe_bots]) if safe_bots else "None"
-            delayed_list = ", ".join([f"@{bot}" for bot in delayed_bots]) if delayed_bots else "None"
-            groups_list = ", ".join(allowed_groups) if allowed_groups else "None"
+                print(f"❌ Command ignored from normal user: {message.from_user.first_name} ({message.from_user.id})")
+                return  # Kuch bhi reply nahi karenge, silently ignore
             
-            status_text = f"""
-🤖 **Admin Bot Status**
+            # Sirf admin yahan tak pahuchega
+            command = message.command[0]
+            print(f"✅ Admin command: {command} from {message.from_user.first_name}")
+            
+            if command == "ping":
+                await message.reply("🏓 Pong! 24/7 Bot Active - No Sleep!")
+            
+            elif command == "status":
+                me = await app.get_me()
+                safe_list = ", ".join([f"@{bot}" for bot in safe_bots]) if safe_bots else "None"
+                delayed_list = ", ".join([f"@{bot}" for bot in delayed_bots]) if delayed_bots else "None"
+                groups_list = ", ".join(allowed_groups) if allowed_groups else "None"
+                
+                status_text = f"""
+🤖 **24/7 Bot Status - NO SLEEP**
 ├─ **Owner:** {me.first_name}
 ├─ **ID:** `{me.id}`
 ├─ **Allowed Groups:** {groups_list}
 ├─ **Safe Bots:** {safe_list}
 ├─ **Delayed Bots:** {delayed_list}
+├─ **Status:** 🟢 24/7 ACTIVE
+└─ **Sleep:** ❌ NEVER
 
-**Commands working perfectly!** ✅
-            """
-            await message.reply(status_text)
-            print("✅ Status command executed by admin")
-        
-        @app.on_message(filters.command("allow"))
-        async def allow_handler(client, message: Message):
-            if not is_admin(message.from_user.id):
-                await message.reply("❌ This command is for bot owner only!")
-                return
-                
-            if len(message.command) > 1:
-                group_id = message.command[1]
-                allowed_groups.add(group_id)
-                await message.reply(f"✅ Group `{group_id}` allowed!")
-                print(f"✅ Group added by admin: {group_id}")
-            else:
-                await message.reply("❌ Usage: /allow <group_id>")
-        
-        @app.on_message(filters.command("safe"))
-        async def safe_handler(client, message: Message):
-            if not is_admin(message.from_user.id):
-                await message.reply("❌ This command is for bot owner only!")
-                return
-                
-            if len(message.command) > 1:
-                bot_username = message.command[1].replace('@', '').lower()
-                safe_bots.add(bot_username)
-                if bot_username in delayed_bots:
-                    delayed_bots.remove(bot_username)
-                await message.reply(f"✅ @{bot_username} added to safe list!")
-                print(f"✅ Safe bot added by admin: {bot_username}")
-            else:
-                await message.reply("❌ Usage: /safe @botusername")
-        
-        @app.on_message(filters.command("delay"))
-        async def delay_handler(client, message: Message):
-            if not is_admin(message.from_user.id):
-                await message.reply("❌ This command is for bot owner only!")
-                return
-                
-            if len(message.command) > 1:
-                bot_username = message.command[1].replace('@', '').lower()
-                delayed_bots.add(bot_username)
-                if bot_username in safe_bots:
-                    safe_bots.remove(bot_username)
-                await message.reply(f"⏰ @{bot_username} added to delayed list!")
-                print(f"✅ Delayed bot added by admin: {bot_username}")
-            else:
-                await message.reply("❌ Usage: /delay @botusername")
-        
-        @app.on_message(filters.command("remove"))
-        async def remove_handler(client, message: Message):
-            if not is_admin(message.from_user.id):
-                await message.reply("❌ This command is for bot owner only!")
-                return
-                
-            if len(message.command) > 1:
-                bot_username = message.command[1].replace('@', '').lower()
-                removed_from = []
-                
-                if bot_username in safe_bots:
-                    safe_bots.remove(bot_username)
-                    removed_from.append('safe')
-                
-                if bot_username in delayed_bots:
-                    delayed_bots.remove(bot_username)
-                    removed_from.append('delayed')
-                
-                if removed_from:
-                    await message.reply(f"✅ @{bot_username} removed from: {', '.join(removed_from)}")
+**Bot will never sleep!** 🎉
+                """
+                await message.reply(status_text)
+            
+            elif command == "allow":
+                if len(message.command) > 1:
+                    group_id = message.command[1]
+                    allowed_groups.add(group_id)
+                    await message.reply(f"✅ Group `{group_id}` allowed!")
+                    print(f"✅ Group added by admin: {group_id}")
                 else:
-                    await message.reply(f"❌ @{bot_username} not found in any list!")
-            else:
-                await message.reply("❌ Usage: /remove @botusername")
+                    await message.reply("❌ Usage: /allow <group_id>")
+            
+            elif command == "safe":
+                if len(message.command) > 1:
+                    bot_username = message.command[1].replace('@', '').lower()
+                    safe_bots.add(bot_username)
+                    if bot_username in delayed_bots:
+                        delayed_bots.remove(bot_username)
+                    await message.reply(f"✅ @{bot_username} added to safe list!")
+                    print(f"✅ Safe bot added by admin: {bot_username}")
+                else:
+                    await message.reply("❌ Usage: /safe @botusername")
+            
+            elif command == "delay":
+                if len(message.command) > 1:
+                    bot_username = message.command[1].replace('@', '').lower()
+                    delayed_bots.add(bot_username)
+                    if bot_username in safe_bots:
+                        safe_bots.remove(bot_username)
+                    await message.reply(f"⏰ @{bot_username} added to delayed list!")
+                    print(f"✅ Delayed bot added by admin: {bot_username}")
+                else:
+                    await message.reply("❌ Usage: /delay @botusername")
+            
+            elif command == "remove":
+                if len(message.command) > 1:
+                    bot_username = message.command[1].replace('@', '').lower()
+                    removed_from = []
+                    
+                    if bot_username in safe_bots:
+                        safe_bots.remove(bot_username)
+                        removed_from.append('safe')
+                    
+                    if bot_username in delayed_bots:
+                        delayed_bots.remove(bot_username)
+                        removed_from.append('delayed')
+                    
+                    if removed_from:
+                        await message.reply(f"✅ @{bot_username} removed from: {', '.join(removed_from)}")
+                    else:
+                        await message.reply(f"❌ @{bot_username} not found in any list!")
+                else:
+                    await message.reply("❌ Usage: /remove @botusername")
+            
+            elif command == "help":
+                help_text = """
+🤖 **24/7 Admin Bot Help**
+
+**Available Commands:**
+/status - Bot status
+/allow <group_id> - Allow group
+/safe @bot - Add safe bot
+/delay @bot - Add delayed bot  
+/remove @bot - Remove bot
+/ping - Test bot
+
+**🔒 Normal users are completely ignored!**
+**🕒 Bot will never sleep! 24/7 Active!**
+                """
+                await message.reply(help_text)
         
         # MESSAGE FILTERING (Working as before)
         async def contains_unsafe_bot_mention(client, text):
@@ -259,32 +264,34 @@ async def start_telegram():
             except Exception as e:
                 print(f"❌ Error: {e}")
         
-        print("🚀 Starting Telegram client...")
+        print("🚀 Starting 24/7 Telegram client...")
         await app.start()
         
         me = await app.get_me()
-        print(f"🎉 BOT CONNECTED: {me.first_name} ({me.id})")
+        print(f"🎉 24/7 BOT CONNECTED: {me.first_name} ({me.id})")
         
-        # Send admin info
+        # Send 24/7 confirmation
         try:
             await app.send_message("me", f"""
-✅ **Admin-Only Bot Started!**
+✅ **24/7 Production Bot Started!**
 
-**🔐 Admin Protection Enabled:**
-• Only you (ID: {ADMIN_USER_ID}) can use management commands
-• Others will get "command for owner only" message
-• Public commands: /ping, /help
+**🕒 NO SLEEP GUARANTEE:**
+• Port 10000 - Render compatible
+• Auto-ping every 5 minutes
+• Web service detected properly
+• 24/7 active - Never sleeps
 
-**Bot is ready with admin protection!** 🛡️
+**Normal users completely ignored!**
+**Bot will run permanently!** 🚀
             """)
         except:
             pass
         
-        print("🤖 Admin-Only Bot is now running!")
+        print("🤖 24/7 BOT IS NOW RUNNING - NO SLEEP!")
         
-        # Keep alive
+        # Permanent run
         while True:
-            await asyncio.sleep(10)
+            await asyncio.sleep(60)
             
     except Exception as e:
         print(f"❌ Telegram Error: {e}")
@@ -293,9 +300,9 @@ async def start_telegram():
 
 # Main execution
 async def main():
-    print("🔧 Starting main function...")
+    print("🔧 Starting 24/7 main function...")
     await start_telegram()
 
 if __name__ == "__main__":
-    print("⭐ Admin-Only Bot Starting...")
+    print("⭐ 24/7 BOT STARTING - NO SLEEP...")
     asyncio.run(main())
