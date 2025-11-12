@@ -1,3 +1,14 @@
+# IMGHDR FIX - Python 3.13 Compatibility
+import sys
+import types
+try:
+    import imghdr
+except ImportError:
+    imghdr = types.ModuleType('imghdr')
+    def what(file, h=None): return None
+    imghdr.what = what
+    sys.modules['imghdr'] = imghdr
+
 import os
 import asyncio
 from telethon import TelegramClient, events
