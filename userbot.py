@@ -1,3 +1,14 @@
+# IMGHDR FIX - Add this at the VERY TOP
+import sys
+import types
+try:
+    import imghdr
+except ImportError:
+    imghdr = types.ModuleType('imghdr')
+    def what(file, h=None): return None
+    imghdr.what = what
+    sys.modules['imghdr'] = imghdr
+
 import requests
 import threading
 import time
@@ -245,4 +256,3 @@ async def main():
 if __name__ == '__main__':
     print("🎯 BOT STARTING...")
     asyncio.run(main())
-
