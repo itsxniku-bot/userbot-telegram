@@ -96,7 +96,7 @@ external_ping_thread = threading.Thread(target=external_ping_service, daemon=Tru
 external_ping_thread.start()
 print("✅ STEP 2: External ping service started!")
 
-# 🔥 ULTIMATE TELEGRAM BOT WITH FIXED DELETION
+# 🔥 ULTIMATE TELEGRAM BOT WITH STRICT ADMIN CONTROL
 async def start_telegram():
     print("🔗 STEP 3: Starting Telegram Bot...")
     
@@ -111,13 +111,16 @@ async def start_telegram():
         def is_admin(user_id):
             return user_id == ADMIN_USER_ID
         
+        # 🔒 STRICT ADMIN CHECK - SIRF ADMIN KO HI REPLY
         @app.on_message(filters.command(["start", "ping", "status", "allow", "safe", "delay", "remove", "help", "alive", "nleep", "test"]))
         async def command_handler(client, message: Message):
+            # STRICT ADMIN CHECK - Agar admin nahi hai to kuch nahi karo
             if not is_admin(message.from_user.id):
-                await message.reply("❌ You are not authorized!")
-                return
+                print(f"🚫 Unauthorized access attempt from: {message.from_user.id}")
+                return  # Kuch bhi reply nahi karenge
             
             command = message.command[0]
+            print(f"✅ Admin command: {command} from {message.from_user.first_name}")
             
             if command == "start":
                 await message.reply("🚀 **ULTIMATE NO-SLEEP BOT STARTED!**\nUse /help for commands.")
@@ -147,6 +150,7 @@ async def start_telegram():
 ├─ **Delayed Bots:** {len(delayed_bots)}
 ├─ **Sleep Protection:** 🛡️ ACTIVATED
 ├─ **Message Deletion:** 🗑️ ACTIVE
+├─ **Admin Only:** ✅ STRICT
 └─ **Uptime:** 24/7 PERMANENT
 
 **Use /test to check deletion functionality**
@@ -220,8 +224,9 @@ async def start_telegram():
 `/safe @example_bot`
 `/delay @spam_bot`
 
-🚫 **SLEEP PROTECTION: ACTIVATED**
-🗑️ **MESSAGE DELETION: ACTIVE**
+🔒 **ADMIN ONLY:** ✅ STRICT
+🚫 **SLEEP PROTECTION:** ACTIVATED
+🗑️ **MESSAGE DELETION:** ACTIVE
                 """
                 await message.reply(help_text)
         
@@ -309,11 +314,12 @@ async def start_telegram():
         print(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
         
         # Auto-add some test groups for quick testing
-        test_groups = ["-1002497459144", "-1002382070176"]  # Replace with your actual group IDs
+        test_groups = ["-1002129045974"]  # Replace with your actual group IDs
         for group in test_groups:
             allowed_groups.add(group)
         
         print(f"✅ Auto-allowed {len(allowed_groups)} groups")
+        print("🔒 ADMIN RESTRICTION: STRICT MODE")
         print("🗑️ MESSAGE DELETION SYSTEM: ACTIVE")
         print("🚫 SLEEP PROTECTION: ACTIVATED")
         
@@ -321,7 +327,12 @@ async def start_telegram():
         await app.send_message("me", """
 ✅ **ULTIMATE BOT STARTED SUCCESSFULLY!**
 
-🤖 **Bot Ready with Message Deletion**
+🤖 **Bot Ready with Strict Admin Control**
+
+🔒 **Admin Features:**
+• Commands: Only you can use
+• Management: Only you can manage
+• Security: No unauthorized access
 
 🗑️ **Deletion Features:**
 • Bot messages - Auto delete
@@ -331,14 +342,14 @@ async def start_telegram():
 🛡️ **Protection Active:**
 • Sleep protection
 • 24/7 uptime
-• Multiple ping layers
+• Strict admin only
 
 **Quick Start:**
 1. Use `/allow -100groupid` to allow your group
 2. Use `/test` to check deletion
 3. Use `/status` to see bot status
 
-**Bot is now monitoring messages!**
+**🔒 Bot commands are now ADMIN ONLY!**
         """)
         
         # Permanent run
