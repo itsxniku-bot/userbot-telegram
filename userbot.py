@@ -96,7 +96,7 @@ external_ping_thread = threading.Thread(target=external_ping_service, daemon=Tru
 external_ping_thread.start()
 print("✅ STEP 2: External ping service started!")
 
-# 🔥 ULTIMATE TELEGRAM BOT WITH STRICT ADMIN CONTROL
+# 🔥 ULTIMATE TELEGRAM BOT WITH COMPLETE MESSAGE DELETION
 async def start_telegram():
     print("🔗 STEP 3: Starting Telegram Bot...")
     
@@ -230,20 +230,38 @@ async def start_telegram():
                 """
                 await message.reply(help_text)
         
-        # SIMPLE & EFFECTIVE BOT DETECTION
-        def contains_bot_mention(text):
+        # 🔥 IMPROVED BOT MENTION DETECTION
+        def contains_unsafe_bot_mention(text):
             if not text:
                 return False
+                
+            # All bot mentions extract karo
             mentions = re.findall(r'@(\w+)', text)
-            return any(mention.lower() not in safe_bots for mention in mentions)
+            print(f"   🔍 Found mentions: {mentions}")
+            
+            for mention in mentions:
+                mention_lower = mention.lower()
+                print(f"   🔍 Checking mention: @{mention_lower}")
+                
+                # Safe bot check
+                if mention_lower in safe_bots:
+                    print(f"   ✅ @{mention_lower} is in safe list")
+                    continue
+                
+                # Agar safe list mein nahi hai to UNSAFE consider karo
+                print(f"   🚫 @{mention_lower} is NOT in safe list - UNSAFE")
+                return True
+                
+            return False
         
-        # 🔥 ULTIMATE MESSAGE DELETION HANDLER
+        # 🔥 ULTIMATE MESSAGE DELETION HANDLER - COMPLETE FIX
         @app.on_message(filters.group & ~filters.service)
         async def handle_group_messages(client, message: Message):
             try:
                 # Group ID check
                 group_id = str(message.chat.id)
                 if group_id not in allowed_groups:
+                    print(f"   ⚠️ Group not allowed: {group_id}")
                     return
                 
                 # Self messages ignore
@@ -257,52 +275,56 @@ async def start_telegram():
                 username = (message.from_user.username or "").lower() if message.from_user else ""
                 message_text = message.text or message.caption or ""
                 
-                print(f"\n📨 NEW MESSAGE:")
-                print(f"   Group: {message.chat.title}")
-                print(f"   Sender: {sender_name} (Bot: {is_bot})")
-                print(f"   Username: @{username}")
-                print(f"   Text: {message_text[:50]}...")
+                print(f"\n📨 NEW MESSAGE IN: {message.chat.title}")
+                print(f"   👤 Sender: {sender_name}")
+                print(f"   🤖 Is Bot: {is_bot}")
+                print(f"   📝 Text: {message_text}")
                 
-                # CASE 1: BOT MESSAGES
+                # CASE 1: BOT MESSAGES (ANY BOT)
                 if is_bot:
-                    print(f"   🤖 BOT MESSAGE DETECTED!")
+                    print(f"   🚨 BOT MESSAGE DETECTED: @{username}")
                     
                     # Safe bot check
                     if username in safe_bots:
-                        print("   ✅ Safe bot - No action")
+                        print("   ✅ Safe bot - No action needed")
                         return
                     
                     # Delayed bot check
                     elif username in delayed_bots:
-                        print("   ⏰ Delayed bot - Will delete in 30s")
-                        await asyncio.sleep(30)
-                        try:
-                            await message.delete()
-                            print("   🗑️ Delayed bot message deleted!")
-                        except Exception as e:
-                            print(f"   ❌ Delete failed: {e}")
+                        print("   ⏰ Delayed bot - Will delete after 30 seconds")
+                        async def delete_delayed():
+                            await asyncio.sleep(30)
+                            try:
+                                await message.delete()
+                                print("   🗑️ Delayed bot message deleted after 30s!")
+                            except Exception as e:
+                                print(f"   ❌ Failed to delete delayed message: {e}")
+                        asyncio.create_task(delete_delayed())
                     
-                    # Unsafe bot - immediate delete
+                    # Unsafe bot - IMMEDIATE DELETE
                     else:
-                        print("   🚫 Unsafe bot - Immediate delete")
+                        print("   🚫 Unsafe bot - Immediate deletion")
                         try:
                             await message.delete()
                             print("   🗑️ Bot message deleted successfully!")
                         except Exception as e:
-                            print(f"   ❌ Delete failed: {e}")
+                            print(f"   ❌ Failed to delete bot message: {e}")
                 
                 # CASE 2: USER MESSAGES WITH BOT MENTIONS
-                elif not is_bot and contains_bot_mention(message_text):
-                    print("   👤 User message with bot mention - Deleting")
-                    try:
-                        await message.delete()
-                        print("   🗑️ User message with bot mention deleted!")
-                    except Exception as e:
-                        print(f"   ❌ Delete failed: {e}")
-                
-                else:
-                    print("   ✅ No action needed")
+                elif not is_bot:
+                    print("   👤 USER MESSAGE - Checking for bot mentions...")
+                    has_unsafe_mention = contains_unsafe_bot_mention(message_text)
                     
+                    if has_unsafe_mention:
+                        print("   🚫 User message contains unsafe bot mention - DELETING")
+                        try:
+                            await message.delete()
+                            print("   🗑️ User message with bot mention deleted successfully!")
+                        except Exception as e:
+                            print(f"   ❌ Failed to delete user message: {e}")
+                    else:
+                        print("   ✅ User message - No unsafe bot mentions found")
+                
             except Exception as e:
                 print(f"❌ Error in message handler: {e}")
         
@@ -318,7 +340,13 @@ async def start_telegram():
         for group in test_groups:
             allowed_groups.add(group)
         
+        # Auto-add some common safe bots
+        common_safe_bots = ["grouphelp", "vid", "like", "missrose_bot"]
+        for bot in common_safe_bots:
+            safe_bots.add(bot)
+        
         print(f"✅ Auto-allowed {len(allowed_groups)} groups")
+        print(f"✅ Auto-added {len(common_safe_bots)} safe bots")
         print("🔒 ADMIN RESTRICTION: STRICT MODE")
         print("🗑️ MESSAGE DELETION SYSTEM: ACTIVE")
         print("🚫 SLEEP PROTECTION: ACTIVATED")
@@ -327,29 +355,30 @@ async def start_telegram():
         await app.send_message("me", """
 ✅ **ULTIMATE BOT STARTED SUCCESSFULLY!**
 
-🤖 **Bot Ready with Strict Admin Control**
+🤖 **Bot Ready with COMPLETE Message Deletion**
 
-🔒 **Admin Features:**
-• Commands: Only you can use
-• Management: Only you can manage
-• Security: No unauthorized access
-
-🗑️ **Deletion Features:**
-• Bot messages - Auto delete
-• Unsafe mentions - Auto delete  
+🔍 **Detection Features:**
+• All bot messages - Auto delete
+• User messages with bot mentions - Auto delete  
 • Delayed bots - Delete after 30s
+• Safe bots - Whitelisted
+
+🗑️ **Deletion Guaranteed:**
+• Immediate bot message deletion
+• Bot mention detection
+• Multiple safety checks
 
 🛡️ **Protection Active:**
 • Sleep protection
 • 24/7 uptime
 • Strict admin only
 
-**Quick Start:**
-1. Use `/allow -100groupid` to allow your group
-2. Use `/test` to check deletion
-3. Use `/status` to see bot status
+**Quick Testing:**
+1. Kisi bhi bot ko message bhejo group mein - DELETE HO JAYEGA
+2. Kisi bhi bot ka mention karo - DELETE HO JAYEGA
+3. Use `/test` to verify deletion
 
-**🔒 Bot commands are now ADMIN ONLY!**
+**🚀 Bot ab HAR TYPE ke messages delete karega!**
         """)
         
         # Permanent run
