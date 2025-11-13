@@ -318,7 +318,7 @@ async def start_telegram():
         print(f"✅ BOT CONNECTED: {me_obj.first_name} (@{me_obj.username})")
         
         # 🎯 PERMANENT GROUP SETUP
-        allowed_groups.add("-1002129045974")  # Chhota group
+        allowed_groups.add("-1002382070176")  # Chhota group
         allowed_groups.add("-1002497459144")  # Bada group
         
         safe_bots.update(["grouphelp", "vid", "like"])
