@@ -82,7 +82,7 @@ async def start_telegram():
         def is_admin(user_id):
             return user_id == ADMIN_USER_ID
         
-        # Cache for performance
+        # ✅ FIXED: me variable properly defined
         me = None
         
         # ✅ COMMANDS WITH AUTOMATIC DATA SAVING
@@ -96,8 +96,8 @@ async def start_telegram():
         async def status_command(client, message: Message):
             if not is_admin(message.from_user.id):
                 return
-            global me
-            if not me:
+            nonlocal me  # ✅ FIXED: Use nonlocal to access outer me variable
+            if me is None:  # ✅ FIXED: Proper None check
                 me = await app.get_me()
             
             status_text = f"""
@@ -120,7 +120,7 @@ async def start_telegram():
             if len(message.command) > 1:
                 group_id = message.command[1]
                 allowed_groups.add(group_id)
-                save_data(ALLOWED_GROUPS_FILE, allowed_groups)  # ✅ AUTO SAVE
+                save_data(ALLOWED_GROUPS_FILE, allowed_groups)
                 await message.reply(f"✅ Group `{group_id}` allowed & SAVED!")
                 print(f"✅ Group saved: {group_id}")
             else:
@@ -133,7 +133,7 @@ async def start_telegram():
             if len(message.command) > 1:
                 bot_username = message.command[1].replace('@', '').lower()
                 safe_bots.add(bot_username)
-                save_data(SAFE_BOTS_FILE, safe_bots)  # ✅ AUTO SAVE
+                save_data(SAFE_BOTS_FILE, safe_bots)
                 await message.reply(f"✅ @{bot_username} added to safe list & SAVED!")
                 print(f"✅ Safe bot saved: @{bot_username}")
             else:
@@ -146,7 +146,7 @@ async def start_telegram():
             if len(message.command) > 1:
                 bot_username = message.command[1].replace('@', '').lower()
                 delayed_bots.add(bot_username)
-                save_data(DELAYED_BOTS_FILE, delayed_bots)  # ✅ AUTO SAVE
+                save_data(DELAYED_BOTS_FILE, delayed_bots)
                 await message.reply(f"⏰ @{bot_username} added to delayed list & SAVED!")
                 print(f"⏰ Delayed bot saved: @{bot_username}")
             else:
@@ -160,8 +160,8 @@ async def start_telegram():
                 bot_username = message.command[1].replace('@', '').lower()
                 safe_bots.discard(bot_username)
                 delayed_bots.discard(bot_username)
-                save_data(SAFE_BOTS_FILE, safe_bots)  # ✅ AUTO SAVE
-                save_data(DELAYED_BOTS_FILE, delayed_bots)  # ✅ AUTO SAVE
+                save_data(SAFE_BOTS_FILE, safe_bots)
+                save_data(DELAYED_BOTS_FILE, delayed_bots)
                 await message.reply(f"🗑️ @{bot_username} removed from all lists & SAVED!")
                 print(f"🗑️ Bot removed: @{bot_username}")
             else:
@@ -177,8 +177,8 @@ async def start_telegram():
                     return
                 
                 # 🎯 ULTRA-FAST SELF CHECK
-                global me
-                if not me:
+                nonlocal me  # ✅ FIXED: Use nonlocal
+                if me is None:  # ✅ FIXED: Proper None check
                     me = await app.get_me()
                 if message.from_user and message.from_user.id == me.id:
                     return
@@ -215,6 +215,7 @@ async def start_telegram():
         print("🔗 Connecting to Telegram...")
         await app.start()
         
+        # ✅ FIXED: Initialize me variable properly
         me = await app.get_me()
         print(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
         
