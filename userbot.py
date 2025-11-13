@@ -14,7 +14,6 @@ import sys
 # Bot data storage
 allowed_groups = set()
 safe_bots = set()
-delayed_bots = set()
 
 # YOUR USER ID
 ADMIN_USER_ID = 8368838212
@@ -35,45 +34,30 @@ class SleepProtection:
         # Layer 2: External Pings
         self.start_external_pings()
         
-        # Layer 3: Internal Monitor
-        self.start_internal_monitor()
-        
-        print("✅ SLEEP PROTECTION: 3 LAYERS ACTIVATED")
+        print("✅ SLEEP PROTECTION: 2 LAYERS ACTIVATED")
     
     def start_flask(self):
-        """Layer 1: Flask Server with Multiple Endpoints"""
+        """Layer 1: Flask Server"""
         def run_flask():
             app = Flask(__name__)
             
             @app.route('/')
             def home():
                 self.ping_count += 1
-                return f"🤖 BOT ACTIVE - Pings: {self.ping_count}"
+                return "🤖 BOT ACTIVE"
             
             @app.route('/ping')
             def ping():
                 self.ping_count += 1
-                return f"🏓 Pong #{self.ping_count}"
-            
-            @app.route('/health')
-            def health():
-                self.ping_count += 1
-                return "✅ HEALTHY"
-            
-            @app.route('/status')
-            def status():
-                self.ping_count += 1
-                uptime = int(time.time() - self.start_time)
-                return f"🟢 UPTIME: {uptime}s"
+                return "🏓 Pong"
             
             # Auto-ping every 1 minute
             def auto_ping():
                 while True:
                     try:
                         requests.get("http://localhost:10000/ping", timeout=5)
-                        print(f"🔁 Auto-Ping #{self.ping_count}")
                     except:
-                        print("⚠️ Ping failed")
+                        pass
                     time.sleep(60)
             
             threading.Thread(target=auto_ping, daemon=True).start()
@@ -88,46 +72,26 @@ class SleepProtection:
         def external_pinger():
             urls = [
                 "https://userbot-telegram-1.onrender.com/",
-                "https://userbot-telegram-1.onrender.com/ping",
-                "https://userbot-telegram-1.onrender.com/health"
+                "https://userbot-telegram-1.onrender.com/ping"
             ]
             
-            cycle = 0
             while True:
-                cycle += 1
-                print(f"🌐 External Ping Cycle #{cycle}")
-                
                 for url in urls:
                     try:
-                        response = requests.get(url, timeout=10)
-                        print(f"   ✅ {url} - {response.status_code}")
-                    except Exception as e:
-                        print(f"   ❌ {url} - Failed")
-                
-                time.sleep(120)  # Every 2 minutes
+                        requests.get(url, timeout=10)
+                    except:
+                        pass
+                time.sleep(120)
         
         threading.Thread(target=external_pinger, daemon=True).start()
         print("✅ Layer 2: External Pings RUNNING")
-    
-    def start_internal_monitor(self):
-        """Layer 3: Internal Health Monitor"""
-        def monitor():
-            check_count = 0
-            while True:
-                check_count += 1
-                uptime = int(time.time() - self.start_time)
-                print(f"🏥 Health Check #{check_count} - Uptime: {uptime}s - Total Pings: {self.ping_count}")
-                time.sleep(90)  # Every 1.5 minutes
-        
-        threading.Thread(target=monitor, daemon=True).start()
-        print("✅ Layer 3: Health Monitor RUNNING")
 
 # 🚀 INITIALIZE SLEEP PROTECTION
 print("🛡️ Initializing Sleep Protection System...")
 sleep_protection = SleepProtection()
 sleep_protection.start_protection()
 
-# 🔥 TELEGRAM BOT WITH GUARANTEED MESSAGE DELETION
+# 🔥 TELEGRAM BOT WITH SMART MESSAGE DELETION
 async def start_telegram():
     print("🔗 Starting Telegram Bot...")
     
@@ -143,7 +107,7 @@ async def start_telegram():
             return user_id == ADMIN_USER_ID
         
         # 🔒 ADMIN COMMANDS
-        @app.on_message(filters.command(["start", "ping", "status", "allow", "safe", "remove", "help", "alive", "test", "sleepstatus"]))
+        @app.on_message(filters.command(["start", "status", "allow", "safe", "remove", "test"]))
         async def command_handler(client, message: Message):
             if not is_admin(message.from_user.id):
                 return
@@ -151,53 +115,24 @@ async def start_telegram():
             command = message.command[0]
             
             if command == "start":
-                await message.reply("🚀 **ULTIMATE BOT STARTED!**")
-            
-            elif command == "ping":
-                sleep_protection.ping_count += 1
-                await message.reply(f"🏓 **Pong!**\nTotal Pings: {sleep_protection.ping_count}")
-            
-            elif command == "alive":
-                await message.reply("🟢 **BOT ZINDA HAI!**\n24/7 Active")
-            
-            elif command == "sleepstatus":
-                uptime = int(time.time() - sleep_protection.start_time)
-                status_text = f"""
-🛡️ **SLEEP PROTECTION STATUS**
-
-**Layers Active:**
-├─ Flask Server: ✅ PORT 10000
-├─ External Pings: ✅ EVERY 2 MINS
-├─ Health Monitor: ✅ EVERY 1.5 MINS
-└─ Multi-process: ✅ ACTIVE
-
-**Metrics:**
-├─ Total Pings: {sleep_protection.ping_count}
-├─ Uptime: {uptime} seconds
-├─ Groups: {len(allowed_groups)}
-└─ Safe Bots: {len(safe_bots)}
-
-**🚫 SLEEP: IMPOSSIBLE**
-                """
-                await message.reply(status_text)
+                await message.reply("🚀 **BOT STARTED!**")
             
             elif command == "status":
                 me = await app.get_me()
-                uptime = int(time.time() - sleep_protection.start_time)
                 status_text = f"""
 🤖 **BOT STATUS**
-
-**System:**
-├─ Name: {me.first_name}
-├─ Groups: {len(allowed_groups)}
-├─ Safe Bots: {len(safe_bots)}
-├─ Uptime: {uptime}s
-└─ Pings: {sleep_protection.ping_count}
 
 **Features:**
 ├─ Message Deletion: 🗑️ ACTIVE
 ├─ Sleep Protection: 🛡️ ACTIVE
-└─ Admin Only: ✅ STRICT
+├─ Groups: {len(allowed_groups)}
+└─ Safe Bots: {len(safe_bots)}
+
+**Deletion Rules:**
+• Bot messages → DELETE
+• User messages with @bot mentions → DELETE
+• User messages with @user mentions → ❌ NOT DELETE
+• Normal user messages → ❌ NOT DELETE
                 """
                 await message.reply(status_text)
             
@@ -206,30 +141,20 @@ async def start_telegram():
                     group_id = message.command[1]
                     allowed_groups.add(group_id)
                     await message.reply(f"✅ Group `{group_id}` allowed!")
-                    print(f"✅ Group added: {group_id}")
             
             elif command == "safe":
                 if len(message.command) > 1:
                     bot_username = message.command[1].replace('@', '').lower()
                     safe_bots.add(bot_username)
                     await message.reply(f"✅ @{bot_username} added to safe list!")
-                    print(f"✅ Safe bot: @{bot_username}")
-            
-            elif command == "remove":
-                if len(message.command) > 1:
-                    bot_username = message.command[1].replace('@', '').lower()
-                    safe_bots.discard(bot_username)
-                    await message.reply(f"🗑️ @{bot_username} removed!")
-                    print(f"🗑️ Removed: @{bot_username}")
             
             elif command == "test":
-                # Test deletion
-                test_msg = await message.reply("🧪 Testing deletion in 3 seconds...")
+                test_msg = await message.reply("🧪 Testing...")
                 await asyncio.sleep(3)
                 await test_msg.delete()
-                await message.reply("✅ Deletion test PASSED!")
+                await message.reply("✅ Test passed!")
         
-        # 🗑️ GUARANTEED MESSAGE DELETION SYSTEM
+        # 🗑️ SMART MESSAGE DELETION SYSTEM
         @app.on_message(filters.group)
         async def handle_messages(client, message: Message):
             try:
@@ -249,11 +174,11 @@ async def start_telegram():
                 message_text = message.text or message.caption or ""
                 
                 print(f"\n📨 Message in {message.chat.title}:")
-                print(f"   From: {message.from_user.first_name if message.from_user else 'Unknown'}")
-                print(f"   Bot: {is_bot}, Username: @{username}")
-                print(f"   Text: {message_text[:100]}...")
+                print(f"   From: {message.from_user.first_name}")
+                print(f"   Is Bot: {is_bot}")
+                print(f"   Text: {message_text}")
                 
-                # 🗑️ CASE 1: DELETE ALL BOT MESSAGES
+                # 🗑️ CASE 1: DELETE BOT MESSAGES
                 if is_bot:
                     print(f"   🤖 BOT MESSAGE DETECTED")
                     
@@ -265,13 +190,13 @@ async def start_telegram():
                     # DELETE BOT MESSAGE
                     try:
                         await message.delete()
-                        print("   🗑️ Bot message DELETED successfully!")
+                        print("   🗑️ Bot message DELETED!")
                         return
                     except Exception as e:
                         print(f"   ❌ Delete failed: {e}")
                         return
                 
-                # 🗑️ CASE 2: DELETE USER MESSAGES WITH BOT MENTIONS
+                # 🗑️ CASE 2: CHECK FOR BOT MENTIONS IN USER MESSAGES
                 if message_text:
                     # Find all @mentions
                     mentions = re.findall(r'@(\w+)', message_text)
@@ -282,18 +207,41 @@ async def start_telegram():
                         for mention in mentions:
                             mention_lower = mention.lower()
                             
-                            # If mentioned bot is NOT safe, DELETE message
-                            if mention_lower not in safe_bots:
-                                print(f"   🚫 Unsafe mention: @{mention_lower}")
-                                try:
-                                    await message.delete()
-                                    print("   🗑️ User message with bot mention DELETED!")
-                                    return
-                                except Exception as e:
-                                    print(f"   ❌ Delete failed: {e}")
-                                    return
+                            # 🚨 CRITICAL CHECK: Only delete if mentioned username is a BOT
+                            # Normal user mentions will NOT be deleted
+                            try:
+                                # Try to get user info to check if it's a bot
+                                user = await client.get_users(mention)
+                                if user.is_bot:
+                                    # Mentioned user is a BOT - DELETE message
+                                    if mention_lower not in safe_bots:
+                                        print(f"   🚫 Bot mention detected: @{mention_lower}")
+                                        try:
+                                            await message.delete()
+                                            print("   🗑️ User message with bot mention DELETED!")
+                                            return
+                                        except Exception as e:
+                                            print(f"   ❌ Delete failed: {e}")
+                                            return
+                                    else:
+                                        print(f"   ✅ Safe bot mention: @{mention_lower}")
+                                else:
+                                    # Mentioned user is a NORMAL USER - DON'T DELETE
+                                    print(f"   👤 Normal user mention: @{mention_lower} - NO DELETE")
+                                    
+                            except Exception as e:
+                                # If we can't get user info, assume it's unsafe and delete
+                                print(f"   ⚠️ Could not verify @{mention_lower}, deleting for safety")
+                                if mention_lower not in safe_bots:
+                                    try:
+                                        await message.delete()
+                                        print("   🗑️ Message with unverified mention DELETED!")
+                                        return
+                                    except Exception as e:
+                                        print(f"   ❌ Delete failed: {e}")
+                                        return
                 
-                print("   ✅ No action needed")
+                print("   ✅ No deletion needed - Normal user message")
                 
             except Exception as e:
                 print(f"❌ Error in message handler: {e}")
@@ -305,38 +253,27 @@ async def start_telegram():
         me = await app.get_me()
         print(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
         
-        # 🎯 AUTO CONFIGURATION FOR INSTANT WORKING
-        # Add your group ID here
-        allowed_groups.add("-1002129045974")
-        
-        # Add common safe bots
-        safe_bots.update(["grouphelp", "vid", "like", "missrose_bot"])
+        # 🎯 AUTO CONFIGURATION
+        allowed_groups.add("-1002129045974")  # Your group ID
+        safe_bots.update(["grouphelp", "vid", "like"])  # Safe bots
         
         print(f"✅ Auto-allowed group: {allowed_groups}")
-        print(f"✅ Auto-safe bots: {safe_bots}")
-        print("🗑️ MESSAGE DELETION: 100% READY")
-        print("🛡️ SLEEP PROTECTION: 100% ACTIVE")
+        print("🗑️ MESSAGE DELETION: READY")
+        print("🛡️ SLEEP PROTECTION: ACTIVE")
         
         # Startup message
         await app.send_message("me", """
-✅ **ULTIMATE BOT STARTED SUCCESSFULLY!**
+✅ **BOT STARTED SUCCESSFULLY!**
 
-🗑️ **MESSAGE DELETION: ACTIVE**
-• All bot messages → DELETE
-• User messages with bot mentions → DELETE
-• Only safe bots are whitelisted
+🗑️ **DELETION RULES:**
+• Bot messages → DELETE
+• Messages with @bot mentions → DELETE  
+• Messages with @user mentions → ❌ NOT DELETE
+• Normal messages → ❌ NOT DELETE
 
-🛡️ **SLEEP PROTECTION: ACTIVE** 
-• 3-layer protection system
-• 24/7 uptime guaranteed
-• Auto-restart if needed
+🛡️ **SLEEP PROTECTION: ACTIVE**
 
-🚀 **READY FOR TESTING:**
-1. Send any bot message in group → WILL DELETE
-2. Mention any bot in user message → WILL DELETE  
-3. Use /sleepstatus for protection info
-
-**BOT AB 100% KAAM KAREGA!** 🎯
+**READY FOR USE!**
         """)
         
         # Permanent run
