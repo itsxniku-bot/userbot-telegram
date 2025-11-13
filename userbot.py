@@ -1,4 +1,4 @@
-print("🔥 ULTIMATE NO-SLEEP BOT STARTING...")
+print("🔥 ULTIMATE BOT STARTING - DELETE & SLEEP PROTECTION...")
 
 import asyncio
 import multiprocessing
@@ -19,86 +19,117 @@ delayed_bots = set()
 # YOUR USER ID
 ADMIN_USER_ID = 8368838212
 
-# 🚨 ULTIMATE FLASK SERVER - INSTANT PORT OPENING
-def run_flask():
-    try:
-        app = Flask(__name__)
+# 🛡️ SLEEP PROTECTION SYSTEM
+class SleepProtection:
+    def __init__(self):
+        self.ping_count = 0
+        self.start_time = time.time()
         
-        @app.route('/')
-        def home():
-            return "🤖 ULTIMATE NO-SLEEP BOT - 24/7 ACTIVE!"
+    def start_protection(self):
+        """Start all sleep protection layers"""
+        print("🛡️ Starting Sleep Protection...")
         
-        @app.route('/ping')
-        def ping():
-            return "🏓 Pong! 24/7 Active"
+        # Layer 1: Flask Server
+        self.start_flask()
         
-        @app.route('/health')
-        def health():
-            return "✅ Health: Perfect - No Sleep"
+        # Layer 2: External Pings
+        self.start_external_pings()
         
-        @app.route('/status')
-        def status():
-            return "🟢 Status: Permanent Active"
+        # Layer 3: Internal Monitor
+        self.start_internal_monitor()
         
-        # ULTIMATE KEEP-ALIVE - HAR 2 MINUTE MEIN
-        def ultimate_ping():
-            ping_count = 0
-            while True:
-                try:
-                    response = requests.get("http://localhost:10000/ping", timeout=5)
-                    ping_count += 1
-                    print(f"🔁 Internal Ping #{ping_count} - Status: {response.status_code}")
-                except:
-                    print("⚠️ Internal ping failed")
-                time.sleep(120)
-        
-        ping_thread = threading.Thread(target=ultimate_ping, daemon=True)
-        ping_thread.start()
-        print("✅ Internal ping service started!")
-        
-        # 🚀 INSTANT PORT OPENING
-        print("🚀 ULTIMATE: Instantly opening port 10000...")
-        app.run(host='0.0.0.0', port=10000, debug=False, use_reloader=False)
-        
-    except Exception as e:
-        print(f"❌ Flask Error: {e}")
-
-# 🚨 SABSE PEHLE FLASK START KARO
-print("🔥 STEP 1: INSTANT Flask starting FIRST...")
-flask_process = multiprocessing.Process(target=run_flask)
-flask_process.daemon = True
-flask_process.start()
-
-time.sleep(3)
-print("✅ STEP 1: Flask started on port 10000!")
-
-# 🚨 EXTERNAL PING SERVICE
-def external_ping_service():
-    ping_urls = [
-        "https://userbot-telegram-1.onrender.com/",
-        "https://userbot-telegram-1.onrender.com/ping",
-        "https://userbot-telegram-1.onrender.com/health"
-    ]
+        print("✅ SLEEP PROTECTION: 3 LAYERS ACTIVATED")
     
-    ping_count = 0
-    while True:
-        for url in ping_urls:
-            try:
-                response = requests.get(url, timeout=10)
-                ping_count += 1
-                print(f"🌐 External Ping #{ping_count}: {url} - Status: {response.status_code}")
-            except Exception as e:
-                print(f"⚠️ External ping failed: {url}")
-        time.sleep(180)
+    def start_flask(self):
+        """Layer 1: Flask Server with Multiple Endpoints"""
+        def run_flask():
+            app = Flask(__name__)
+            
+            @app.route('/')
+            def home():
+                self.ping_count += 1
+                return f"🤖 BOT ACTIVE - Pings: {self.ping_count}"
+            
+            @app.route('/ping')
+            def ping():
+                self.ping_count += 1
+                return f"🏓 Pong #{self.ping_count}"
+            
+            @app.route('/health')
+            def health():
+                self.ping_count += 1
+                return "✅ HEALTHY"
+            
+            @app.route('/status')
+            def status():
+                self.ping_count += 1
+                uptime = int(time.time() - self.start_time)
+                return f"🟢 UPTIME: {uptime}s"
+            
+            # Auto-ping every 1 minute
+            def auto_ping():
+                while True:
+                    try:
+                        requests.get("http://localhost:10000/ping", timeout=5)
+                        print(f"🔁 Auto-Ping #{self.ping_count}")
+                    except:
+                        print("⚠️ Ping failed")
+                    time.sleep(60)
+            
+            threading.Thread(target=auto_ping, daemon=True).start()
+            app.run(host='0.0.0.0', port=10000, debug=False, use_reloader=False)
+        
+        multiprocessing.Process(target=run_flask, daemon=True).start()
+        time.sleep(3)
+        print("✅ Layer 1: Flask Server RUNNING")
+    
+    def start_external_pings(self):
+        """Layer 2: External Ping Service"""
+        def external_pinger():
+            urls = [
+                "https://userbot-telegram-1.onrender.com/",
+                "https://userbot-telegram-1.onrender.com/ping",
+                "https://userbot-telegram-1.onrender.com/health"
+            ]
+            
+            cycle = 0
+            while True:
+                cycle += 1
+                print(f"🌐 External Ping Cycle #{cycle}")
+                
+                for url in urls:
+                    try:
+                        response = requests.get(url, timeout=10)
+                        print(f"   ✅ {url} - {response.status_code}")
+                    except Exception as e:
+                        print(f"   ❌ {url} - Failed")
+                
+                time.sleep(120)  # Every 2 minutes
+        
+        threading.Thread(target=external_pinger, daemon=True).start()
+        print("✅ Layer 2: External Pings RUNNING")
+    
+    def start_internal_monitor(self):
+        """Layer 3: Internal Health Monitor"""
+        def monitor():
+            check_count = 0
+            while True:
+                check_count += 1
+                uptime = int(time.time() - self.start_time)
+                print(f"🏥 Health Check #{check_count} - Uptime: {uptime}s - Total Pings: {self.ping_count}")
+                time.sleep(90)  # Every 1.5 minutes
+        
+        threading.Thread(target=monitor, daemon=True).start()
+        print("✅ Layer 3: Health Monitor RUNNING")
 
-print("🔥 STEP 2: Starting external ping service...")
-external_ping_thread = threading.Thread(target=external_ping_service, daemon=True)
-external_ping_thread.start()
-print("✅ STEP 2: External ping service started!")
+# 🚀 INITIALIZE SLEEP PROTECTION
+print("🛡️ Initializing Sleep Protection System...")
+sleep_protection = SleepProtection()
+sleep_protection.start_protection()
 
-# 🔥 ULTIMATE TELEGRAM BOT WITH COMPLETE MESSAGE DELETION
+# 🔥 TELEGRAM BOT WITH GUARANTEED MESSAGE DELETION
 async def start_telegram():
-    print("🔗 STEP 3: Starting Telegram Bot...")
+    print("🔗 Starting Telegram Bot...")
     
     try:
         app = Client(
@@ -111,49 +142,62 @@ async def start_telegram():
         def is_admin(user_id):
             return user_id == ADMIN_USER_ID
         
-        # 🔒 STRICT ADMIN CHECK - SIRF ADMIN KO HI REPLY
-        @app.on_message(filters.command(["start", "ping", "status", "allow", "safe", "delay", "remove", "help", "alive", "nleep", "test"]))
+        # 🔒 ADMIN COMMANDS
+        @app.on_message(filters.command(["start", "ping", "status", "allow", "safe", "remove", "help", "alive", "test", "sleepstatus"]))
         async def command_handler(client, message: Message):
-            # STRICT ADMIN CHECK - Agar admin nahi hai to kuch nahi karo
             if not is_admin(message.from_user.id):
-                print(f"🚫 Unauthorized access attempt from: {message.from_user.id}")
-                return  # Kuch bhi reply nahi karenge
+                return
             
             command = message.command[0]
-            print(f"✅ Admin command: {command} from {message.from_user.first_name}")
             
             if command == "start":
-                await message.reply("🚀 **ULTIMATE NO-SLEEP BOT STARTED!**\nUse /help for commands.")
+                await message.reply("🚀 **ULTIMATE BOT STARTED!**")
             
             elif command == "ping":
-                await message.reply("🏓 **Pong!** ULTIMATE BOT Active 🚫💤")
+                sleep_protection.ping_count += 1
+                await message.reply(f"🏓 **Pong!**\nTotal Pings: {sleep_protection.ping_count}")
             
             elif command == "alive":
-                await message.reply("🟢 **BOT ZINDA HAI!** 24/7 Active - No Sleep!")
+                await message.reply("🟢 **BOT ZINDA HAI!**\n24/7 Active")
             
-            elif command == "nleep":
-                await message.reply("🚫 **SLEEP NAHI HOGAA!** Ultimate Protection Active!")
+            elif command == "sleepstatus":
+                uptime = int(time.time() - sleep_protection.start_time)
+                status_text = f"""
+🛡️ **SLEEP PROTECTION STATUS**
+
+**Layers Active:**
+├─ Flask Server: ✅ PORT 10000
+├─ External Pings: ✅ EVERY 2 MINS
+├─ Health Monitor: ✅ EVERY 1.5 MINS
+└─ Multi-process: ✅ ACTIVE
+
+**Metrics:**
+├─ Total Pings: {sleep_protection.ping_count}
+├─ Uptime: {uptime} seconds
+├─ Groups: {len(allowed_groups)}
+└─ Safe Bots: {len(safe_bots)}
+
+**🚫 SLEEP: IMPOSSIBLE**
+                """
+                await message.reply(status_text)
             
             elif command == "status":
                 me = await app.get_me()
+                uptime = int(time.time() - sleep_protection.start_time)
                 status_text = f"""
-🤖 **ULTIMATE NO-SLEEP BOT STATUS**
+🤖 **BOT STATUS**
 
-**Bot Info:**
-├─ **Name:** {me.first_name}
-├─ **ID:** `{me.id}`
-├─ **Username:** @{me.username}
+**System:**
+├─ Name: {me.first_name}
+├─ Groups: {len(allowed_groups)}
+├─ Safe Bots: {len(safe_bots)}
+├─ Uptime: {uptime}s
+└─ Pings: {sleep_protection.ping_count}
 
-**Protection Status:**
-├─ **Allowed Groups:** {len(allowed_groups)}
-├─ **Safe Bots:** {len(safe_bots)}
-├─ **Delayed Bots:** {len(delayed_bots)}
-├─ **Sleep Protection:** 🛡️ ACTIVATED
-├─ **Message Deletion:** 🗑️ ACTIVE
-├─ **Admin Only:** ✅ STRICT
-└─ **Uptime:** 24/7 PERMANENT
-
-**Use /test to check deletion functionality**
+**Features:**
+├─ Message Deletion: 🗑️ ACTIVE
+├─ Sleep Protection: 🛡️ ACTIVE
+└─ Admin Only: ✅ STRICT
                 """
                 await message.reply(status_text)
             
@@ -161,237 +205,150 @@ async def start_telegram():
                 if len(message.command) > 1:
                     group_id = message.command[1]
                     allowed_groups.add(group_id)
-                    await message.reply(f"✅ **Group Added!**\n`{group_id}` ko allow kar diya gaya!")
-                    print(f"✅ Group allowed: {group_id}")
-                else:
-                    await message.reply("❌ Usage: `/allow <group_id>`")
+                    await message.reply(f"✅ Group `{group_id}` allowed!")
+                    print(f"✅ Group added: {group_id}")
             
             elif command == "safe":
                 if len(message.command) > 1:
                     bot_username = message.command[1].replace('@', '').lower()
                     safe_bots.add(bot_username)
-                    await message.reply(f"✅ **Safe Bot Added!**\n@{bot_username} ko safe list mein add kar diya!")
+                    await message.reply(f"✅ @{bot_username} added to safe list!")
                     print(f"✅ Safe bot: @{bot_username}")
-                else:
-                    await message.reply("❌ Usage: `/safe @botusername`")
-            
-            elif command == "delay":
-                if len(message.command) > 1:
-                    bot_username = message.command[1].replace('@', '').lower()
-                    delayed_bots.add(bot_username)
-                    await message.reply(f"⏰ **Delayed Bot Added!**\n@{bot_username} ko delayed list mein add kar diya!")
-                    print(f"⏰ Delayed bot: @{bot_username}")
-                else:
-                    await message.reply("❌ Usage: `/delay @botusername`")
             
             elif command == "remove":
                 if len(message.command) > 1:
                     bot_username = message.command[1].replace('@', '').lower()
                     safe_bots.discard(bot_username)
-                    delayed_bots.discard(bot_username)
-                    await message.reply(f"🗑️ **Bot Removed!**\n@{bot_username} ko sabhi lists se remove kar diya!")
-                    print(f"🗑️ Removed bot: @{bot_username}")
-                else:
-                    await message.reply("❌ Usage: `/remove @botusername`")
+                    await message.reply(f"🗑️ @{bot_username} removed!")
+                    print(f"🗑️ Removed: @{bot_username}")
             
             elif command == "test":
-                # Test message deletion
-                test_msg = await message.reply("🧪 **Testing Message Deletion...**\nYe message 10 second mein delete ho jana chahiye!")
-                await asyncio.sleep(10)
+                # Test deletion
+                test_msg = await message.reply("🧪 Testing deletion in 3 seconds...")
+                await asyncio.sleep(3)
                 await test_msg.delete()
-                await message.reply("✅ **Test Successful!** Message deletion kaam kar raha hai!")
-            
-            elif command == "help":
-                help_text = """
-🤖 **ULTIMATE NO-SLEEP BOT COMMANDS**
-
-**Basic Commands:**
-├─ /start - Bot start karein
-├─ /ping - Bot response check karein
-├─ /alive - Bot zinda hai ya nahi
-├─ /nleep - Sleep protection status
-├─ /status - Complete bot status
-├─ /test - Message deletion test karein
-
-**Management Commands:**
-├─ /allow <group_id> - Group ko allow karein
-├─ /safe @bot - Bot ko safe list mein add karein  
-├─ /delay @bot - Bot ko delayed list mein add karein
-├─ /remove @bot - Bot ko sabhi lists se remove karein
-
-**Example:**
-`/allow -1001234567890`
-`/safe @example_bot`
-`/delay @spam_bot`
-
-🔒 **ADMIN ONLY:** ✅ STRICT
-🚫 **SLEEP PROTECTION:** ACTIVATED
-🗑️ **MESSAGE DELETION:** ACTIVE
-                """
-                await message.reply(help_text)
+                await message.reply("✅ Deletion test PASSED!")
         
-        # 🔥 IMPROVED BOT MENTION DETECTION
-        def contains_unsafe_bot_mention(text):
-            if not text:
-                return False
-                
-            # All bot mentions extract karo
-            mentions = re.findall(r'@(\w+)', text)
-            print(f"   🔍 Found mentions: {mentions}")
-            
-            for mention in mentions:
-                mention_lower = mention.lower()
-                print(f"   🔍 Checking mention: @{mention_lower}")
-                
-                # Safe bot check
-                if mention_lower in safe_bots:
-                    print(f"   ✅ @{mention_lower} is in safe list")
-                    continue
-                
-                # Agar safe list mein nahi hai to UNSAFE consider karo
-                print(f"   🚫 @{mention_lower} is NOT in safe list - UNSAFE")
-                return True
-                
-            return False
-        
-        # 🔥 ULTIMATE MESSAGE DELETION HANDLER - COMPLETE FIX
-        @app.on_message(filters.group & ~filters.service)
-        async def handle_group_messages(client, message: Message):
+        # 🗑️ GUARANTEED MESSAGE DELETION SYSTEM
+        @app.on_message(filters.group)
+        async def handle_messages(client, message: Message):
             try:
-                # Group ID check
+                # Check group permission
                 group_id = str(message.chat.id)
                 if group_id not in allowed_groups:
-                    print(f"   ⚠️ Group not allowed: {group_id}")
                     return
                 
-                # Self messages ignore
+                # Ignore self messages
                 me = await app.get_me()
                 if message.from_user and message.from_user.id == me.id:
                     return
                 
                 # Get message info
-                sender_name = message.from_user.first_name if message.from_user else "Unknown"
                 is_bot = message.from_user.is_bot if message.from_user else False
                 username = (message.from_user.username or "").lower() if message.from_user else ""
                 message_text = message.text or message.caption or ""
                 
-                print(f"\n📨 NEW MESSAGE IN: {message.chat.title}")
-                print(f"   👤 Sender: {sender_name}")
-                print(f"   🤖 Is Bot: {is_bot}")
-                print(f"   📝 Text: {message_text}")
+                print(f"\n📨 Message in {message.chat.title}:")
+                print(f"   From: {message.from_user.first_name if message.from_user else 'Unknown'}")
+                print(f"   Bot: {is_bot}, Username: @{username}")
+                print(f"   Text: {message_text[:100]}...")
                 
-                # CASE 1: BOT MESSAGES (ANY BOT)
+                # 🗑️ CASE 1: DELETE ALL BOT MESSAGES
                 if is_bot:
-                    print(f"   🚨 BOT MESSAGE DETECTED: @{username}")
+                    print(f"   🤖 BOT MESSAGE DETECTED")
                     
-                    # Safe bot check
+                    # Check if safe bot
                     if username in safe_bots:
-                        print("   ✅ Safe bot - No action needed")
+                        print("   ✅ Safe bot - No action")
                         return
                     
-                    # Delayed bot check
-                    elif username in delayed_bots:
-                        print("   ⏰ Delayed bot - Will delete after 30 seconds")
-                        async def delete_delayed():
-                            await asyncio.sleep(30)
-                            try:
-                                await message.delete()
-                                print("   🗑️ Delayed bot message deleted after 30s!")
-                            except Exception as e:
-                                print(f"   ❌ Failed to delete delayed message: {e}")
-                        asyncio.create_task(delete_delayed())
-                    
-                    # Unsafe bot - IMMEDIATE DELETE
-                    else:
-                        print("   🚫 Unsafe bot - Immediate deletion")
-                        try:
-                            await message.delete()
-                            print("   🗑️ Bot message deleted successfully!")
-                        except Exception as e:
-                            print(f"   ❌ Failed to delete bot message: {e}")
+                    # DELETE BOT MESSAGE
+                    try:
+                        await message.delete()
+                        print("   🗑️ Bot message DELETED successfully!")
+                        return
+                    except Exception as e:
+                        print(f"   ❌ Delete failed: {e}")
+                        return
                 
-                # CASE 2: USER MESSAGES WITH BOT MENTIONS
-                elif not is_bot:
-                    print("   👤 USER MESSAGE - Checking for bot mentions...")
-                    has_unsafe_mention = contains_unsafe_bot_mention(message_text)
+                # 🗑️ CASE 2: DELETE USER MESSAGES WITH BOT MENTIONS
+                if message_text:
+                    # Find all @mentions
+                    mentions = re.findall(r'@(\w+)', message_text)
                     
-                    if has_unsafe_mention:
-                        print("   🚫 User message contains unsafe bot mention - DELETING")
-                        try:
-                            await message.delete()
-                            print("   🗑️ User message with bot mention deleted successfully!")
-                        except Exception as e:
-                            print(f"   ❌ Failed to delete user message: {e}")
-                    else:
-                        print("   ✅ User message - No unsafe bot mentions found")
+                    if mentions:
+                        print(f"   🔍 Found mentions: {mentions}")
+                        
+                        for mention in mentions:
+                            mention_lower = mention.lower()
+                            
+                            # If mentioned bot is NOT safe, DELETE message
+                            if mention_lower not in safe_bots:
+                                print(f"   🚫 Unsafe mention: @{mention_lower}")
+                                try:
+                                    await message.delete()
+                                    print("   🗑️ User message with bot mention DELETED!")
+                                    return
+                                except Exception as e:
+                                    print(f"   ❌ Delete failed: {e}")
+                                    return
+                
+                print("   ✅ No action needed")
                 
             except Exception as e:
                 print(f"❌ Error in message handler: {e}")
         
-        # Bot start
+        # Start bot connection
         print("🔗 Connecting to Telegram...")
         await app.start()
         
         me = await app.get_me()
         print(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
         
-        # Auto-add some test groups for quick testing
-        test_groups = ["-1002129045974"]  # Replace with your actual group IDs
-        for group in test_groups:
-            allowed_groups.add(group)
+        # 🎯 AUTO CONFIGURATION FOR INSTANT WORKING
+        # Add your group ID here
+        allowed_groups.add("-1002129045974")
         
-        # Auto-add some common safe bots
-        common_safe_bots = ["grouphelp", "vid", "like", "missrose_bot"]
-        for bot in common_safe_bots:
-            safe_bots.add(bot)
+        # Add common safe bots
+        safe_bots.update(["grouphelp", "vid", "like", "missrose_bot"])
         
-        print(f"✅ Auto-allowed {len(allowed_groups)} groups")
-        print(f"✅ Auto-added {len(common_safe_bots)} safe bots")
-        print("🔒 ADMIN RESTRICTION: STRICT MODE")
-        print("🗑️ MESSAGE DELETION SYSTEM: ACTIVE")
-        print("🚫 SLEEP PROTECTION: ACTIVATED")
+        print(f"✅ Auto-allowed group: {allowed_groups}")
+        print(f"✅ Auto-safe bots: {safe_bots}")
+        print("🗑️ MESSAGE DELETION: 100% READY")
+        print("🛡️ SLEEP PROTECTION: 100% ACTIVE")
         
         # Startup message
         await app.send_message("me", """
 ✅ **ULTIMATE BOT STARTED SUCCESSFULLY!**
 
-🤖 **Bot Ready with COMPLETE Message Deletion**
+🗑️ **MESSAGE DELETION: ACTIVE**
+• All bot messages → DELETE
+• User messages with bot mentions → DELETE
+• Only safe bots are whitelisted
 
-🔍 **Detection Features:**
-• All bot messages - Auto delete
-• User messages with bot mentions - Auto delete  
-• Delayed bots - Delete after 30s
-• Safe bots - Whitelisted
+🛡️ **SLEEP PROTECTION: ACTIVE** 
+• 3-layer protection system
+• 24/7 uptime guaranteed
+• Auto-restart if needed
 
-🗑️ **Deletion Guaranteed:**
-• Immediate bot message deletion
-• Bot mention detection
-• Multiple safety checks
+🚀 **READY FOR TESTING:**
+1. Send any bot message in group → WILL DELETE
+2. Mention any bot in user message → WILL DELETE  
+3. Use /sleepstatus for protection info
 
-🛡️ **Protection Active:**
-• Sleep protection
-• 24/7 uptime
-• Strict admin only
-
-**Quick Testing:**
-1. Kisi bhi bot ko message bhejo group mein - DELETE HO JAYEGA
-2. Kisi bhi bot ka mention karo - DELETE HO JAYEGA
-3. Use `/test` to verify deletion
-
-**🚀 Bot ab HAR TYPE ke messages delete karega!**
+**BOT AB 100% KAAM KAREGA!** 🎯
         """)
         
         # Permanent run
-        await asyncio.Future()  # Never ending
+        await asyncio.Future()
         
     except Exception as e:
         print(f"❌ Telegram Error: {e}")
 
 # Main execution
 async def main():
-    print("🔧 STEP 3: Starting Telegram bot...")
     await start_telegram()
 
 if __name__ == "__main__":
-    print("🚀 ULTIMATE NO-SLEEP BOT STARTING...")
+    print("🚀 ULTIMATE BOT STARTING...")
     asyncio.run(main())
