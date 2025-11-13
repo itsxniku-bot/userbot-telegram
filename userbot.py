@@ -161,8 +161,8 @@ async def start_telegram():
         print(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
         
         # 🎯 AUTO SETUP - APNE GROUP IDs YAHAN DALDO
-        allowed_groups.add("-1002129045974")  # Your small group
-        # allowed_groups.add("-1001234567890")  # Your large group ID - REPLACE WITH ACTUAL
+        allowed_groups.add("-1002497459144")  # Your small group
+        # allowed_groups.add("-1002382070176")  # Your large group ID - REPLACE WITH ACTUAL
         
         safe_bots.update(["grouphelp", "vid", "like"])
         
