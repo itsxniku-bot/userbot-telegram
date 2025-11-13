@@ -1,4 +1,4 @@
-print("🔥 ULTIMATE BOT STARTING - COMPLETE & FINAL VERSION...")
+print("🔥 ULTIMATE BOT STARTING - SLEEP FIX + ALL COMMANDS...")
 
 import asyncio
 import multiprocessing
@@ -13,7 +13,7 @@ import sys
 import json
 import os
 
-# Bot data storage with file saving
+# Bot data storage
 ALLOWED_GROUPS_FILE = "allowed_groups.json"
 SAFE_BOTS_FILE = "safe_bots.json"
 DELAYED_BOTS_FILE = "delayed_bots.json"
@@ -22,8 +22,7 @@ def load_data(filename, default=set()):
     try:
         if os.path.exists(filename):
             with open(filename, 'r') as f:
-                data = json.load(f)
-                return set(data)
+                return set(json.load(f))
     except:
         pass
     return default
@@ -35,7 +34,7 @@ def save_data(filename, data):
     except:
         pass
 
-# Load saved data
+# Load data
 allowed_groups = load_data(ALLOWED_GROUPS_FILE)
 safe_bots = load_data(SAFE_BOTS_FILE)
 delayed_bots = load_data(DELAYED_BOTS_FILE)
@@ -45,33 +44,77 @@ ADMIN_USER_ID = 8368838212
 
 print(f"✅ Loaded {len(allowed_groups)} groups, {len(safe_bots)} safe bots, {len(delayed_bots)} delayed bots")
 
-# 🛡️ SLEEP PROTECTION
-def run_flask():
-    app = Flask(__name__)
+# 🛡️ ULTIMATE SLEEP PROTECTION
+class SleepProtection:
+    def __init__(self):
+        self.ping_count = 0
+        self.start_time = time.time()
+        
+    def start_protection(self):
+        print("🛡️ Starting Ultimate Sleep Protection...")
+        self.start_flask()
+        self.start_external_pings()
+        print("✅ SLEEP PROTECTION: ACTIVATED")
     
-    @app.route('/')
-    def home():
-        return "🤖 BOT ACTIVE"
+    def start_flask(self):
+        def run_flask():
+            app = Flask(__name__)
+            
+            @app.route('/')
+            def home():
+                self.ping_count += 1
+                return f"🤖 BOT ACTIVE - Pings: {self.ping_count}"
+            
+            @app.route('/ping')
+            def ping():
+                self.ping_count += 1
+                return "🏓 Pong"
+            
+            @app.route('/health')
+            def health():
+                return "✅ HEALTHY"
+            
+            # Auto-ping every 30 seconds
+            def auto_ping():
+                while True:
+                    try:
+                        requests.get("http://localhost:10000/ping", timeout=5)
+                    except:
+                        pass
+                    time.sleep(30)
+            
+            threading.Thread(target=auto_ping, daemon=True).start()
+            app.run(host='0.0.0.0', port=10000, debug=False, use_reloader=False)
+        
+        multiprocessing.Process(target=run_flask, daemon=True).start()
+        time.sleep(3)
+        print("✅ Flask Server: RUNNING")
     
-    @app.route('/ping')
-    def ping():
-        return "🏓 Pong"
-    
-    @app.route('/health')
-    def health():
-        return "✅ HEALTHY"
-    
-    app.run(host='0.0.0.0', port=10000, debug=False, use_reloader=False)
+    def start_external_pings(self):
+        def external_pinger():
+            urls = [
+                "https://userbot-telegram-1.onrender.com/",
+                "https://userbot-telegram-1.onrender.com/ping"
+            ]
+            while True:
+                for url in urls:
+                    try:
+                        requests.get(url, timeout=10)
+                    except:
+                        pass
+                time.sleep(60)
+        
+        threading.Thread(target=external_pinger, daemon=True).start()
+        print("✅ External Pings: RUNNING")
 
-print("🔥 Starting Flask...")
-flask_process = multiprocessing.Process(target=run_flask, daemon=True)
-flask_process.start()
-time.sleep(3)
-print("✅ Flask started!")
+# 🚀 INITIALIZE SLEEP PROTECTION
+print("🛡️ Initializing Sleep Protection...")
+sleep_protector = SleepProtection()
+sleep_protector.start_protection()
 
-# 🔥 COMPLETE TELEGRAM BOT WITH ALL FEATURES
+# 🔥 TELEGRAM BOT WITH ALL COMMANDS
 async def start_telegram():
-    print("🔗 Starting Telegram Bot - COMPLETE VERSION...")
+    print("🔗 Starting Telegram Bot - ALL COMMANDS...")
     
     try:
         app = Client(
@@ -86,197 +129,138 @@ async def start_telegram():
         
         me = None
         
-        # ✅ FLOOD PROTECTION
-        last_delete_time = 0
-        delete_count = 0
-        FLOOD_DELAY = 2  # 2 seconds between deletes
-        
-        # ✅ COMPLETE COMMANDS LIST
+        # ✅ ALL COMMANDS
         @app.on_message(filters.command("start"))
         async def start_command(client, message: Message):
-            if not is_admin(message.from_user.id):
-                return
-            await message.reply("🚀 **ULTIMATE BOT STARTED!**\nUse /help for all commands")
+            if not is_admin(message.from_user.id): return
+            await message.reply("🚀 **ULTIMATE BOT STARTED!**\nUse /help for commands")
         
         @app.on_message(filters.command("help"))
         async def help_command(client, message: Message):
-            if not is_admin(message.from_user.id):
-                return
-            
+            if not is_admin(message.from_user.id): return
             help_text = """
 🤖 **ULTIMATE BOT - ALL COMMANDS**
 
-**Basic Commands:**
+**Basic:**
 ├─ /start - Start bot
-├─ /help - Show this help
-├─ /ping - Test bot response
-├─ /alive - Check if bot is alive
+├─ /help - This help
+├─ /ping - Test response
+├─ /alive - Check alive
 ├─ /status - Bot status
 
-**Group Management:**
+**Management:**
 ├─ /allow <group_id> - Allow group
-├─ /safe @bot - Add bot to safe list
-├─ /delay @bot - Add bot to delayed list
-├─ /remove @bot - Remove bot from lists
+├─ /safe @bot - Add safe bot
+├─ /delay @bot - Add delayed bot
+├─ /remove @bot - Remove bot
 
-**Protection & Testing:**
-├─ /sleepstatus - Sleep protection status
-├─ /floodstatus - Flood protection status
-├─ /nleep - Sleep protection check
-├─ /test - Test message deletion
-
-**Examples:**
-`/allow -1001234567890`
-`/safe @grouphelp`
-`/delay @spam_bot`
-`/remove @bot`
+**Protection:**
+├─ /sleepstatus - Sleep protection
+├─ /nleep - Sleep check
+├─ /test - Test deletion
             """
             await message.reply(help_text)
         
         @app.on_message(filters.command("ping"))
         async def ping_command(client, message: Message):
-            if not is_admin(message.from_user.id):
-                return
-            await message.reply("🏓 **Pong!** Bot is active and responding!")
+            if not is_admin(message.from_user.id): return
+            await message.reply("🏓 **Pong!** Bot active")
         
         @app.on_message(filters.command("alive"))
         async def alive_command(client, message: Message):
-            if not is_admin(message.from_user.id):
-                return
-            await message.reply("🟢 **BOT ZINDA HAI!** 24/7 Active with Sleep Protection!")
+            if not is_admin(message.from_user.id): return
+            await message.reply("🟢 **BOT ZINDA HAI!** 24/7 Active")
         
         @app.on_message(filters.command("nleep"))
         async def nleep_command(client, message: Message):
-            if not is_admin(message.from_user.id):
-                return
-            await message.reply("🚫 **SLEEP NAHI HOGAA!** Ultimate Protection Active!")
+            if not is_admin(message.from_user.id): return
+            await message.reply("🚫 **SLEEP NAHI HOGAA!** Protection Active")
         
         @app.on_message(filters.command("status"))
         async def status_command(client, message: Message):
-            if not is_admin(message.from_user.id):
-                return
+            if not is_admin(message.from_user.id): return
             nonlocal me
-            if me is None:
-                me = await app.get_me()
+            if me is None: me = await app.get_me()
             
             status_text = f"""
 🤖 **BOT STATUS**
 
-**Bot Info:**
+**Info:**
 ├─ Name: {me.first_name}
-├─ Username: @{me.username}
-
-**Protection Status:**
 ├─ Groups: {len(allowed_groups)}
 ├─ Safe Bots: {len(safe_bots)}
 ├─ Delayed Bots: {len(delayed_bots)}
-├─ Sleep Protection: 🛡️ ACTIVE
-├─ Flood Protection: 🛡️ ACTIVE
-└─ Message Deletion: 🗑️ WORKING
 
-**Large Groups:**
-├─ -1002129045974 ✅
-├─ -1002497459144 ✅
-└─ Data Save: ✅ AUTOMATIC
+**Protection:**
+├─ Sleep: 🛡️ ACTIVE
+├─ Deletion: 🗑️ ACTIVE
+└─ Data Save: ✅ WORKING
             """
             await message.reply(status_text)
         
         @app.on_message(filters.command("sleepstatus"))
         async def sleepstatus_command(client, message: Message):
-            if not is_admin(message.from_user.id):
-                return
-            uptime = int(time.time() - start_time)
-            await message.reply(f"🛡️ **SLEEP PROTECTION ACTIVE**\nUptime: {uptime}s")
-        
-        @app.on_message(filters.command("floodstatus"))
-        async def floodstatus_command(client, message: Message):
-            if not is_admin(message.from_user.id):
-                return
-            nonlocal last_delete_time, delete_count
-            
-            time_since_last = time.time() - last_delete_time
-            status_text = f"""
-🛡️ **FLOOD PROTECTION STATUS**
-
-**Activity:**
-├─ Last Delete: {time_since_last:.1f}s ago
-├─ Total Deletes: {delete_count}
-├─ Flood Delay: {FLOOD_DELAY}s
-└─ Status: ✅ ACTIVE
-
-**Protection:**
-• Prevents Telegram rate limits
-• Automatic flood wait recovery
-• Stable message deletion
-            """
-            await message.reply(status_text)
+            if not is_admin(message.from_user.id): return
+            uptime = int(time.time() - sleep_protector.start_time)
+            await message.reply(f"🛡️ **SLEEP PROTECTION ACTIVE**\nUptime: {uptime}s | Pings: {sleep_protector.ping_count}")
         
         @app.on_message(filters.command("allow"))
         async def allow_command(client, message: Message):
-            if not is_admin(message.from_user.id):
-                return
+            if not is_admin(message.from_user.id): return
             if len(message.command) > 1:
                 group_id = message.command[1]
                 allowed_groups.add(group_id)
                 save_data(ALLOWED_GROUPS_FILE, allowed_groups)
                 await message.reply(f"✅ Group `{group_id}` allowed & SAVED!")
-                print(f"✅ Group saved: {group_id}")
             else:
                 await message.reply("❌ Usage: `/allow <group_id>`")
         
         @app.on_message(filters.command("safe"))
         async def safe_command(client, message: Message):
-            if not is_admin(message.from_user.id):
-                return
+            if not is_admin(message.from_user.id): return
             if len(message.command) > 1:
                 bot_username = message.command[1].replace('@', '').lower()
                 safe_bots.add(bot_username)
                 save_data(SAFE_BOTS_FILE, safe_bots)
-                await message.reply(f"✅ @{bot_username} added to safe list & SAVED!")
-                print(f"✅ Safe bot saved: @{bot_username}")
+                await message.reply(f"✅ @{bot_username} added to safe list!")
             else:
                 await message.reply("❌ Usage: `/safe @botusername`")
         
         @app.on_message(filters.command("delay"))
         async def delay_command(client, message: Message):
-            if not is_admin(message.from_user.id):
-                return
+            if not is_admin(message.from_user.id): return
             if len(message.command) > 1:
                 bot_username = message.command[1].replace('@', '').lower()
                 delayed_bots.add(bot_username)
                 save_data(DELAYED_BOTS_FILE, delayed_bots)
-                await message.reply(f"⏰ @{bot_username} added to delayed list & SAVED!")
-                print(f"⏰ Delayed bot saved: @{bot_username}")
+                await message.reply(f"⏰ @{bot_username} added to delayed list!")
             else:
                 await message.reply("❌ Usage: `/delay @botusername`")
         
         @app.on_message(filters.command("remove"))
         async def remove_command(client, message: Message):
-            if not is_admin(message.from_user.id):
-                return
+            if not is_admin(message.from_user.id): return
             if len(message.command) > 1:
                 bot_username = message.command[1].replace('@', '').lower()
                 safe_bots.discard(bot_username)
                 delayed_bots.discard(bot_username)
                 save_data(SAFE_BOTS_FILE, safe_bots)
                 save_data(DELAYED_BOTS_FILE, delayed_bots)
-                await message.reply(f"🗑️ @{bot_username} removed from all lists & SAVED!")
-                print(f"🗑️ Bot removed: @{bot_username}")
+                await message.reply(f"🗑️ @{bot_username} removed from all lists!")
             else:
                 await message.reply("❌ Usage: `/remove @botusername`")
         
         @app.on_message(filters.command("test"))
         async def test_command(client, message: Message):
-            if not is_admin(message.from_user.id):
-                return
-            test_msg = await message.reply("🧪 Testing all systems...")
+            if not is_admin(message.from_user.id): return
+            test_msg = await message.reply("🧪 Testing deletion...")
             await asyncio.sleep(2)
             await test_msg.delete()
-            await message.reply("✅ All systems working perfectly!")
+            await message.reply("✅ Test passed! Deletion working")
         
-        # 🚀 COMPLETE MESSAGE HANDLER WITH ALL FEATURES
+        # 🚀 SIMPLE & EFFECTIVE MESSAGE DELETION
         @app.on_message(filters.group)
-        async def complete_message_handler(client, message: Message):
+        async def simple_deletion_handler(client, message: Message):
             try:
                 group_id = str(message.chat.id)
                 if group_id not in allowed_groups:
@@ -284,8 +268,7 @@ async def start_telegram():
                 
                 # Self check
                 nonlocal me
-                if me is None:
-                    me = await app.get_me()
+                if me is None: me = await app.get_me()
                 if message.from_user and message.from_user.id == me.id:
                     return
                 
@@ -294,30 +277,28 @@ async def start_telegram():
                 message_text = message.text or message.caption or ""
                 
                 if is_bot:
+                    print(f"🤖 Bot detected: @{username} in {message.chat.title}")
+                    
                     # Safe bot check
                     if username in safe_bots:
+                        print(f"✅ Safe bot ignored: @{username}")
                         return
                     
-                    # ✅ DELAYED BOT LOGIC
+                    # Delayed bot logic
                     if username in delayed_bots:
-                        # SMART LINK DETECTION
-                        has_links = any(pattern in message_text.lower() for pattern in [
-                            't.me/', 'http://', 'https://', 'www.', '.com', '.org', '.net'
-                        ])
+                        # Check for links/mentions
+                        has_links = any(pattern in message_text.lower() for pattern in ['t.me/', 'http://', 'https://'])
                         has_mentions = '@' in message_text
                         
-                        # INSTANT DELETE FOR LINKS & MENTIONS
                         if has_links or has_mentions:
-                            print(f"🚫 Delayed bot with links/mentions: @{username} - INSTANT DELETE")
+                            print(f"🚫 Delayed bot with links: @{username} - INSTANT DELETE")
                             try:
                                 await message.delete()
                                 print(f"✅ Instant deleted: @{username}")
                             except Exception as e:
                                 print(f"❌ Delete failed: {e}")
-                        
-                        # NORMAL MESSAGES - 30 SECOND DELAY
                         else:
-                            print(f"⏰ Delayed bot normal message: @{username} - 30s delay")
+                            print(f"⏰ Delayed bot normal: @{username} - 30s DELAY")
                             async def delete_after_delay():
                                 await asyncio.sleep(30)
                                 try:
@@ -328,26 +309,20 @@ async def start_telegram():
                             asyncio.create_task(delete_after_delay())
                         return
                     
-                    # 🗑️ OTHER BOTS - FLOOD-PROTECTED DELETE
-                    nonlocal last_delete_time, delete_count
-                    current_time = time.time()
-                    time_since_last = current_time - last_delete_time
-                    
-                    if time_since_last < FLOOD_DELAY:
-                        await asyncio.sleep(FLOOD_DELAY - time_since_last)
-                    
+                    # Other bots - IMMEDIATE DELETE
+                    print(f"🗑️ Unsafe bot: @{username} - IMMEDIATE DELETE")
                     try:
                         await message.delete()
-                        last_delete_time = time.time()
-                        delete_count += 1
-                        print(f"✅ DELETE SUCCESS: @{username} | Count: {delete_count}")
+                        print(f"✅ Deleted: @{username}")
                     except Exception as e:
-                        error_msg = str(e)
-                        print(f"❌ DELETE FAILED: @{username} | Error: {error_msg}")
-                        
-                        if "FLOOD_WAIT" in error_msg:
-                            print("🚫 FLOOD WAIT - Waiting 10 seconds")
-                            await asyncio.sleep(10)
+                        print(f"❌ Delete failed: {e}")
+                        # Retry once
+                        try:
+                            await asyncio.sleep(1)
+                            await message.delete()
+                            print(f"✅ Retry success: @{username}")
+                        except:
+                            print(f"💀 Final delete failed: @{username}")
                 
             except Exception as e:
                 print(f"❌ Handler error: {e}")
@@ -357,10 +332,9 @@ async def start_telegram():
         await app.start()
         
         me = await app.get_me()
-        start_time = time.time()
         print(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
         
-        # 🎯 PERMANENT AUTO-SETUP
+        # 🎯 AUTO SETUP
         allowed_groups.add("-1002129045974")
         allowed_groups.add("-1002497459144")
         save_data(ALLOWED_GROUPS_FILE, allowed_groups)
@@ -368,38 +342,31 @@ async def start_telegram():
         safe_bots.update(["grouphelp", "vid", "like"])
         save_data(SAFE_BOTS_FILE, safe_bots)
         
-        print(f"✅ PERMANENT GROUPS: {allowed_groups}")
-        print("💾 DATA SAVE: AUTOMATIC")
-        print("🛡️ FLOOD PROTECTION: ACTIVE")
+        print(f"✅ Auto-setup: {len(allowed_groups)} groups, {len(safe_bots)} safe bots")
+        print("🛡️ SLEEP PROTECTION: ACTIVE")
         print("🗑️ MESSAGE DELETION: READY")
         
-        # Startup confirmation
+        # Startup message
         await app.send_message("me", """
-✅ **ULTIMATE BOT STARTED - COMPLETE VERSION!**
+✅ **ULTIMATE BOT STARTED!**
 
-🤖 **ALL FEATURES ACTIVE:**
-• Complete Commands Set
-• Automatic Data Saving
-• Flood Protection
-• Sleep Protection
-• Smart Bot Detection
-• Large Group Optimized
+🎯 **FEATURES:**
+• All Commands Working
+• Sleep Protection Active
+• Message Deletion Ready
+• Data Auto Save
 
-🎯 **DELAYED BOTS:**
-• Links/Mentions → INSTANT DELETE
-• Normal Messages → 30s DELAY
+🚀 **READY FOR:**
+• Large Groups (15,000+)
+• Instant Bot Detection
+• Smart Link Detection
 
-🚀 **PERFORMANCE:**
-• 100% Message Deletion
-• No Flood Wait Issues
-• Continuous Operation
-
-**BOT READY WITH ALL FEATURES!** 🔥
+**Use /help for all commands** 🔧
         """)
         
-        print("🤖 BOT READY - Complete Version Active!")
+        print("🤖 BOT READY - All Features Active!")
         
-        # Permanent run
+        # Keep running
         await asyncio.Future()
         
     except Exception as e:
