@@ -183,8 +183,9 @@ async def start_telegram():
             elif command == "remove":
                 if len(message.command) > 1:
                     bot_username = message.command[1].replace('@', '').lower()
-                    # Remove logic
-                    await message.reply(f"✅ @{bot_username} removed!")
+                    safe_bots.discard(bot_username)
+                    delayed_bots.discard(bot_username)
+                    await message.reply(f"✅ @{bot_username} removed from all lists!")
             
             elif command == "help":
                 await message.reply("""
@@ -195,75 +196,103 @@ async def start_telegram():
 /status - Full status
 /alive - Check if alive  
 /nleep - Sleep protection status
-/allow - Allow group
-/safe - Add safe bot
-/delay - Add delayed bot
-/remove - Remove bot
+/allow [group_id] - Allow group
+/safe [@bot] - Add safe bot
+/delay [@bot] - Add delayed bot
+/remove [@bot] - Remove bot
 
 **🚫 SLEEP PROTECTION: ACTIVATED**
                 """)
         
-        # Message filtering (same as before)
-        async def contains_unsafe_bot_mention(client, text):
+        # IMPROVED BOT DETECTION FUNCTION
+        async def contains_unsafe_bot_mention(text):
             if not text:
                 return False
+                
             mentions = re.findall(r'@(\w+)', text)
             for mention in mentions:
                 mention_lower = mention.lower()
+                
+                # Safe bots ko ignore karo
                 if mention_lower in safe_bots:
                     continue
+                    
+                # Delayed bots hain to True return karo
                 if mention_lower in delayed_bots:
                     return True
-                try:
-                    user = await client.get_users(mention)
-                    if user.is_bot and mention_lower not in safe_bots:
-                        return True
-                except:
-                    if mention_lower not in safe_bots:
-                        return True
+                    
+                # Agar safe list mein nahi hai to unsafe maano
+                if mention_lower not in safe_bots:
+                    return True
+                    
             return False
         
+        # IMPROVED MESSAGE HANDLER - BETTER DELETION LOGIC
         @app.on_message(filters.group)
         async def message_handler(client, message: Message):
             try:
                 group_id = str(message.chat.id)
+                
+                # Agar group allowed nahi hai to return
                 if group_id not in allowed_groups:
                     return
                 
+                # Apne message ko ignore karo
                 me = await app.get_me()
                 if message.from_user and message.from_user.id == me.id:
                     return
                 
                 message_text = message.text or message.caption or ""
-                has_unsafe_bot_mention = await contains_unsafe_bot_mention(client, message_text)
                 
-                # Bot messages
+                # DEBUG: Har message print karo
+                print(f"📨 New Message in {message.chat.title}:")
+                print(f"   From: {message.from_user.first_name if message.from_user else 'Unknown'}")
+                print(f"   Text: {message_text[:100]}...")
+                print(f"   Is Bot: {message.from_user.is_bot if message.from_user else False}")
+                
+                # CASE 1: BOT MESSAGES
                 if message.from_user and message.from_user.is_bot:
-                    sender_username = message.from_user.username or ""
-                    if sender_username:
-                        sender_username_lower = sender_username.lower()
-                        if sender_username_lower in safe_bots:
-                            return
-                        elif sender_username_lower in delayed_bots:
-                            if 't.me/' in message_text.lower() or has_unsafe_bot_mention:
-                                await message.delete()
-                            else:
-                                async def delete_after_delay():
-                                    await asyncio.sleep(30)
-                                    try:
-                                        await message.delete()
-                                    except:
-                                        pass
-                                asyncio.create_task(delete_after_delay())
-                        else:
+                    sender_username = (message.from_user.username or "").lower()
+                    print(f"   Bot Username: @{sender_username}")
+                    
+                    # Safe bot check
+                    if sender_username in safe_bots:
+                        print("   ✅ Safe bot - No action")
+                        return
+                    
+                    # Delayed bot check
+                    elif sender_username in delayed_bots:
+                        print("   ⏰ Delayed bot - Checking content...")
+                        if 't.me/' in message_text.lower() or await contains_unsafe_bot_mention(message_text):
+                            print("   🗑️ Deleting delayed bot message (unsafe content)")
                             await message.delete()
+                        else:
+                            print("   ⏰ Delayed bot - Will delete after 30 seconds")
+                            async def delete_after_delay():
+                                await asyncio.sleep(30)
+                                try:
+                                    await message.delete()
+                                    print("   🗑️ Delayed message deleted after 30s")
+                                except Exception as e:
+                                    print(f"   ❌ Failed to delete delayed message: {e}")
+                            asyncio.create_task(delete_after_delay())
+                    
+                    # Unsafe bot - immediate delete
+                    else:
+                        print("   🗑️ Unsafe bot - Immediate delete")
+                        await message.delete()
                 
-                # User messages
-                elif message.from_user and has_unsafe_bot_mention:
-                    await message.delete()
+                # CASE 2: USER MESSAGES WITH BOT MENTIONS
+                elif message.from_user and not message.from_user.is_bot:
+                    has_unsafe_mention = await contains_unsafe_bot_mention(message_text)
+                    if has_unsafe_mention:
+                        print("   🗑️ User message with unsafe bot mention - Deleting")
+                        await message.delete()
+                    else:
+                        print("   ✅ User message - No unsafe mentions")
                         
             except Exception as e:
-                print(f"❌ Error: {e}")
+                print(f"❌ Error in message handler: {e}")
         
         print("🔗 Connecting to Telegram...")
         await app.start()
@@ -286,6 +315,11 @@ async def start_telegram():
 **🚫 SLEEP: IMPOSSIBLE**
 **🕒 24/7: GUARANTEED**
 
+**MESSAGE DELETION: ACTIVE**
+• Bot messages: Auto-delete
+• Unsafe mentions: Auto-delete  
+• Delayed bots: Delete after 30s
+
 Use /nleep to check sleep protection!
             """)
         except:
@@ -293,6 +327,11 @@ Use /nleep to check sleep protection!
         
         print("🤖 ULTIMATE NO-SLEEP BOT RUNNING!")
         print("🚫 SLEEP PROTECTION: ACTIVATED")
+        print("🗑️ MESSAGE DELETION: ACTIVE")
+        
+        # TESTING KE LIYE - Kuch groups ko automatically allow karo
+        print("🔧 Adding test groups to allowed list...")
+        allowed_groups.add("-1002129045974")  # Example group ID
         
         # Permanent run
         while True:
