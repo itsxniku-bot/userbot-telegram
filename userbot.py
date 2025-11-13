@@ -1,4 +1,4 @@
-print("🔥 ULTIMATE BOT STARTING - DATA SAVE FIXED...")
+print("🔥 ULTIMATE BOT STARTING - SPECIFIC GROUP FIX...")
 
 import asyncio
 import multiprocessing
@@ -13,13 +13,12 @@ import sys
 import json
 import os
 
-# Bot data storage - NOW WITH FILE SAVING
+# Bot data storage
 ALLOWED_GROUPS_FILE = "allowed_groups.json"
 SAFE_BOTS_FILE = "safe_bots.json"
 DELAYED_BOTS_FILE = "delayed_bots.json"
 
 def load_data(filename, default=set()):
-    """Load data from file"""
     try:
         if os.path.exists(filename):
             with open(filename, 'r') as f:
@@ -30,7 +29,6 @@ def load_data(filename, default=set()):
     return default
 
 def save_data(filename, data):
-    """Save data to file"""
     try:
         with open(filename, 'w') as f:
             json.dump(list(data), f)
@@ -45,7 +43,7 @@ delayed_bots = load_data(DELAYED_BOTS_FILE)
 # YOUR USER ID
 ADMIN_USER_ID = 8368838212
 
-print(f"✅ Loaded {len(allowed_groups)} groups, {len(safe_bots)} safe bots, {len(delayed_bots)} delayed bots")
+print(f"✅ Loaded {len(allowed_groups)} groups")
 
 # 🛡️ SLEEP PROTECTION
 def run_flask():
@@ -67,9 +65,9 @@ flask_process.start()
 time.sleep(3)
 print("✅ Flask started!")
 
-# 🔥 TELEGRAM BOT WITH DATA SAVING
+# 🔥 TELEGRAM BOT WITH SPECIFIC GROUP DEBUG
 async def start_telegram():
-    print("🔗 Starting Telegram Bot - DATA SAVE FIXED...")
+    print("🔗 Starting Telegram Bot - SPECIFIC GROUP DEBUG...")
     
     try:
         app = Client(
@@ -82,36 +80,36 @@ async def start_telegram():
         def is_admin(user_id):
             return user_id == ADMIN_USER_ID
         
-        # ✅ FIXED: me variable properly defined
         me = None
         
-        # ✅ COMMANDS WITH AUTOMATIC DATA SAVING
+        # ✅ COMMANDS
         @app.on_message(filters.command("start"))
         async def start_command(client, message: Message):
             if not is_admin(message.from_user.id):
                 return
-            await message.reply("🚀 **BOT STARTED!** Data Save Fixed")
+            await message.reply("🚀 **BOT STARTED!** Specific Group Debug")
         
-        @app.on_message(filters.command("status"))
-        async def status_command(client, message: Message):
+        @app.on_message(filters.command("debug"))
+        async def debug_command(client, message: Message):
             if not is_admin(message.from_user.id):
                 return
-            nonlocal me  # ✅ FIXED: Use nonlocal to access outer me variable
-            if me is None:  # ✅ FIXED: Proper None check
-                me = await app.get_me()
             
-            status_text = f"""
-🤖 **BOT STATUS - DATA SAVED**
+            # Test specific group
+            test_group = "-1002497459144"
+            debug_info = f"""
+🔍 **DEBUG INFO - GROUP -1002497459144**
 
-**Groups:** {len(allowed_groups)}
-**Safe Bots:** {len(safe_bots)}  
-**Delayed Bots:** {len(delayed_bots)}
-**Large Group:** {'✅ ADDED' if '-1002497459144' in allowed_groups else '❌ MISSING'}
+**Group in Allowed List:** {'✅ YES' if test_group in allowed_groups else '❌ NO'}
+**Total Allowed Groups:** {len(allowed_groups)}
+**Bot Connected:** {'✅ YES' if me else '❌ NO'}
 
-**Data:** ✅ AUTOMATICALLY SAVED
-**Deletion:** 🗑️ ACTIVE
+**Next Steps:**
+1. Check if bot is ADMIN in group
+2. Check "Delete Messages" permission  
+3. Send bot message in group for test
             """
-            await message.reply(status_text)
+            await message.reply(debug_info)
+            print(f"🔍 DEBUG: Group -1002497459144 in allowed_groups: {test_group in allowed_groups}")
         
         @app.on_message(filters.command("allow"))
         async def allow_command(client, message: Message):
@@ -123,138 +121,94 @@ async def start_telegram():
                 save_data(ALLOWED_GROUPS_FILE, allowed_groups)
                 await message.reply(f"✅ Group `{group_id}` allowed & SAVED!")
                 print(f"✅ Group saved: {group_id}")
-            else:
-                await message.reply("❌ Usage: `/allow <group_id>`")
         
-        @app.on_message(filters.command("safe"))
-        async def safe_command(client, message: Message):
-            if not is_admin(message.from_user.id):
-                return
-            if len(message.command) > 1:
-                bot_username = message.command[1].replace('@', '').lower()
-                safe_bots.add(bot_username)
-                save_data(SAFE_BOTS_FILE, safe_bots)
-                await message.reply(f"✅ @{bot_username} added to safe list & SAVED!")
-                print(f"✅ Safe bot saved: @{bot_username}")
-            else:
-                await message.reply("❌ Usage: `/safe @botusername`")
-        
-        @app.on_message(filters.command("delay"))
-        async def delay_command(client, message: Message):
-            if not is_admin(message.from_user.id):
-                return
-            if len(message.command) > 1:
-                bot_username = message.command[1].replace('@', '').lower()
-                delayed_bots.add(bot_username)
-                save_data(DELAYED_BOTS_FILE, delayed_bots)
-                await message.reply(f"⏰ @{bot_username} added to delayed list & SAVED!")
-                print(f"⏰ Delayed bot saved: @{bot_username}")
-            else:
-                await message.reply("❌ Usage: `/delay @botusername`")
-        
-        @app.on_message(filters.command("remove"))
-        async def remove_command(client, message: Message):
-            if not is_admin(message.from_user.id):
-                return
-            if len(message.command) > 1:
-                bot_username = message.command[1].replace('@', '').lower()
-                safe_bots.discard(bot_username)
-                delayed_bots.discard(bot_username)
-                save_data(SAFE_BOTS_FILE, safe_bots)
-                save_data(DELAYED_BOTS_FILE, delayed_bots)
-                await message.reply(f"🗑️ @{bot_username} removed from all lists & SAVED!")
-                print(f"🗑️ Bot removed: @{bot_username}")
-            else:
-                await message.reply("❌ Usage: `/remove @botusername`")
-        
-        # 🚀 ULTRA-FAST MESSAGE DELETION FOR LARGE GROUPS
+        # 🚀 SPECIFIC GROUP DEBUG HANDLER
         @app.on_message(filters.group)
-        async def guaranteed_deletion_handler(client, message: Message):
+        async def specific_group_debug_handler(client, message: Message):
             try:
-                # 🎯 ULTRA-FAST GROUP CHECK
                 group_id = str(message.chat.id)
+                group_title = message.chat.title
+                
+                print(f"🔍 MESSAGE IN: {group_title} ({group_id})")
+                
+                # SPECIFIC DEBUG FOR PROBLEM GROUP
+                if group_id == "-1002497459144":
+                    print(f"🎯 TARGET GROUP DETECTED: {group_title}")
+                    print(f"   Allowed: {'✅ YES' if group_id in allowed_groups else '❌ NO'}")
+                
                 if group_id not in allowed_groups:
+                    print(f"   ❌ GROUP NOT ALLOWED: {group_title}")
                     return
                 
-                # 🎯 ULTRA-FAST SELF CHECK
-                nonlocal me  # ✅ FIXED: Use nonlocal
-                if me is None:  # ✅ FIXED: Proper None check
+                print(f"   ✅ GROUP ALLOWED: {group_title}")
+                
+                # Self check
+                nonlocal me
+                if me is None:
                     me = await app.get_me()
                 if message.from_user and message.from_user.id == me.id:
                     return
                 
-                # 🎯 MINIMAL PROCESSING - MAXIMUM SPEED
                 is_bot = message.from_user.is_bot if message.from_user else False
+                username = (message.from_user.username or "").lower()
                 
-                # 🗑️ INSTANT BOT DETECTION & DELETION
                 if is_bot:
-                    username = (message.from_user.username or "").lower()
+                    print(f"   🤖 BOT DETECTED: @{username}")
                     
-                    # Quick safe bot check
                     if username in safe_bots:
+                        print(f"   ✅ SAFE BOT IGNORED: @{username}")
                         return
                     
-                    # INSTANT DELETE - No delays for large groups
+                    # DELETE ATTEMPT WITH DETAILED LOGGING
+                    print(f"   🗑️ ATTEMPTING DELETE: @{username} in {group_title}")
                     try:
                         await message.delete()
-                        print(f"🗑️ FAST DELETE: @{username} in {message.chat.title}")
+                        print(f"   ✅ DELETE SUCCESS: @{username} in {group_title}")
                     except Exception as e:
-                        # Silent fail + retry
-                        try:
-                            await asyncio.sleep(1)
-                            await message.delete()
-                            print(f"🗑️ RETRY SUCCESS: @{username}")
-                        except:
-                            print(f"❌ DELETE FAILED: @{username}")
+                        print(f"   ❌ DELETE FAILED: @{username} in {group_title}")
+                        print(f"   ERROR: {e}")
+                        # Permission error check
+                        if "DELETE_MESSAGE" in str(e) or "permission" in str(e).lower():
+                            print(f"   🔒 PERMISSION ERROR: Bot needs 'Delete Messages' admin right")
                 
             except Exception as e:
-                # Silent error handling for large groups
-                pass
+                print(f"❌ Handler error in {message.chat.title if message.chat else 'Unknown'}: {e}")
         
         # ✅ BOT START
         print("🔗 Connecting to Telegram...")
         await app.start()
         
-        # ✅ FIXED: Initialize me variable properly
         me = await app.get_me()
         print(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
         
-        # 🎯 PERMANENT AUTO-SETUP - LARGE GROUP ADDED
-        allowed_groups.add("-1002129045974")  # Chhota group
-        allowed_groups.add("-1002497459144")  # ✅ LARGE GROUP PERMANENT ADDED
+        # 🎯 FORCE ADD PROBLEM GROUP
+        allowed_groups.add("-1002129045974")  # Working group
+        allowed_groups.add("-1002497459144")  # ❌ PROBLEM GROUP - FORCE ADD
         
-        # Auto-save the permanent groups
         save_data(ALLOWED_GROUPS_FILE, allowed_groups)
-        
         safe_bots.update(["grouphelp", "vid", "like"])
         save_data(SAFE_BOTS_FILE, safe_bots)
         
-        print(f"✅ PERMANENT GROUPS: {allowed_groups}")
-        print("💾 DATA SAVE: AUTOMATICALLY WORKING")
-        print("🚀 LARGE GROUP DELETION: GUARANTEED")
+        print(f"✅ GROUPS FORCE ADDED: {allowed_groups}")
+        print("🔍 DEBUG MODE: ACTIVE")
         
-        # ✅ STARTUP CONFIRMATION
-        await app.send_message("me", f"""
-✅ **BOT STARTED - DATA SAVE FIXED!**
+        # Startup confirmation
+        await app.send_message("me", """
+✅ **BOT STARTED - SPECIFIC GROUP DEBUG!**
 
-🎯 **PERMANENT GROUPS:**
-• -1002129045974 (Chhota Group)
-• -1002497459144 (LARGE Group) ✅ ADDED & SAVED
+🎯 **TARGET GROUP: -1002497459144**
+• Force added to allowed list
+• Debug logging active
+• Permission checking enabled
 
-💾 **DATA SAVING:**
-• Groups → ✅ AUTOMATIC SAVE
-• Safe Bots → ✅ AUTOMATIC SAVE  
-• Delayed Bots → ✅ AUTOMATIC SAVE
+🔍 **DEBUG COMMANDS:**
+• /debug - Check group status
+• /allow - Add group manually
 
-🚀 **LARGE GROUP:**
-• Messages → 🗑️ 100% DELETE
-• No skipping → ✅ GUARANTEED
-• Fast processing → ✅ OPTIMIZED
-
-**BOT READY - DATA SAVE FIXED!** 🔥
+**Check console logs for detailed debugging!** 🔧
         """)
         
-        print("🤖 BOT READY - Data Save Fixed + Large Group Optimized!")
+        print("🤖 BOT READY - Specific Group Debug Active!")
         
         # Keep running
         await asyncio.Future()
