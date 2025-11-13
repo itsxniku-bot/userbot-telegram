@@ -1,4 +1,4 @@
-print("🔥 ULTIMATE BOT STARTING - SLEEP FIX + ALL COMMANDS...")
+print("🔥 ULTIMATE BOT STARTING - NO DUPLICATE SAVING...")
 
 import asyncio
 import multiprocessing
@@ -112,9 +112,9 @@ print("🛡️ Initializing Sleep Protection...")
 sleep_protector = SleepProtection()
 sleep_protector.start_protection()
 
-# 🔥 TELEGRAM BOT WITH ALL COMMANDS
+# 🔥 TELEGRAM BOT WITH NO DUPLICATE SAVING
 async def start_telegram():
-    print("🔗 Starting Telegram Bot - ALL COMMANDS...")
+    print("🔗 Starting Telegram Bot - NO DUPLICATE SAVING...")
     
     try:
         app = Client(
@@ -129,7 +129,7 @@ async def start_telegram():
         
         me = None
         
-        # ✅ ALL COMMANDS
+        # ✅ ALL COMMANDS WITH NO DUPLICATE SAVING
         @app.on_message(filters.command("start"))
         async def start_command(client, message: Message):
             if not is_admin(message.from_user.id): return
@@ -194,7 +194,7 @@ async def start_telegram():
 **Protection:**
 ├─ Sleep: 🛡️ ACTIVE
 ├─ Deletion: 🗑️ ACTIVE
-└─ Data Save: ✅ WORKING
+└─ Data Save: ✅ SMART SAVE
             """
             await message.reply(status_text)
         
@@ -209,9 +209,12 @@ async def start_telegram():
             if not is_admin(message.from_user.id): return
             if len(message.command) > 1:
                 group_id = message.command[1]
-                allowed_groups.add(group_id)
-                save_data(ALLOWED_GROUPS_FILE, allowed_groups)
-                await message.reply(f"✅ Group `{group_id}` allowed & SAVED!")
+                if group_id in allowed_groups:
+                    await message.reply(f"ℹ️ Group `{group_id}` already allowed!")
+                else:
+                    allowed_groups.add(group_id)
+                    save_data(ALLOWED_GROUPS_FILE, allowed_groups)
+                    await message.reply(f"✅ Group `{group_id}` allowed & SAVED!")
             else:
                 await message.reply("❌ Usage: `/allow <group_id>`")
         
@@ -220,9 +223,12 @@ async def start_telegram():
             if not is_admin(message.from_user.id): return
             if len(message.command) > 1:
                 bot_username = message.command[1].replace('@', '').lower()
-                safe_bots.add(bot_username)
-                save_data(SAFE_BOTS_FILE, safe_bots)
-                await message.reply(f"✅ @{bot_username} added to safe list!")
+                if bot_username in safe_bots:
+                    await message.reply(f"ℹ️ @{bot_username} already in safe list!")
+                else:
+                    safe_bots.add(bot_username)
+                    save_data(SAFE_BOTS_FILE, safe_bots)
+                    await message.reply(f"✅ @{bot_username} added to safe list!")
             else:
                 await message.reply("❌ Usage: `/safe @botusername`")
         
@@ -231,9 +237,12 @@ async def start_telegram():
             if not is_admin(message.from_user.id): return
             if len(message.command) > 1:
                 bot_username = message.command[1].replace('@', '').lower()
-                delayed_bots.add(bot_username)
-                save_data(DELAYED_BOTS_FILE, delayed_bots)
-                await message.reply(f"⏰ @{bot_username} added to delayed list!")
+                if bot_username in delayed_bots:
+                    await message.reply(f"ℹ️ @{bot_username} already in delayed list!")
+                else:
+                    delayed_bots.add(bot_username)
+                    save_data(DELAYED_BOTS_FILE, delayed_bots)
+                    await message.reply(f"⏰ @{bot_username} added to delayed list!")
             else:
                 await message.reply("❌ Usage: `/delay @botusername`")
         
@@ -242,11 +251,18 @@ async def start_telegram():
             if not is_admin(message.from_user.id): return
             if len(message.command) > 1:
                 bot_username = message.command[1].replace('@', '').lower()
+                was_in_safe = bot_username in safe_bots
+                was_in_delayed = bot_username in delayed_bots
+                
                 safe_bots.discard(bot_username)
                 delayed_bots.discard(bot_username)
-                save_data(SAFE_BOTS_FILE, safe_bots)
-                save_data(DELAYED_BOTS_FILE, delayed_bots)
-                await message.reply(f"🗑️ @{bot_username} removed from all lists!")
+                
+                if was_in_safe or was_in_delayed:
+                    save_data(SAFE_BOTS_FILE, safe_bots)
+                    save_data(DELAYED_BOTS_FILE, delayed_bots)
+                    await message.reply(f"🗑️ @{bot_username} removed from all lists!")
+                else:
+                    await message.reply(f"ℹ️ @{bot_username} not found in any list!")
             else:
                 await message.reply("❌ Usage: `/remove @botusername`")
         
@@ -258,7 +274,7 @@ async def start_telegram():
             await test_msg.delete()
             await message.reply("✅ Test passed! Deletion working")
         
-        # 🚀 SIMPLE & EFFECTIVE MESSAGE DELETION
+        # 🚀 MESSAGE DELETION HANDLER
         @app.on_message(filters.group)
         async def simple_deletion_handler(client, message: Message):
             try:
@@ -334,37 +350,47 @@ async def start_telegram():
         me = await app.get_me()
         print(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
         
-        # 🎯 AUTO SETUP
+        # 🎯 AUTO SETUP - ONLY IF NOT ALREADY EXISTS
+        initial_groups = len(allowed_groups)
+        initial_safe_bots = len(safe_bots)
+        
         allowed_groups.add("-1002129045974")
         allowed_groups.add("-1002497459144")
-        save_data(ALLOWED_GROUPS_FILE, allowed_groups)
-        
         safe_bots.update(["grouphelp", "vid", "like"])
-        save_data(SAFE_BOTS_FILE, safe_bots)
         
-        print(f"✅ Auto-setup: {len(allowed_groups)} groups, {len(safe_bots)} safe bots")
+        # Save only if new data was added
+        if len(allowed_groups) > initial_groups:
+            save_data(ALLOWED_GROUPS_FILE, allowed_groups)
+            print(f"✅ New groups saved: {len(allowed_groups)}")
+        
+        if len(safe_bots) > initial_safe_bots:
+            save_data(SAFE_BOTS_FILE, safe_bots)
+            print(f"✅ New safe bots saved: {len(safe_bots)}")
+        
+        print(f"✅ Final setup: {len(allowed_groups)} groups, {len(safe_bots)} safe bots")
         print("🛡️ SLEEP PROTECTION: ACTIVE")
+        print("💾 SMART SAVE: NO DUPLICATES")
         print("🗑️ MESSAGE DELETION: READY")
         
         # Startup message
         await app.send_message("me", """
 ✅ **ULTIMATE BOT STARTED!**
 
-🎯 **FEATURES:**
+🎯 **SMART FEATURES:**
+• No Duplicate Saving
+• Already Exists Detection
+• Smart Data Management
 • All Commands Working
+
+🚀 **READY FOR ACTION:**
 • Sleep Protection Active
 • Message Deletion Ready
-• Data Auto Save
+• Large Groups Optimized
 
-🚀 **READY FOR:**
-• Large Groups (15,000+)
-• Instant Bot Detection
-• Smart Link Detection
-
-**Use /help for all commands** 🔧
+**Bot ab duplicate data save nahi karega!** 🔧
         """)
         
-        print("🤖 BOT READY - All Features Active!")
+        print("🤖 BOT READY - No Duplicate Saving Active!")
         
         # Keep running
         await asyncio.Future()
