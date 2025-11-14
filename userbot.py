@@ -350,46 +350,62 @@ async def start_telegram():
                 await message.reply("✅ Test passed! Deletion working")
                 print("✅ /test command executed")
         
-        # 🚀 MESSAGE DELETION HANDLER - WORKING VERSION
+        # 🚀 MESSAGE DELETION HANDLER - WORKING VERSION (FIXED)
         @app.on_message(filters.group)
         async def deletion_handler(client, message: Message):
             try:
-                group_id = str(message.chat.id)
-                
-                if group_id not in allowed_groups:
+                # --- FIX #1: GROUP ID MISMATCH FIX ---
+                group_id = str(message.chat.id).strip()
+                allowed_groups_clean = {str(g).strip() for g in allowed_groups}
+
+                if group_id not in allowed_groups_clean:
+                    print(f"❌ Group Not Allowed / ID Mismatch → {group_id}")
                     return
-                
+
                 # Self check
                 nonlocal me
                 if me is None: me = await app.get_me()
                 if message.from_user and message.from_user.id == me.id:
                     return
-                
+
+                # --- FIX #2: BOT PERMISSION CHECK ---
+                try:
+                    chat_member = await app.get_chat_member(message.chat.id, me.id)
+                    # chat_member may not have attributes for permissions in some contexts, guard access
+                    can_delete = getattr(chat_member, "can_delete_messages", None)
+                    status = getattr(chat_member, "status", None)
+                    if not (can_delete or status == "administrator"):
+                        print(f"❌ NO DELETE PERMISSION in group {group_id} (status={status}, can_delete={can_delete})")
+                        return
+                except Exception as e:
+                    print(f"⚠️ Permission check failed for group {group_id}: {e}")
+                    return
+
                 is_bot = message.from_user.is_bot if message.from_user else False
                 username = (message.from_user.username or "").lower()
                 message_text = message.text or message.caption or ""
-                
+
                 if is_bot:
                     print(f"🤖 Bot detected: @{username} in {message.chat.title}")
-                    
+
                     # Safe bot check
                     if username in safe_bots:
                         print(f"✅ Safe bot ignored: @{username}")
                         return
-                    
+
                     # Delayed bot logic
                     if username in delayed_bots:
                         # Check for links/mentions
                         has_links = any(pattern in message_text.lower() for pattern in ['t.me/', 'http://', 'https://'])
                         has_mentions = '@' in message_text
-                        
+
                         if has_links or has_mentions:
                             print(f"🚫 Delayed bot with links: @{username} - INSTANT DELETE")
                             try:
                                 await message.delete()
                                 print(f"✅ Instant deleted: @{username}")
                             except Exception as e:
-                                print(f"❌ Delete failed: {e}")
+                                print(f"❌ Delete failed for @{username}: {e}")
                         else:
                             print(f"⏰ Delayed bot normal: @{username} - 30s DELAY")
                             async def delete_after_delay():
@@ -397,26 +413,27 @@ async def start_telegram():
                                 try:
                                     await message.delete()
                                     print(f"✅ Delayed delete: @{username}")
-                                except:
-                                    pass
+                                except Exception as e:
+                                    print(f"⚠️ Delayed delete failed for @{username}: {e}")
                             asyncio.create_task(delete_after_delay())
                         return
-                    
+
                     # Other bots - IMMEDIATE DELETE
                     print(f"🗑️ Unsafe bot: @{username} - IMMEDIATE DELETE")
                     try:
                         await message.delete()
                         print(f"✅ Deleted: @{username}")
                     except Exception as e:
-                        print(f"❌ Delete failed: {e}")
+                        print(f"❌ Delete failed: {e} -- retrying...")
                         # Retry once
                         try:
                             await asyncio.sleep(1)
                             await message.delete()
                             print(f"✅ Retry success: @{username}")
-                        except:
-                            print(f"💀 Final delete failed: @{username}")
-                
+                        except Exception as e2:
+                            # --- FIX #3: PERMANENT FAILURE LOG ---
+                            print(f"💀 Permanent delete failure in group {group_id} for @{username}: {e2}")
+
             except Exception as e:
                 print(f"❌ Handler error: {e}")
         
