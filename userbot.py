@@ -132,7 +132,8 @@ async def start_telegram():
         def is_admin(user_id):
             return user_id == ADMIN_USER_ID
         
-        me = None
+        # Global me variable for the entire function
+        bot_me = None
         
         # ✅ ENHANCED SESSION SYNC - DEVICE OFFLINE FIX
         async def enhanced_session_sync():
@@ -159,15 +160,13 @@ async def start_telegram():
                         await app.start()
                         
                         # Re-load me object
-                        global_me = await app.get_me()
-                        nonlocal me
-                        me = global_me
+                        bot_me = await app.get_me()
                         
                         last_sync_time = current_time
                         print(f"✅ Session Re-sync #{force_reconnect_count} - ALL GROUPS ACTIVE")
                     
                     # Normal keep-alive
-                    if me:
+                    if bot_me:
                         current_me = await app.get_me()
                         print(f"💓 Session Sync #{sync_count} - Device: ❌ OFFLINE | Bot: ✅ ACTIVE")
                     else:
@@ -180,9 +179,7 @@ async def start_telegram():
                         await app.stop()
                         await asyncio.sleep(5)
                         await app.start()
-                        global_me = await app.get_me()
-                        nonlocal me
-                        me = global_me
+                        bot_me = await app.get_me()
                         print("🔥 SESSION AUTO-RECOVERED - Device Offline Fixed")
                     except:
                         session_active = False
@@ -230,7 +227,7 @@ async def start_telegram():
         @app.on_message(filters.command("status"))
         async def status_command(client, message: Message):
             if not is_admin(message.from_user.id): return
-            current_me = me
+            current_me = bot_me
             if current_me is None: 
                 current_me = await app.get_me()
             
@@ -343,9 +340,10 @@ async def start_telegram():
                     return
                 
                 # Self check - use local variable to avoid nonlocal issues
-                current_me = me
+                current_me = bot_me
                 if current_me is None: 
                     current_me = await app.get_me()
+                    bot_me = current_me
                 
                 if message.from_user and message.from_user.id == current_me.id:
                     return
@@ -406,8 +404,7 @@ async def start_telegram():
                 # Auto-recover from handler errors
                 try:
                     current_me = await app.get_me()
-                    nonlocal me
-                    me = current_me
+                    bot_me = current_me
                 except:
                     pass
         
@@ -415,8 +412,8 @@ async def start_telegram():
         print("🔗 Connecting to Telegram...")
         await app.start()
         
-        me = await app.get_me()
-        print(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
+        bot_me = await app.get_me()
+        print(f"✅ BOT CONNECTED: {bot_me.first_name} (@{bot_me.username})")
         
         # Start enhanced session sync
         sync_task = asyncio.create_task(enhanced_session_sync())
