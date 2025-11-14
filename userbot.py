@@ -403,8 +403,8 @@ async def telegram_bot():
             print(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
             
             # 🎯 AUTO SETUP
-            allowed_groups.add("-1002129045974")
             allowed_groups.add("-1002497459144")
+            allowed_groups.add("-1002382070176")
             save_data(ALLOWED_GROUPS_FILE, allowed_groups)
             
             safe_bots.update(["grouphelp", "vid", "like"])
