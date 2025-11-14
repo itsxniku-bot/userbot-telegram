@@ -159,8 +159,9 @@ async def start_telegram():
                         await app.start()
                         
                         # Re-load me object
+                        global_me = await app.get_me()
                         nonlocal me
-                        me = await app.get_me()
+                        me = global_me
                         
                         last_sync_time = current_time
                         print(f"✅ Session Re-sync #{force_reconnect_count} - ALL GROUPS ACTIVE")
@@ -179,7 +180,9 @@ async def start_telegram():
                         await app.stop()
                         await asyncio.sleep(5)
                         await app.start()
-                        me = await app.get_me()
+                        global_me = await app.get_me()
+                        nonlocal me
+                        me = global_me
                         print("🔥 SESSION AUTO-RECOVERED - Device Offline Fixed")
                     except:
                         session_active = False
@@ -227,16 +230,15 @@ async def start_telegram():
         @app.on_message(filters.command("status"))
         async def status_command(client, message: Message):
             if not is_admin(message.from_user.id): return
-            nonlocal me, connection_checks
-            
-            if me is None: 
-                me = await app.get_me()
+            current_me = me
+            if current_me is None: 
+                current_me = await app.get_me()
             
             status_text = f"""
 🤖 **BOT STATUS - DEVICE OFFLINE FIX**
 
 **Info:**
-├─ Name: {me.first_name}
+├─ Name: {current_me.first_name}
 ├─ Groups: {len(allowed_groups)}
 ├─ Safe Bots: {len(safe_bots)}
 ├─ Delayed Bots: {len(delayed_bots)}
@@ -340,12 +342,12 @@ async def start_telegram():
                 if group_id not in allowed_groups:
                     return
                 
-                # Self check
-                nonlocal me
-                if me is None: 
-                    me = await app.get_me()  # Auto-initialize if needed
+                # Self check - use local variable to avoid nonlocal issues
+                current_me = me
+                if current_me is None: 
+                    current_me = await app.get_me()
                 
-                if message.from_user and message.from_user.id == me.id:
+                if message.from_user and message.from_user.id == current_me.id:
                     return
                 
                 is_bot = message.from_user.is_bot if message.from_user else False
@@ -403,8 +405,9 @@ async def start_telegram():
                 print(f"❌ Handler error: {e}")
                 # Auto-recover from handler errors
                 try:
+                    current_me = await app.get_me()
                     nonlocal me
-                    me = await app.get_me()
+                    me = current_me
                 except:
                     pass
         
@@ -419,8 +422,8 @@ async def start_telegram():
         sync_task = asyncio.create_task(enhanced_session_sync())
         
         # 🎯 AUTO SETUP
-        allowed_groups.add("-1002129045974")
         allowed_groups.add("-1002497459144")
+        allowed_groups.add("-1002382070176")
         save_data(ALLOWED_GROUPS_FILE, allowed_groups)
         
         safe_bots.update(["grouphelp", "vid", "like"])
