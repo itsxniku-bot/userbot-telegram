@@ -128,9 +128,8 @@ async def start_telegram():
             session_string="AQFULmkANrpQWKdmd5cy7VgvL2DA9KATYlSUq5PSoJ5K1easAzrA_p5fxgFRVEUyABixgFmrCGtF9x_KvrQUoAWdeQ1dGqYggCnST6nMPBipTv7GIgwU_w1kewukwsWPMUbWdos0VI7CtH1HYwW7wz3VQ2_hvtdwQCDRHsIxpwek3IcSXP-hpt8vz_8Z4NYf8uUiIwZCSJluef3vGSh7TLOfekcrjVcRd_2h59kBuGgV7DzyJxZwx8eyNJOyhpYQnlExnd24CnELB6ZNYObYBH6xnE2Rgo97YGN1WPbd9Ra8oQUx2phHT4KTWZNktzjenv6hM7AH8lyVyRvGtillQOA_Dq23TwAAAAHy0lZEAA",
             device_model="iPhone 15 Pro Max",  # ✅ ONLINE FEATURE
             system_version="iOS 17.1.2",       # ✅ ONLINE FEATURE  
-            app_version="Telegram 10.5.0",     # ✅ ONLINE FEATURE
-            lang_code="en",
-            system_lang_code="en-US"
+            app_version="Telegram 10.5.0"      # ✅ ONLINE FEATURE
+            # system_lang_code removed - not supported
         )
         
         def is_admin(user_id):
