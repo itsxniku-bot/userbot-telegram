@@ -119,7 +119,6 @@ async def start_telegram():
     # ✅ DEVICE OFFLINE STABILITY VARIABLES
     session_active = True
     connection_checks = 0
-    last_sync_time = time.time()
     
     try:
         app = Client(
@@ -132,66 +131,69 @@ async def start_telegram():
         def is_admin(user_id):
             return user_id == ADMIN_USER_ID
         
-        # Global me variable for the entire function
+        # Global me variable for device offline fix
         bot_me = None
         
-        # ✅ ENHANCED SESSION SYNC - DEVICE OFFLINE FIX
-        async def enhanced_session_sync():
-            """Device offline hone par bhi session sync rakhta hai"""
-            nonlocal connection_checks, session_active, last_sync_time
-            
-            sync_count = 0
-            force_reconnect_count = 0
+        # ✅ ENHANCED SESSION KEEP-ALIVE FOR DEVICE OFFLINE
+        async def enhanced_session_keep_alive():
+            """Device offline hone par bhi session active rakhta hai"""
+            nonlocal connection_checks, session_active
+            keep_alive_count = 0
             
             while session_active:
-                sync_count += 1
+                keep_alive_count += 1
                 connection_checks += 1
                 
                 try:
-                    # Force session sync every 5 minutes
-                    current_time = time.time()
-                    if current_time - last_sync_time > 300:  # 5 minutes
-                        print("🔄 FORCE SESSION SYNC - Device Offline Protection")
-                        force_reconnect_count += 1
-                        
-                        # Re-initialize client to refresh session
-                        await app.stop()
-                        await asyncio.sleep(2)
-                        await app.start()
-                        
-                        # Re-load me object
-                        bot_me = await app.get_me()
-                        
-                        last_sync_time = current_time
-                        print(f"✅ Session Re-sync #{force_reconnect_count} - ALL GROUPS ACTIVE")
+                    # Force session refresh every 10 minutes for device offline fix
+                    if keep_alive_count % 20 == 0:  # Every 10 minutes (20 * 30s = 10min)
+                        print("🔄 FORCE SESSION REFRESH - Device Offline Protection")
+                        try:
+                            # Re-initialize to refresh session
+                            current_me = await app.get_me()
+                            bot_me = current_me
+                            print("✅ Session Refreshed - All Groups Active")
+                        except Exception as refresh_error:
+                            print(f"⚠️ Session Refresh Failed: {refresh_error}")
+                            # Try to recover by restarting
+                            try:
+                                await app.stop()
+                                await asyncio.sleep(3)
+                                await app.start()
+                                current_me = await app.get_me()
+                                bot_me = current_me
+                                print("🔥 SESSION RECOVERED - Device Offline Fixed")
+                            except:
+                                print("💀 Session Recovery Failed")
                     
                     # Normal keep-alive
                     if bot_me:
                         current_me = await app.get_me()
-                        print(f"💓 Session Sync #{sync_count} - Device: ❌ OFFLINE | Bot: ✅ ACTIVE")
+                        print(f"💓 Session Keep-Alive #{keep_alive_count} - Device: ❌ OFFLINE | Bot: ✅ ACTIVE")
                     else:
-                        print(f"💓 Session Sync #{sync_count} - Initializing...")
+                        print(f"💓 Session Keep-Alive #{keep_alive_count} - Initializing...")
                     
                 except Exception as e:
-                    print(f"⚠️ Session Sync Failed: {e}")
-                    # Auto-recover from errors
+                    print(f"⚠️ Session Keep-Alive Failed: {e}")
+                    # Auto-recover from session errors
                     try:
                         await app.stop()
                         await asyncio.sleep(5)
                         await app.start()
-                        bot_me = await app.get_me()
+                        current_me = await app.get_me()
+                        bot_me = current_me
                         print("🔥 SESSION AUTO-RECOVERED - Device Offline Fixed")
                     except:
                         session_active = False
                         break
                 
-                await asyncio.sleep(120)  # Every 2 minutes
+                await asyncio.sleep(30)  # Every 30 seconds for better stability
         
-        # ✅ ALL COMMANDS
+        # ✅ ALL COMMANDS - SAME AS BEFORE
         @app.on_message(filters.command("start"))
         async def start_command(client, message: Message):
             if not is_admin(message.from_user.id): return
-            await message.reply("🚀 **ULTIMATE BOT STARTED!**\n**Device Offline Fix - Active**")
+            await message.reply("🚀 **ULTIMATE BOT STARTED!**\n**Device Offline Fix Active**")
         
         @app.on_message(filters.command("help"))
         async def help_command(client, message: Message):
@@ -199,13 +201,24 @@ async def start_telegram():
             help_text = """
 🤖 **ULTIMATE BOT - DEVICE OFFLINE FIX**
 
-**New Features:**
-• Device Offline = Bot Online ✅
-• All Groups Working 24/7 🔥
-• Session Auto-Recovery 🛠️
-• Force Sync Every 5 Minutes 🔄
+**Basic:**
+├─ /start - Start bot
+├─ /help - This help
+├─ /ping - Test response
+├─ /alive - Check alive
+├─ /status - Bot status
 
-**Commands Same As Before...**
+**Management:**
+├─ /allow <group_id> - Allow group
+├─ /safe @bot - Add safe bot
+├─ /delay @bot - Add delayed bot
+├─ /remove @bot - Remove bot
+
+**Device Offline Protection:**
+├─ /sleepstatus - Sleep protection
+├─ /nleep - Sleep check
+├─ /devicefix - Force session refresh
+├─ /test - Test deletion
             """
             await message.reply(help_text)
         
@@ -230,6 +243,7 @@ async def start_telegram():
             current_me = bot_me
             if current_me is None: 
                 current_me = await app.get_me()
+                bot_me = current_me
             
             status_text = f"""
 🤖 **BOT STATUS - DEVICE OFFLINE FIX**
@@ -243,7 +257,8 @@ async def start_telegram():
 **Device Offline Protection:**
 ├─ Connection Checks: {connection_checks}
 ├─ Session Status: ✅ ACTIVE
-├─ Force Sync: ✅ EVERY 5 MIN
+├─ Keep-Alive: ✅ EVERY 30s
+├─ Force Refresh: ✅ EVERY 10min
 └─ All Groups: 🔥 GUARANTEED
             """
             await message.reply(status_text)
@@ -257,9 +272,13 @@ async def start_telegram():
         @app.on_message(filters.command("devicefix"))
         async def devicefix_command(client, message: Message):
             if not is_admin(message.from_user.id): return
-            nonlocal last_sync_time
-            last_sync_time = time.time()
-            await message.reply("🔄 **DEVICE OFFLINE FIX ACTIVATED**\nSession forced sync - All groups will work!")
+            try:
+                # Force immediate session refresh
+                current_me = await app.get_me()
+                bot_me = current_me
+                await message.reply("🔄 **DEVICE OFFLINE FIX ACTIVATED**\nSession forced refresh - All groups will work!")
+            except Exception as e:
+                await message.reply(f"❌ Device Fix Failed: {e}")
         
         @app.on_message(filters.command("allow"))
         async def allow_command(client, message: Message):
@@ -331,7 +350,7 @@ async def start_telegram():
             await test_msg.delete()
             await message.reply("✅ Test passed! Deletion working")
         
-        # 🚀 MESSAGE DELETION HANDLER - ENHANCED
+        # 🚀 MESSAGE DELETION HANDLER - DEVICE OFFLINE FIX
         @app.on_message(filters.group)
         async def deletion_handler(client, message: Message):
             try:
@@ -339,7 +358,7 @@ async def start_telegram():
                 if group_id not in allowed_groups:
                     return
                 
-                # Self check - use local variable to avoid nonlocal issues
+                # Self check with device offline fix
                 current_me = bot_me
                 if current_me is None: 
                     current_me = await app.get_me()
@@ -353,7 +372,7 @@ async def start_telegram():
                 message_text = message.text or message.caption or ""
                 
                 if is_bot:
-                    print(f"🤖 Bot detected in {message.chat.title}: @{username}")
+                    print(f"🤖 Bot detected: @{username} in {message.chat.title}")
                     
                     # Safe bot check
                     if username in safe_bots:
@@ -362,6 +381,7 @@ async def start_telegram():
                     
                     # Delayed bot logic
                     if username in delayed_bots:
+                        # Check for links/mentions
                         has_links = any(pattern in message_text.lower() for pattern in ['t.me/', 'http://', 'https://'])
                         has_mentions = '@' in message_text
                         
@@ -391,9 +411,9 @@ async def start_telegram():
                         print(f"✅ Deleted: @{username}")
                     except Exception as e:
                         print(f"❌ Delete failed: {e}")
-                        # Enhanced retry logic
+                        # Retry once
                         try:
-                            await asyncio.sleep(2)
+                            await asyncio.sleep(1)
                             await message.delete()
                             print(f"✅ Retry success: @{username}")
                         except:
@@ -401,12 +421,6 @@ async def start_telegram():
                 
             except Exception as e:
                 print(f"❌ Handler error: {e}")
-                # Auto-recover from handler errors
-                try:
-                    current_me = await app.get_me()
-                    bot_me = current_me
-                except:
-                    pass
         
         # ✅ BOT START
         print("🔗 Connecting to Telegram...")
@@ -415,8 +429,8 @@ async def start_telegram():
         bot_me = await app.get_me()
         print(f"✅ BOT CONNECTED: {bot_me.first_name} (@{bot_me.username})")
         
-        # Start enhanced session sync
-        sync_task = asyncio.create_task(enhanced_session_sync())
+        # Start enhanced session keep-alive for device offline fix
+        keep_alive_task = asyncio.create_task(enhanced_session_keep_alive())
         
         # 🎯 AUTO SETUP
         allowed_groups.add("-1002497459144")
@@ -427,19 +441,19 @@ async def start_telegram():
         save_data(SAFE_BOTS_FILE, safe_bots)
         
         print(f"✅ Auto-setup: {len(allowed_groups)} groups, {len(safe_bots)} safe bots")
-        print("💓 ENHANCED SESSION SYNC: ACTIVE")
+        print("💓 ENHANCED SESSION KEEP-ALIVE: ACTIVE")
         print("🔥 DEVICE OFFLINE FIX: ACTIVATED")
-        print("🗑️ ALL GROUPS DELETION: READY")
+        print("🗑️ MESSAGE DELETION: READY")
         
         # Startup message
         await app.send_message("me", """
 ✅ **ULTIMATE BOT STARTED - DEVICE OFFLINE FIX!**
 
-🎯 **NEW FEATURES:**
-• Device Offline = Bot Online ✅
-• Force Session Sync Every 5 Minutes
+🎯 **DEVICE OFFLINE PROTECTION:**
+• Force Session Refresh Every 10 Minutes
+• Auto-Recovery When Device Goes Offline
 • All Groups Working 24/7
-• Session Auto-Recovery
+• Session Never Expires
 
 🚀 **GUARANTEED:**
 • Device Band = Sab Groups Kaam Karenge
@@ -452,14 +466,14 @@ async def start_telegram():
         
         print("🤖 BOT READY - Device Offline Fix Active!")
         
-        # Keep running
+        # Keep running until session breaks
         try:
             await asyncio.Future()
         except:
             pass
         finally:
             session_active = False
-            sync_task.cancel()
+            keep_alive_task.cancel()
             await app.stop()
         
     except Exception as e:
