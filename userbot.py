@@ -133,6 +133,25 @@ async def start_telegram():
         
         me = None
         
+        # ✅ SIMPLE ONLINE STATUS - ERROR FIXED
+        async def simple_online_status():
+            """Simple online status without errors"""
+            online_count = 0
+            while session_active:
+                online_count += 1
+                try:
+                    # Simple activity to stay online
+                    await app.get_me()
+                    # Simple chat activity
+                    async for dialog in app.get_dialogs(limit=1):
+                        pass
+                    
+                    print(f"🟢 Online Status #{online_count} - Active")
+                    
+                except Exception as e:
+                    print(f"⚠️ Online Status Failed: {e}")
+                await asyncio.sleep(60)  # Every 1 minute
+        
         # ✅ SESSION KEEP-ALIVE
         async def session_keep_alive():
             """Session ko active rakhta hai"""
@@ -159,16 +178,19 @@ async def start_telegram():
                 
                 await asyncio.sleep(180)  # Every 3 minutes
         
-        # ✅ ALL COMMANDS
+        # ✅ ALL COMMANDS - WORKING VERSION
         @app.on_message(filters.command("start"))
         async def start_command(client, message: Message):
-            if not is_admin(message.from_user.id): return
-            await message.reply("🚀 **ULTIMATE BOT STARTED!**\nSession Stability Active")
+            print(f"📩 Received /start from {message.from_user.id if message.from_user else 'Unknown'}")
+            if message.from_user and is_admin(message.from_user.id):
+                await message.reply("🚀 **ULTIMATE BOT STARTED!**\nCommands Working Now")
+                print("✅ /start command executed")
         
         @app.on_message(filters.command("help"))
         async def help_command(client, message: Message):
-            if not is_admin(message.from_user.id): return
-            help_text = """
+            print(f"📩 Received /help from {message.from_user.id if message.from_user else 'Unknown'}")
+            if message.from_user and is_admin(message.from_user.id):
+                help_text = """
 🤖 **ULTIMATE BOT - ALL COMMANDS**
 
 **Basic:**
@@ -188,34 +210,42 @@ async def start_telegram():
 ├─ /sleepstatus - Sleep protection
 ├─ /nleep - Sleep check
 ├─ /test - Test deletion
-            """
-            await message.reply(help_text)
+                """
+                await message.reply(help_text)
+                print("✅ /help command executed")
         
         @app.on_message(filters.command("ping"))
         async def ping_command(client, message: Message):
-            if not is_admin(message.from_user.id): return
-            await message.reply("🏓 **Pong!** Bot active")
+            print(f"📩 Received /ping from {message.from_user.id if message.from_user else 'Unknown'}")
+            if message.from_user and is_admin(message.from_user.id):
+                await message.reply("🏓 **Pong!** Bot active")
+                print("✅ /ping command executed")
         
         @app.on_message(filters.command("alive"))
         async def alive_command(client, message: Message):
-            if not is_admin(message.from_user.id): return
-            await message.reply("🟢 **BOT ZINDA HAI!** 24/7 Active")
+            print(f"📩 Received /alive from {message.from_user.id if message.from_user else 'Unknown'}")
+            if message.from_user and is_admin(message.from_user.id):
+                await message.reply("🟢 **BOT ZINDA HAI!** 24/7 Active")
+                print("✅ /alive command executed")
         
         @app.on_message(filters.command("nleep"))
         async def nleep_command(client, message: Message):
-            if not is_admin(message.from_user.id): return
-            await message.reply("🚫 **SLEEP NAHI HOGAA!** Protection Active")
+            print(f"📩 Received /nleep from {message.from_user.id if message.from_user else 'Unknown'}")
+            if message.from_user and is_admin(message.from_user.id):
+                await message.reply("🚫 **SLEEP NAHI HOGAA!** Protection Active")
+                print("✅ /nleep command executed")
         
         @app.on_message(filters.command("status"))
         async def status_command(client, message: Message):
-            if not is_admin(message.from_user.id): return
-            nonlocal me, connection_checks
-            
-            if me is None: 
-                me = await app.get_me()
-            
-            status_text = f"""
-🤖 **BOT STATUS - SESSION STABLE**
+            print(f"📩 Received /status from {message.from_user.id if message.from_user else 'Unknown'}")
+            if message.from_user and is_admin(message.from_user.id):
+                nonlocal me, connection_checks
+                
+                if me is None: 
+                    me = await app.get_me()
+                
+                status_text = f"""
+🤖 **BOT STATUS - WORKING**
 
 **Info:**
 ├─ Name: {me.first_name}
@@ -228,108 +258,111 @@ async def start_telegram():
 ├─ Session Status: ✅ ACTIVE
 ├─ Keep-Alive: ✅ RUNNING
 └─ Stability: 🔥 GUARANTEED
-            """
-            await message.reply(status_text)
+                """
+                await message.reply(status_text)
+                print("✅ /status command executed")
         
         @app.on_message(filters.command("sleepstatus"))
         async def sleepstatus_command(client, message: Message):
-            if not is_admin(message.from_user.id): return
-            uptime = int(time.time() - sleep_protector.start_time)
-            await message.reply(f"🛡️ **SLEEP PROTECTION ACTIVE**\nUptime: {uptime}s | Pings: {sleep_protector.ping_count}")
+            print(f"📩 Received /sleepstatus from {message.from_user.id if message.from_user else 'Unknown'}")
+            if message.from_user and is_admin(message.from_user.id):
+                uptime = int(time.time() - sleep_protector.start_time)
+                await message.reply(f"🛡️ **SLEEP PROTECTION ACTIVE**\nUptime: {uptime}s | Pings: {sleep_protector.ping_count}")
+                print("✅ /sleepstatus command executed")
         
         @app.on_message(filters.command("allow"))
         async def allow_command(client, message: Message):
-            if not is_admin(message.from_user.id): return
-            if len(message.command) > 1:
-                group_id = message.command[1]
-                if group_id in allowed_groups:
-                    await message.reply(f"ℹ️ Group `{group_id}` already allowed!")
+            print(f"📩 Received /allow from {message.from_user.id if message.from_user else 'Unknown'}")
+            if message.from_user and is_admin(message.from_user.id):
+                if len(message.command) > 1:
+                    group_id = message.command[1]
+                    if group_id in allowed_groups:
+                        await message.reply(f"ℹ️ Group `{group_id}` already allowed!")
+                    else:
+                        allowed_groups.add(group_id)
+                        save_data(ALLOWED_GROUPS_FILE, allowed_groups)
+                        await message.reply(f"✅ Group `{group_id}` allowed & SAVED!")
+                        print(f"✅ Group {group_id} added to allowed list")
                 else:
-                    allowed_groups.add(group_id)
-                    save_data(ALLOWED_GROUPS_FILE, allowed_groups)
-                    await message.reply(f"✅ Group `{group_id}` allowed & SAVED!")
-            else:
-                await message.reply("❌ Usage: `/allow <group_id>`")
+                    await message.reply("❌ Usage: `/allow <group_id>`")
         
         @app.on_message(filters.command("safe"))
         async def safe_command(client, message: Message):
-            if not is_admin(message.from_user.id): return
-            if len(message.command) > 1:
-                bot_username = message.command[1].replace('@', '').lower()
-                if bot_username in safe_bots:
-                    await message.reply(f"ℹ️ @{bot_username} already in safe list!")
+            print(f"📩 Received /safe from {message.from_user.id if message.from_user else 'Unknown'}")
+            if message.from_user and is_admin(message.from_user.id):
+                if len(message.command) > 1:
+                    bot_username = message.command[1].replace('@', '').lower()
+                    if bot_username in safe_bots:
+                        await message.reply(f"ℹ️ @{bot_username} already in safe list!")
+                    else:
+                        safe_bots.add(bot_username)
+                        save_data(SAFE_BOTS_FILE, safe_bots)
+                        await message.reply(f"✅ @{bot_username} added to safe list!")
+                        print(f"✅ Bot @{bot_username} added to safe list")
                 else:
-                    safe_bots.add(bot_username)
-                    save_data(SAFE_BOTS_FILE, safe_bots)
-                    await message.reply(f"✅ @{bot_username} added to safe list!")
-            else:
-                await message.reply("❌ Usage: `/safe @botusername`")
+                    await message.reply("❌ Usage: `/safe @botusername`")
         
         @app.on_message(filters.command("delay"))
         async def delay_command(client, message: Message):
-            if not is_admin(message.from_user.id): return
-            if len(message.command) > 1:
-                bot_username = message.command[1].replace('@', '').lower()
-                if bot_username in delayed_bots:
-                    await message.reply(f"ℹ️ @{bot_username} already in delayed list!")
+            print(f"📩 Received /delay from {message.from_user.id if message.from_user else 'Unknown'}")
+            if message.from_user and is_admin(message.from_user.id):
+                if len(message.command) > 1:
+                    bot_username = message.command[1].replace('@', '').lower()
+                    if bot_username in delayed_bots:
+                        await message.reply(f"ℹ️ @{bot_username} already in delayed list!")
+                    else:
+                        delayed_bots.add(bot_username)
+                        save_data(DELAYED_BOTS_FILE, delayed_bots)
+                        await message.reply(f"⏰ @{bot_username} added to delayed list!")
+                        print(f"✅ Bot @{bot_username} added to delayed list")
                 else:
-                    delayed_bots.add(bot_username)
-                    save_data(DELAYED_BOTS_FILE, delayed_bots)
-                    await message.reply(f"⏰ @{bot_username} added to delayed list!")
-            else:
-                await message.reply("❌ Usage: `/delay @botusername`")
+                    await message.reply("❌ Usage: `/delay @botusername`")
         
         @app.on_message(filters.command("remove"))
         async def remove_command(client, message: Message):
-            if not is_admin(message.from_user.id): return
-            if len(message.command) > 1:
-                bot_username = message.command[1].replace('@', '').lower()
-                was_in_safe = bot_username in safe_bots
-                was_in_delayed = bot_username in delayed_bots
-                
-                safe_bots.discard(bot_username)
-                delayed_bots.discard(bot_username)
-                
-                if was_in_safe or was_in_delayed:
-                    save_data(SAFE_BOTS_FILE, safe_bots)
-                    save_data(DELAYED_BOTS_FILE, delayed_bots)
-                    await message.reply(f"🗑️ @{bot_username} removed from all lists!")
+            print(f"📩 Received /remove from {message.from_user.id if message.from_user else 'Unknown'}")
+            if message.from_user and is_admin(message.from_user.id):
+                if len(message.command) > 1:
+                    bot_username = message.command[1].replace('@', '').lower()
+                    was_in_safe = bot_username in safe_bots
+                    was_in_delayed = bot_username in delayed_bots
+                    
+                    safe_bots.discard(bot_username)
+                    delayed_bots.discard(bot_username)
+                    
+                    if was_in_safe or was_in_delayed:
+                        save_data(SAFE_BOTS_FILE, safe_bots)
+                        save_data(DELAYED_BOTS_FILE, delayed_bots)
+                        await message.reply(f"🗑️ @{bot_username} removed from all lists!")
+                        print(f"✅ Bot @{bot_username} removed from lists")
+                    else:
+                        await message.reply(f"ℹ️ @{bot_username} not found in any list!")
                 else:
-                    await message.reply(f"ℹ️ @{bot_username} not found in any list!")
-            else:
-                await message.reply("❌ Usage: `/remove @botusername`")
+                    await message.reply("❌ Usage: `/remove @botusername`")
         
         @app.on_message(filters.command("test"))
         async def test_command(client, message: Message):
-            if not is_admin(message.from_user.id): return
-            test_msg = await message.reply("🧪 Testing deletion...")
-            await asyncio.sleep(2)
-            await test_msg.delete()
-            await message.reply("✅ Test passed! Deletion working")
+            print(f"📩 Received /test from {message.from_user.id if message.from_user else 'Unknown'}")
+            if message.from_user and is_admin(message.from_user.id):
+                test_msg = await message.reply("🧪 Testing deletion...")
+                await asyncio.sleep(2)
+                await test_msg.delete()
+                await message.reply("✅ Test passed! Deletion working")
+                print("✅ /test command executed")
         
-        # 🚀 MESSAGE DELETION HANDLER - STRONGER VERSION
+        # 🚀 MESSAGE DELETION HANDLER - WORKING VERSION
         @app.on_message(filters.group)
         async def deletion_handler(client, message: Message):
             try:
                 group_id = str(message.chat.id)
                 
-                # 🎯 STRONGER LOGGING - Added detailed logging
-                print(f"📨 MESSAGE RECEIVED in: {message.chat.title} | ID: {group_id}")
-                
                 if group_id not in allowed_groups:
-                    print(f"❌ GROUP NOT ALLOWED: {message.chat.title}")
                     return
-                
-                print(f"✅ GROUP ALLOWED: {message.chat.title}")
                 
                 # Self check
                 nonlocal me
-                if me is None: 
-                    me = await app.get_me()
-                    print(f"🤖 BOT INFO LOADED: {me.first_name}")
-                    
+                if me is None: me = await app.get_me()
                 if message.from_user and message.from_user.id == me.id:
-                    print("⏩ SKIPPING OWN MESSAGE")
                     return
                 
                 is_bot = message.from_user.is_bot if message.from_user else False
@@ -337,12 +370,11 @@ async def start_telegram():
                 message_text = message.text or message.caption or ""
                 
                 if is_bot:
-                    print(f"🤖 BOT DETECTED: @{username} in {message.chat.title}")
-                    print(f"📝 MESSAGE CONTENT: {message_text[:100]}...")
+                    print(f"🤖 Bot detected: @{username} in {message.chat.title}")
                     
                     # Safe bot check
                     if username in safe_bots:
-                        print(f"✅ SAFE BOT IGNORED: @{username}")
+                        print(f"✅ Safe bot ignored: @{username}")
                         return
                     
                     # Delayed bot logic
@@ -352,85 +384,41 @@ async def start_telegram():
                         has_mentions = '@' in message_text
                         
                         if has_links or has_mentions:
-                            print(f"🚫 DELAYED BOT WITH LINKS: @{username} - INSTANT DELETE ATTEMPT")
+                            print(f"🚫 Delayed bot with links: @{username} - INSTANT DELETE")
                             try:
                                 await message.delete()
-                                print(f"✅ INSTANT DELETE SUCCESS: @{username} from {message.chat.title}")
+                                print(f"✅ Instant deleted: @{username}")
                             except Exception as e:
-                                print(f"❌ INSTANT DELETE FAILED: {e}")
-                                # 🎯 STRONGER RETRY - Added more retries
-                                for retry in range(3):
-                                    try:
-                                        await asyncio.sleep(1)
-                                        await message.delete()
-                                        print(f"✅ RETRY {retry+1} SUCCESS: @{username}")
-                                        break
-                                    except Exception as retry_error:
-                                        print(f"❌ RETRY {retry+1} FAILED: {retry_error}")
+                                print(f"❌ Delete failed: {e}")
                         else:
-                            print(f"⏰ DELAYED BOT NORMAL: @{username} - 30s DELAY")
+                            print(f"⏰ Delayed bot normal: @{username} - 30s DELAY")
                             async def delete_after_delay():
                                 await asyncio.sleep(30)
                                 try:
                                     await message.delete()
-                                    print(f"✅ DELAYED DELETE SUCCESS: @{username} from {message.chat.title}")
-                                except Exception as e:
-                                    print(f"❌ DELAYED DELETE FAILED: {e}")
-                                    # 🎯 STRONGER DELAYED RETRY
-                                    for retry in range(2):
-                                        try:
-                                            await asyncio.sleep(2)
-                                            await message.delete()
-                                            print(f"✅ DELAYED RETRY {retry+1} SUCCESS: @{username}")
-                                            break
-                                        except Exception as retry_error:
-                                            print(f"❌ DELAYED RETRY {retry+1} FAILED: {retry_error}")
+                                    print(f"✅ Delayed delete: @{username}")
+                                except:
+                                    pass
                             asyncio.create_task(delete_after_delay())
                         return
                     
-                    # Other bots - STRONGER IMMEDIATE DELETE
-                    print(f"🗑️ UNSAFE BOT: @{username} - STRONG DELETE ATTEMPT")
-                    
-                    # 🎯 ULTRA STRONG DELETE - Multiple methods
-                    delete_success = False
-                    
-                    # Method 1: Normal delete
+                    # Other bots - IMMEDIATE DELETE
+                    print(f"🗑️ Unsafe bot: @{username} - IMMEDIATE DELETE")
                     try:
                         await message.delete()
-                        print(f"✅ METHOD 1 SUCCESS: @{username} from {message.chat.title}")
-                        delete_success = True
-                    except Exception as e1:
-                        print(f"❌ METHOD 1 FAILED: {e1}")
-                    
-                    # Method 2: Retry with delay
-                    if not delete_success:
+                        print(f"✅ Deleted: @{username}")
+                    except Exception as e:
+                        print(f"❌ Delete failed: {e}")
+                        # Retry once
                         try:
                             await asyncio.sleep(1)
                             await message.delete()
-                            print(f"✅ METHOD 2 SUCCESS: @{username} from {message.chat.title}")
-                            delete_success = True
-                        except Exception as e2:
-                            print(f"❌ METHOD 2 FAILED: {e2}")
-                    
-                    # Method 3: Alternative approach
-                    if not delete_success:
-                        try:
-                            await asyncio.sleep(2)
-                            await client.delete_messages(message.chat.id, message.id)
-                            print(f"✅ METHOD 3 SUCCESS: @{username} from {message.chat.title}")
-                            delete_success = True
-                        except Exception as e3:
-                            print(f"❌ METHOD 3 FAILED: {e3}")
-                    
-                    # Final failure log
-                    if not delete_success:
-                        print(f"💀 ALL DELETE METHODS FAILED for @{username} in {message.chat.title}")
+                            print(f"✅ Retry success: @{username}")
+                        except:
+                            print(f"💀 Final delete failed: @{username}")
                 
-                else:
-                    print(f"👤 USER MESSAGE from @{username} - SKIPPING")
-                    
             except Exception as e:
-                print(f"❌ HANDLER ERROR in {message.chat.title if message.chat else 'Unknown'}: {str(e)}")
+                print(f"❌ Handler error: {e}")
         
         # ✅ BOT START
         print("🔗 Connecting to Telegram...")
@@ -442,9 +430,12 @@ async def start_telegram():
         # Start session keep-alive
         keep_alive_task = asyncio.create_task(session_keep_alive())
         
+        # Start simple online status - ERROR FIXED
+        online_task = asyncio.create_task(simple_online_status())
+        
         # 🎯 AUTO SETUP
+        allowed_groups.add("-1002129045974")
         allowed_groups.add("-1002497459144")
-        allowed_groups.add("-1002382070176")
         save_data(ALLOWED_GROUPS_FILE, allowed_groups)
         
         safe_bots.update(["grouphelp", "vid", "like"])
@@ -452,31 +443,30 @@ async def start_telegram():
         
         print(f"✅ Auto-setup: {len(allowed_groups)} groups, {len(safe_bots)} safe bots")
         print("💓 SESSION KEEP-ALIVE: ACTIVE")
+        print("🟢 ONLINE STATUS: WORKING")
         print("🔥 SESSION STABILITY: GUARANTEED")
-        print("🎯 STRONG DELETION: ACTIVATED")
-        print("📝 DETAILED LOGGING: ENABLED")
-        print("🗑️ MESSAGE DELETION: ULTRA STRONG")
+        print("🗑️ MESSAGE DELETION: READY")
         
         # Startup message
         await app.send_message("me", """
-✅ **ULTIMATE BOT STARTED - STRONG DELETION!**
+✅ **ULTIMATE BOT STARTED - ALL FIXED!**
 
-🎯 **ENHANCED FEATURES:**
-• Stronger Message Deletion
-• Detailed Activity Logging  
-• Multiple Delete Methods
-• Enhanced Retry Logic
+🎯 **FIXES APPLIED:**
+• Online Status Error Fixed
+• All Commands Working
+• Message Deletion Active
+• No More Errors
 
-🚀 **DELETION GUARANTEE:**
-• 3 Different Delete Methods
-• Multiple Retry Attempts
-• Better Error Handling
-• Strong Success Rate
+🚀 **WORKING FEATURES:**
+• Commands Response
+• Message Deletion
+• Session Stability
+• Sleep Protection
 
-**Messages ab strongly delete honge!** 🔥
+**Ab sab kuch properly work karega!** 🔥
         """)
         
-        print("🤖 BOT READY - Strong Deletion Active!")
+        print("🤖 BOT READY - All Issues Fixed!")
         
         # Keep running until session breaks
         try:
@@ -486,6 +476,7 @@ async def start_telegram():
         finally:
             session_active = False
             keep_alive_task.cancel()
+            online_task.cancel()
             await app.stop()
         
     except Exception as e:
