@@ -159,18 +159,18 @@ async def start_telegram():
                 
                 await asyncio.sleep(180)  # Every 3 minutes
         
-        # ✅ ALL COMMANDS - FIXED VERSION
-        @app.on_message(filters.command("start") & filters.private)
+        # ✅ ALL COMMANDS - PROPERLY FIXED
+        @app.on_message(filters.command("start"))
         async def start_command(client, message: Message):
-            print(f"📩 Received /start from {message.from_user.id}")
-            if is_admin(message.from_user.id):
+            print(f"📩 Received /start from {message.from_user.id if message.from_user else 'Unknown'}")
+            if message.from_user and is_admin(message.from_user.id):
                 await message.reply("🚀 **ULTIMATE BOT STARTED!**\nSession Stability Active")
                 print("✅ /start command executed")
         
-        @app.on_message(filters.command("help") & filters.private)
+        @app.on_message(filters.command("help"))
         async def help_command(client, message: Message):
-            print(f"📩 Received /help from {message.from_user.id}")
-            if is_admin(message.from_user.id):
+            print(f"📩 Received /help from {message.from_user.id if message.from_user else 'Unknown'}")
+            if message.from_user and is_admin(message.from_user.id):
                 help_text = """
 🤖 **ULTIMATE BOT - ALL COMMANDS**
 
@@ -195,31 +195,31 @@ async def start_telegram():
                 await message.reply(help_text)
                 print("✅ /help command executed")
         
-        @app.on_message(filters.command("ping") & filters.private)
+        @app.on_message(filters.command("ping"))
         async def ping_command(client, message: Message):
-            print(f"📩 Received /ping from {message.from_user.id}")
-            if is_admin(message.from_user.id):
+            print(f"📩 Received /ping from {message.from_user.id if message.from_user else 'Unknown'}")
+            if message.from_user and is_admin(message.from_user.id):
                 await message.reply("🏓 **Pong!** Bot active")
                 print("✅ /ping command executed")
         
-        @app.on_message(filters.command("alive") & filters.private)
+        @app.on_message(filters.command("alive"))
         async def alive_command(client, message: Message):
-            print(f"📩 Received /alive from {message.from_user.id}")
-            if is_admin(message.from_user.id):
+            print(f"📩 Received /alive from {message.from_user.id if message.from_user else 'Unknown'}")
+            if message.from_user and is_admin(message.from_user.id):
                 await message.reply("🟢 **BOT ZINDA HAI!** 24/7 Active")
                 print("✅ /alive command executed")
         
-        @app.on_message(filters.command("nleep") & filters.private)
+        @app.on_message(filters.command("nleep"))
         async def nleep_command(client, message: Message):
-            print(f"📩 Received /nleep from {message.from_user.id}")
-            if is_admin(message.from_user.id):
+            print(f"📩 Received /nleep from {message.from_user.id if message.from_user else 'Unknown'}")
+            if message.from_user and is_admin(message.from_user.id):
                 await message.reply("🚫 **SLEEP NAHI HOGAA!** Protection Active")
                 print("✅ /nleep command executed")
         
-        @app.on_message(filters.command("status") & filters.private)
+        @app.on_message(filters.command("status"))
         async def status_command(client, message: Message):
-            print(f"📩 Received /status from {message.from_user.id}")
-            if is_admin(message.from_user.id):
+            print(f"📩 Received /status from {message.from_user.id if message.from_user else 'Unknown'}")
+            if message.from_user and is_admin(message.from_user.id):
                 nonlocal me, connection_checks
                 
                 if me is None: 
@@ -243,18 +243,18 @@ async def start_telegram():
                 await message.reply(status_text)
                 print("✅ /status command executed")
         
-        @app.on_message(filters.command("sleepstatus") & filters.private)
+        @app.on_message(filters.command("sleepstatus"))
         async def sleepstatus_command(client, message: Message):
-            print(f"📩 Received /sleepstatus from {message.from_user.id}")
-            if is_admin(message.from_user.id):
+            print(f"📩 Received /sleepstatus from {message.from_user.id if message.from_user else 'Unknown'}")
+            if message.from_user and is_admin(message.from_user.id):
                 uptime = int(time.time() - sleep_protector.start_time)
                 await message.reply(f"🛡️ **SLEEP PROTECTION ACTIVE**\nUptime: {uptime}s | Pings: {sleep_protector.ping_count}")
                 print("✅ /sleepstatus command executed")
         
-        @app.on_message(filters.command("allow") & filters.private)
+        @app.on_message(filters.command("allow"))
         async def allow_command(client, message: Message):
-            print(f"📩 Received /allow from {message.from_user.id}")
-            if is_admin(message.from_user.id):
+            print(f"📩 Received /allow from {message.from_user.id if message.from_user else 'Unknown'}")
+            if message.from_user and is_admin(message.from_user.id):
                 if len(message.command) > 1:
                     group_id = message.command[1]
                     if group_id in allowed_groups:
@@ -267,10 +267,10 @@ async def start_telegram():
                 else:
                     await message.reply("❌ Usage: `/allow <group_id>`")
         
-        @app.on_message(filters.command("safe") & filters.private)
+        @app.on_message(filters.command("safe"))
         async def safe_command(client, message: Message):
-            print(f"📩 Received /safe from {message.from_user.id}")
-            if is_admin(message.from_user.id):
+            print(f"📩 Received /safe from {message.from_user.id if message.from_user else 'Unknown'}")
+            if message.from_user and is_admin(message.from_user.id):
                 if len(message.command) > 1:
                     bot_username = message.command[1].replace('@', '').lower()
                     if bot_username in safe_bots:
@@ -283,10 +283,10 @@ async def start_telegram():
                 else:
                     await message.reply("❌ Usage: `/safe @botusername`")
         
-        @app.on_message(filters.command("delay") & filters.private)
+        @app.on_message(filters.command("delay"))
         async def delay_command(client, message: Message):
-            print(f"📩 Received /delay from {message.from_user.id}")
-            if is_admin(message.from_user.id):
+            print(f"📩 Received /delay from {message.from_user.id if message.from_user else 'Unknown'}")
+            if message.from_user and is_admin(message.from_user.id):
                 if len(message.command) > 1:
                     bot_username = message.command[1].replace('@', '').lower()
                     if bot_username in delayed_bots:
@@ -299,10 +299,10 @@ async def start_telegram():
                 else:
                     await message.reply("❌ Usage: `/delay @botusername`")
         
-        @app.on_message(filters.command("remove") & filters.private)
+        @app.on_message(filters.command("remove"))
         async def remove_command(client, message: Message):
-            print(f"📩 Received /remove from {message.from_user.id}")
-            if is_admin(message.from_user.id):
+            print(f"📩 Received /remove from {message.from_user.id if message.from_user else 'Unknown'}")
+            if message.from_user and is_admin(message.from_user.id):
                 if len(message.command) > 1:
                     bot_username = message.command[1].replace('@', '').lower()
                     was_in_safe = bot_username in safe_bots
@@ -321,10 +321,10 @@ async def start_telegram():
                 else:
                     await message.reply("❌ Usage: `/remove @botusername`")
         
-        @app.on_message(filters.command("test") & filters.private)
+        @app.on_message(filters.command("test"))
         async def test_command(client, message: Message):
-            print(f"📩 Received /test from {message.from_user.id}")
-            if is_admin(message.from_user.id):
+            print(f"📩 Received /test from {message.from_user.id if message.from_user else 'Unknown'}")
+            if message.from_user and is_admin(message.from_user.id):
                 test_msg = await message.reply("🧪 Testing deletion...")
                 await asyncio.sleep(2)
                 await test_msg.delete()
@@ -439,7 +439,7 @@ async def start_telegram():
 • Messages Always Delete
 • Your Device Can Be Offline
 
-**All commands now working!** 🔥
+**All commands now working properly!** 🔥
         """)
         
         print("🤖 BOT READY - Commands Fixed!")
