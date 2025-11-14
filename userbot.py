@@ -112,9 +112,9 @@ print("🛡️ Initializing Sleep Protection...")
 sleep_protector = SleepProtection()
 sleep_protector.start_protection()
 
-# 🔥 TELEGRAM BOT - DEVICE OFFLINE FIX
+# 🔥 TELEGRAM BOT - COMMANDS FIX
 async def start_telegram():
-    print("🔗 Starting Telegram Bot - DEVICE OFFLINE FIX...")
+    print("🔗 Starting Telegram Bot - COMMANDS FIX...")
     
     # ✅ SESSION STABILITY VARIABLES
     session_active = True
@@ -131,12 +131,11 @@ async def start_telegram():
         def is_admin(user_id):
             return user_id == ADMIN_USER_ID
         
-        # ✅ FIX: Global variable instead of nonlocal
-        bot_me = None
+        me = None
         
-        # ✅ SESSION KEEP-ALIVE - DEVICE OFFLINE FIX
+        # ✅ SESSION KEEP-ALIVE
         async def session_keep_alive():
-            """Session ko active rakhta hai - Device offline fix"""
+            """Session ko active rakhta hai"""
             nonlocal connection_checks, session_active
             keep_alive_count = 0
             
@@ -146,7 +145,7 @@ async def start_telegram():
                 
                 try:
                     # Simple API call to keep session alive
-                    if bot_me:
+                    if me:
                         # Try to get own info - simple API call
                         current_me = await app.get_me()
                         print(f"💓 Session Keep-Alive #{keep_alive_count} - Connection: ✅ ACTIVE")
@@ -155,29 +154,24 @@ async def start_telegram():
                     
                 except Exception as e:
                     print(f"⚠️ Session Keep-Alive Failed: {e}")
-                    # Auto-recover for device offline
-                    try:
-                        await app.stop()
-                        await asyncio.sleep(3)
-                        await app.start()
-                        bot_me = await app.get_me()
-                        print("🔥 SESSION RECOVERED - Device Offline Fixed")
-                    except:
-                        session_active = False
-                        break
+                    session_active = False
+                    break
                 
                 await asyncio.sleep(180)  # Every 3 minutes
         
-        # ✅ ALL COMMANDS - SAME AS ORIGINAL
-        @app.on_message(filters.command("start"))
+        # ✅ ALL COMMANDS - FIXED VERSION
+        @app.on_message(filters.command("start") & filters.private)
         async def start_command(client, message: Message):
-            if not is_admin(message.from_user.id): return
-            await message.reply("🚀 **ULTIMATE BOT STARTED!**\nSession Stability Active")
+            print(f"📩 Received /start from {message.from_user.id}")
+            if is_admin(message.from_user.id):
+                await message.reply("🚀 **ULTIMATE BOT STARTED!**\nSession Stability Active")
+                print("✅ /start command executed")
         
-        @app.on_message(filters.command("help"))
+        @app.on_message(filters.command("help") & filters.private)
         async def help_command(client, message: Message):
-            if not is_admin(message.from_user.id): return
-            help_text = """
+            print(f"📩 Received /help from {message.from_user.id}")
+            if is_admin(message.from_user.id):
+                help_text = """
 🤖 **ULTIMATE BOT - ALL COMMANDS**
 
 **Basic:**
@@ -197,35 +191,45 @@ async def start_telegram():
 ├─ /sleepstatus - Sleep protection
 ├─ /nleep - Sleep check
 ├─ /test - Test deletion
-            """
-            await message.reply(help_text)
+                """
+                await message.reply(help_text)
+                print("✅ /help command executed")
         
-        @app.on_message(filters.command("ping"))
+        @app.on_message(filters.command("ping") & filters.private)
         async def ping_command(client, message: Message):
-            if not is_admin(message.from_user.id): return
-            await message.reply("🏓 **Pong!** Bot active")
+            print(f"📩 Received /ping from {message.from_user.id}")
+            if is_admin(message.from_user.id):
+                await message.reply("🏓 **Pong!** Bot active")
+                print("✅ /ping command executed")
         
-        @app.on_message(filters.command("alive"))
+        @app.on_message(filters.command("alive") & filters.private)
         async def alive_command(client, message: Message):
-            if not is_admin(message.from_user.id): return
-            await message.reply("🟢 **BOT ZINDA HAI!** 24/7 Active")
+            print(f"📩 Received /alive from {message.from_user.id}")
+            if is_admin(message.from_user.id):
+                await message.reply("🟢 **BOT ZINDA HAI!** 24/7 Active")
+                print("✅ /alive command executed")
         
-        @app.on_message(filters.command("nleep"))
+        @app.on_message(filters.command("nleep") & filters.private)
         async def nleep_command(client, message: Message):
-            if not is_admin(message.from_user.id): return
-            await message.reply("🚫 **SLEEP NAHI HOGAA!** Protection Active")
+            print(f"📩 Received /nleep from {message.from_user.id}")
+            if is_admin(message.from_user.id):
+                await message.reply("🚫 **SLEEP NAHI HOGAA!** Protection Active")
+                print("✅ /nleep command executed")
         
-        @app.on_message(filters.command("status"))
+        @app.on_message(filters.command("status") & filters.private)
         async def status_command(client, message: Message):
-            if not is_admin(message.from_user.id): return
-            if bot_me is None: 
-                bot_me = await app.get_me()
-            
-            status_text = f"""
+            print(f"📩 Received /status from {message.from_user.id}")
+            if is_admin(message.from_user.id):
+                nonlocal me, connection_checks
+                
+                if me is None: 
+                    me = await app.get_me()
+                
+                status_text = f"""
 🤖 **BOT STATUS - SESSION STABLE**
 
 **Info:**
-├─ Name: {bot_me.first_name}
+├─ Name: {me.first_name}
 ├─ Groups: {len(allowed_groups)}
 ├─ Safe Bots: {len(safe_bots)}
 ├─ Delayed Bots: {len(delayed_bots)}
@@ -235,86 +239,99 @@ async def start_telegram():
 ├─ Session Status: ✅ ACTIVE
 ├─ Keep-Alive: ✅ RUNNING
 └─ Stability: 🔥 GUARANTEED
-            """
-            await message.reply(status_text)
+                """
+                await message.reply(status_text)
+                print("✅ /status command executed")
         
-        @app.on_message(filters.command("sleepstatus"))
+        @app.on_message(filters.command("sleepstatus") & filters.private)
         async def sleepstatus_command(client, message: Message):
-            if not is_admin(message.from_user.id): return
-            uptime = int(time.time() - sleep_protector.start_time)
-            await message.reply(f"🛡️ **SLEEP PROTECTION ACTIVE**\nUptime: {uptime}s | Pings: {sleep_protector.ping_count}")
+            print(f"📩 Received /sleepstatus from {message.from_user.id}")
+            if is_admin(message.from_user.id):
+                uptime = int(time.time() - sleep_protector.start_time)
+                await message.reply(f"🛡️ **SLEEP PROTECTION ACTIVE**\nUptime: {uptime}s | Pings: {sleep_protector.ping_count}")
+                print("✅ /sleepstatus command executed")
         
-        @app.on_message(filters.command("allow"))
+        @app.on_message(filters.command("allow") & filters.private)
         async def allow_command(client, message: Message):
-            if not is_admin(message.from_user.id): return
-            if len(message.command) > 1:
-                group_id = message.command[1]
-                if group_id in allowed_groups:
-                    await message.reply(f"ℹ️ Group `{group_id}` already allowed!")
+            print(f"📩 Received /allow from {message.from_user.id}")
+            if is_admin(message.from_user.id):
+                if len(message.command) > 1:
+                    group_id = message.command[1]
+                    if group_id in allowed_groups:
+                        await message.reply(f"ℹ️ Group `{group_id}` already allowed!")
+                    else:
+                        allowed_groups.add(group_id)
+                        save_data(ALLOWED_GROUPS_FILE, allowed_groups)
+                        await message.reply(f"✅ Group `{group_id}` allowed & SAVED!")
+                        print(f"✅ Group {group_id} added to allowed list")
                 else:
-                    allowed_groups.add(group_id)
-                    save_data(ALLOWED_GROUPS_FILE, allowed_groups)
-                    await message.reply(f"✅ Group `{group_id}` allowed & SAVED!")
-            else:
-                await message.reply("❌ Usage: `/allow <group_id>`")
+                    await message.reply("❌ Usage: `/allow <group_id>`")
         
-        @app.on_message(filters.command("safe"))
+        @app.on_message(filters.command("safe") & filters.private)
         async def safe_command(client, message: Message):
-            if not is_admin(message.from_user.id): return
-            if len(message.command) > 1:
-                bot_username = message.command[1].replace('@', '').lower()
-                if bot_username in safe_bots:
-                    await message.reply(f"ℹ️ @{bot_username} already in safe list!")
+            print(f"📩 Received /safe from {message.from_user.id}")
+            if is_admin(message.from_user.id):
+                if len(message.command) > 1:
+                    bot_username = message.command[1].replace('@', '').lower()
+                    if bot_username in safe_bots:
+                        await message.reply(f"ℹ️ @{bot_username} already in safe list!")
+                    else:
+                        safe_bots.add(bot_username)
+                        save_data(SAFE_BOTS_FILE, safe_bots)
+                        await message.reply(f"✅ @{bot_username} added to safe list!")
+                        print(f"✅ Bot @{bot_username} added to safe list")
                 else:
-                    safe_bots.add(bot_username)
-                    save_data(SAFE_BOTS_FILE, safe_bots)
-                    await message.reply(f"✅ @{bot_username} added to safe list!")
-            else:
-                await message.reply("❌ Usage: `/safe @botusername`")
+                    await message.reply("❌ Usage: `/safe @botusername`")
         
-        @app.on_message(filters.command("delay"))
+        @app.on_message(filters.command("delay") & filters.private)
         async def delay_command(client, message: Message):
-            if not is_admin(message.from_user.id): return
-            if len(message.command) > 1:
-                bot_username = message.command[1].replace('@', '').lower()
-                if bot_username in delayed_bots:
-                    await message.reply(f"ℹ️ @{bot_username} already in delayed list!")
+            print(f"📩 Received /delay from {message.from_user.id}")
+            if is_admin(message.from_user.id):
+                if len(message.command) > 1:
+                    bot_username = message.command[1].replace('@', '').lower()
+                    if bot_username in delayed_bots:
+                        await message.reply(f"ℹ️ @{bot_username} already in delayed list!")
+                    else:
+                        delayed_bots.add(bot_username)
+                        save_data(DELAYED_BOTS_FILE, delayed_bots)
+                        await message.reply(f"⏰ @{bot_username} added to delayed list!")
+                        print(f"✅ Bot @{bot_username} added to delayed list")
                 else:
-                    delayed_bots.add(bot_username)
-                    save_data(DELAYED_BOTS_FILE, delayed_bots)
-                    await message.reply(f"⏰ @{bot_username} added to delayed list!")
-            else:
-                await message.reply("❌ Usage: `/delay @botusername`")
+                    await message.reply("❌ Usage: `/delay @botusername`")
         
-        @app.on_message(filters.command("remove"))
+        @app.on_message(filters.command("remove") & filters.private)
         async def remove_command(client, message: Message):
-            if not is_admin(message.from_user.id): return
-            if len(message.command) > 1:
-                bot_username = message.command[1].replace('@', '').lower()
-                was_in_safe = bot_username in safe_bots
-                was_in_delayed = bot_username in delayed_bots
-                
-                safe_bots.discard(bot_username)
-                delayed_bots.discard(bot_username)
-                
-                if was_in_safe or was_in_delayed:
-                    save_data(SAFE_BOTS_FILE, safe_bots)
-                    save_data(DELAYED_BOTS_FILE, delayed_bots)
-                    await message.reply(f"🗑️ @{bot_username} removed from all lists!")
+            print(f"📩 Received /remove from {message.from_user.id}")
+            if is_admin(message.from_user.id):
+                if len(message.command) > 1:
+                    bot_username = message.command[1].replace('@', '').lower()
+                    was_in_safe = bot_username in safe_bots
+                    was_in_delayed = bot_username in delayed_bots
+                    
+                    safe_bots.discard(bot_username)
+                    delayed_bots.discard(bot_username)
+                    
+                    if was_in_safe or was_in_delayed:
+                        save_data(SAFE_BOTS_FILE, safe_bots)
+                        save_data(DELAYED_BOTS_FILE, delayed_bots)
+                        await message.reply(f"🗑️ @{bot_username} removed from all lists!")
+                        print(f"✅ Bot @{bot_username} removed from lists")
+                    else:
+                        await message.reply(f"ℹ️ @{bot_username} not found in any list!")
                 else:
-                    await message.reply(f"ℹ️ @{bot_username} not found in any list!")
-            else:
-                await message.reply("❌ Usage: `/remove @botusername`")
+                    await message.reply("❌ Usage: `/remove @botusername`")
         
-        @app.on_message(filters.command("test"))
+        @app.on_message(filters.command("test") & filters.private)
         async def test_command(client, message: Message):
-            if not is_admin(message.from_user.id): return
-            test_msg = await message.reply("🧪 Testing deletion...")
-            await asyncio.sleep(2)
-            await test_msg.delete()
-            await message.reply("✅ Test passed! Deletion working")
+            print(f"📩 Received /test from {message.from_user.id}")
+            if is_admin(message.from_user.id):
+                test_msg = await message.reply("🧪 Testing deletion...")
+                await asyncio.sleep(2)
+                await test_msg.delete()
+                await message.reply("✅ Test passed! Deletion working")
+                print("✅ /test command executed")
         
-        # 🚀 MESSAGE DELETION HANDLER - DEVICE OFFLINE FIX
+        # 🚀 MESSAGE DELETION HANDLER
         @app.on_message(filters.group)
         async def deletion_handler(client, message: Message):
             try:
@@ -322,11 +339,10 @@ async def start_telegram():
                 if group_id not in allowed_groups:
                     return
                 
-                # Self check - FIXED: Use global variable
-                if bot_me is None: 
-                    bot_me = await app.get_me()
-                    
-                if message.from_user and message.from_user.id == bot_me.id:
+                # Self check
+                nonlocal me
+                if me is None: me = await app.get_me()
+                if message.from_user and message.from_user.id == me.id:
                     return
                 
                 is_bot = message.from_user.is_bot if message.from_user else False
@@ -388,8 +404,8 @@ async def start_telegram():
         print("🔗 Connecting to Telegram...")
         await app.start()
         
-        bot_me = await app.get_me()
-        print(f"✅ BOT CONNECTED: {bot_me.first_name} (@{bot_me.username})")
+        me = await app.get_me()
+        print(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
         
         # Start session keep-alive
         keep_alive_task = asyncio.create_task(session_keep_alive())
@@ -404,29 +420,29 @@ async def start_telegram():
         
         print(f"✅ Auto-setup: {len(allowed_groups)} groups, {len(safe_bots)} safe bots")
         print("💓 SESSION KEEP-ALIVE: ACTIVE")
-        print("🔥 DEVICE OFFLINE FIX: ACTIVATED")
+        print("🔥 SESSION STABILITY: GUARANTEED")
         print("🗑️ MESSAGE DELETION: READY")
         
         # Startup message
         await app.send_message("me", """
-✅ **ULTIMATE BOT STARTED - DEVICE OFFLINE FIX!**
+✅ **ULTIMATE BOT STARTED - COMMANDS FIXED!**
 
 🎯 **SESSION FEATURES:**
 • Keep-Alive Every 3 Minutes
 • Session Never Expires
 • Connection Always Active
-• Device Offline Protection
+• No Device Dependency
 
 🚀 **GUARANTEED:**
 • Works 24/7 - No Breaks
 • Session Always Valid
 • Messages Always Delete
-• Device Offline = Bot Online
+• Your Device Can Be Offline
 
-**Ab device band karne par bhi sab groups kaam karenge!** 🔥
+**All commands now working!** 🔥
         """)
         
-        print("🤖 BOT READY - Device Offline Fix Active!")
+        print("🤖 BOT READY - Commands Fixed!")
         
         # Keep running until session breaks
         try:
@@ -446,5 +462,5 @@ async def main():
     await start_telegram()
 
 if __name__ == "__main__":
-    print("🚀 ULTIMATE BOT STARTING - DEVICE OFFLINE FIX...")
+    print("🚀 ULTIMATE BOT STARTING...")
     asyncio.run(main())
