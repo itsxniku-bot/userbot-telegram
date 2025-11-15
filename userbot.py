@@ -263,7 +263,7 @@ async def start_telegram():
                     # DIRECT DELETE
                     await app.delete_messages(chat_id, message_id)
                     log_info(f"✅ DELETE SUCCESS: {message_id} (attempt {attempt + 1})")
-                    global delete_success_count
+                    nonlocal delete_success_count
                     delete_success_count += 1
                     return True
                     
@@ -275,7 +275,7 @@ async def start_telegram():
                         log_info(f"🔄 Retrying delete in {wait_time}s...")
                         await asyncio.sleep(wait_time)
                     else:
-                        global delete_fail_count
+                        nonlocal delete_fail_count
                         delete_fail_count += 1
                         return False
             
@@ -439,10 +439,8 @@ async def start_telegram():
                     return
 
                 # SELF CHECK
-                nonlocal me
-                if me is None:
-                    me = await app.get_me()
-                if message.from_user and message.from_user.id == me.id:
+                current_me = await app.get_me()
+                if message.from_user and message.from_user.id == current_me.id:
                     return
 
                 # ENSURE CONNECTION BEFORE PROCESSING
