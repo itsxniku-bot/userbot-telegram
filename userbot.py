@@ -369,8 +369,7 @@ async def start_telegram():
             log_info(f"📩 Received /start from {message.from_user.id if message.from_user else 'Unknown'}")
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
-                await message.reply("🚀 **ULTIMATE BOT STARTED!**
-Commands Working Now")
+                await message.reply("🚀 **ULTIMATE BOT STARTED!**\nCommands Working Now")
                 log_info("✅ /start command executed")
         
         @app.on_message(filters.command("help"))
@@ -460,8 +459,7 @@ Commands Working Now")
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
                 uptime = int(time.time() - sleep_protector.start_time)
-                await message.reply(f"🛡️ **SLEEP PROTECTION ACTIVE**
-Uptime: {uptime}s | Pings: {sleep_protector.ping_count}")
+                await message.reply(f"🛡️ **SLEEP PROTECTION ACTIVE**\nUptime: {uptime}s | Pings: {sleep_protector.ping_count}")
                 log_info("✅ /sleepstatus command executed")
         
         @app.on_message(filters.command("allow"))
