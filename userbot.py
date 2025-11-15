@@ -297,12 +297,45 @@ async def start_telegram():
                     log_error(f"Watchdog error: {e}")
                     await asyncio.sleep(10)
 
+        # ✅ CHECK GROUP ACCESS FUNCTION
+        async def check_group_access():
+            """Check if bot has access to both groups"""
+            results = {
+                'private': False,
+                'public': False
+            }
+            
+            try:
+                # Check public group access
+                try:
+                    public_chat = await app.get_chat(simple_manager.public_group_id)
+                    results['public'] = True
+                    log_info(f"✅ Public Group Access: {public_chat.title}")
+                except Exception as e:
+                    log_error(f"❌ Public Group Access Failed: {e}")
+                
+                # Check private group access  
+                try:
+                    private_chat = await app.get_chat(simple_manager.private_group_id)
+                    results['private'] = True
+                    log_info(f"✅ Private Group Access: {private_chat.title}")
+                except Exception as e:
+                    log_error(f"❌ Private Group Access Failed: {e}")
+                    
+            except Exception as e:
+                log_error(f"Group access check failed: {e}")
+                
+            return results
+
         # ✅ ALL COMMANDS
         @app.on_message(filters.command("start"))
         async def start_command(client, message: Message):
             log_info(f"📩 /start from {message.from_user.id}")
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
+                # Check current group access
+                access = await check_group_access()
+                
                 status_msg = f"""
 🚀 **BOT STARTED - SIMPLE WORKING FIX!**
 
@@ -311,13 +344,17 @@ async def start_telegram():
 • Public Group: {simple_manager.public_delete_count} ✅
 • Users Ignored: {simple_manager.users_ignored_count} 👥
 
-🎯 **CONFIGURATION:**
+🎯 **GROUP ACCESS:**
+• Private Group: {'✅ ACCESS' if access['private'] else '❌ NO ACCESS'}
+• Public Group: {'✅ ACCESS' if access['public'] else '❌ NO ACCESS'}
+
+🔧 **CONFIGURATION:**
 • Delete: ONLY UNSAFE BOTS
 • Ignore: ALL USERS
 • Links: {len(simple_manager.all_link_patterns)} types detected
 • Safe Bots: {len(safe_bots)} protected
 
-**Status: ACTIVE** 🔥
+**Status: {'OPTIMAL' if access['private'] and access['public'] else 'NEEDS ATTENTION'}** 🔥
                 """
                 await message.reply(status_msg)
                 log_info("✅ /start executed")
@@ -328,22 +365,51 @@ async def start_telegram():
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
                 try:
-                    # Test private group
-                    test_msg_private = await app.send_message(simple_manager.private_group_id, "🧪 Private test...")
-                    await asyncio.sleep(2)
-                    private_success = await simple_delete(test_msg_private)
+                    # First check group access
+                    access = await check_group_access()
                     
-                    # Test public group
-                    test_msg_public = await app.send_message(simple_manager.public_group_id, "🧪 Public test...")
-                    await asyncio.sleep(2)
-                    public_success = await simple_delete(test_msg_public)
+                    if not access['public'] and not access['private']:
+                        await message.reply("❌ **NO GROUP ACCESS** - Add bot to both groups first!")
+                        return
                     
-                    if private_success and public_success:
-                        await message.reply("✅ **BOTH GROUPS WORKING!**")
-                    elif public_success:
-                        await message.reply("✅ **PUBLIC WORKING** / ❌ **PRIVATE ISSUES**")
-                    else:
-                        await message.reply("❌ **BOTH GROUPS HAVE ISSUES**")
+                    test_results = {
+                        'private': 'NOT TESTED',
+                        'public': 'NOT TESTED'
+                    }
+                    
+                    # Test public group if accessible
+                    if access['public']:
+                        try:
+                            test_msg_public = await app.send_message(simple_manager.public_group_id, "🧪 Public test message - will delete in 2 sec...")
+                            await asyncio.sleep(2)
+                            public_success = await simple_delete(test_msg_public)
+                            test_results['public'] = '✅ SUCCESS' if public_success else '❌ FAILED'
+                        except Exception as e:
+                            test_results['public'] = f'❌ ERROR: {str(e)}'
+                    
+                    # Test private group if accessible
+                    if access['private']:
+                        try:
+                            test_msg_private = await app.send_message(simple_manager.private_group_id, "🧪 Private test message - will delete in 2 sec...")
+                            await asyncio.sleep(2)
+                            private_success = await simple_delete(test_msg_private)
+                            test_results['private'] = '✅ SUCCESS' if private_success else '❌ FAILED'
+                        except Exception as e:
+                            test_results['private'] = f'❌ ERROR: {str(e)}'
+                    
+                    # Send results
+                    result_msg = f"""
+🧪 **TEST RESULTS:**
+
+**Public Group ({simple_manager.public_group_id}):**
+{test_results['public']}
+
+**Private Group ({simple_manager.private_group_id}):**  
+{test_results['private']}
+
+💡 **Note:** If private group shows errors, make sure bot is added to that group with delete permissions.
+                    """
+                    await message.reply(result_msg)
                         
                 except Exception as e:
                     await message.reply(f"❌ Test failed: {e}")
@@ -417,26 +483,13 @@ async def start_telegram():
         me = await app.get_me()
         log_info(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
         
+        # Check group access immediately
+        access = await check_group_access()
+        
         log_info(f"🎯 SIMPLE WORKING FIX ACTIVATED")
         log_info(f"🔗 Link Patterns: {len(simple_manager.all_link_patterns)} types")
         log_info(f"🛡️ Safe Bots: {len(safe_bots)}")
-        
-        # Test both groups
-        try:
-            # Test private group
-            test_private = await app.send_message(simple_manager.private_group_id, "🧪 Private test...")
-            await asyncio.sleep(2)
-            private_success = await simple_delete(test_private)
-            log_info(f"🎯 Private Test: {'SUCCESS' if private_success else 'FAILED'}")
-            
-            # Test public group
-            test_public = await app.send_message(simple_manager.public_group_id, "🧪 Public test...")
-            await asyncio.sleep(2)
-            public_success = await simple_delete(test_public)
-            log_info(f"🎯 Public Test: {'SUCCESS' if public_success else 'FAILED'}")
-            
-        except Exception as e:
-            log_error(f"Test error: {e}")
+        log_info(f"📊 Group Access - Private: {access['private']}, Public: {access['public']}")
         
         # Start background tasks
         keep_alive_task = asyncio.create_task(simple_keep_alive())
@@ -445,26 +498,27 @@ async def start_telegram():
         log_info("💓 Keep-Alive: ACTIVE")
         log_info("🗑️ Simple Delete: READY")
         
-        # Startup message
+        # Startup message with access info
         try:
             await app.send_message("me", f"""
 ✅ **BOT STARTED - SIMPLE WORKING FIX!**
 
-🎯 **FIXES APPLIED:**
-• Fixed Syntax Errors
-• Simple & Clean Code
-• All Links Detection
-• Only Bots Delete
+🎯 **GROUP ACCESS STATUS:**
+• Private Group: {'✅ ACCESSIBLE' if access['private'] else '❌ NOT ACCESSIBLE'}
+• Public Group: {'✅ ACCESSIBLE' if access['public'] else '❌ NOT ACCESSIBLE'}
 
-📊 **INITIAL TESTS:**
-• Private Group: {'✅ WORKING' if private_success else '❌ ISSUES'}
-• Public Group: {'✅ WORKING' if public_success else '❌ ISSUES'}
+📊 **INITIAL CONFIG:**
+• Safe Bots: {len(safe_bots)}
+• Delayed Bots: {len(delayed_bots)}
+• Link Patterns: {len(simple_manager.all_link_patterns)}
 
 🔧 **COMMANDS:**
 • /start - Check status
 • /test_bot - Test both groups
 
-**Status: {'OPTIMAL' if private_success and public_success else 'NEEDS ATTENTION'}** 🔥
+💡 **NOTE:** If private group shows inaccessible, add bot to that group with delete permissions.
+
+**Status: {'OPTIMAL' if access['private'] and access['public'] else 'NEEDS ATTENTION'}** 🔥
             """)
         except Exception as e:
             log_error(f"Startup DM failed: {e}")
