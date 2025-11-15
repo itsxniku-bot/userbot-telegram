@@ -255,9 +255,9 @@ async def start_telegram():
                 try:
                     # Simple activity to stay online
                     await app.get_me()
-                    # Simple chat activity
+                    # Simple chat activity - FIXED: Properly handle async generator
                     async for dialog in app.get_dialogs(limit=1):
-                        pass
+                        break  # Just iterate once to keep connection alive
                     
                     log_info(f"🟢 Online Status #{online_count} - Active")
                     touch_activity()
@@ -338,26 +338,28 @@ async def start_telegram():
                     await asyncio.sleep(5)
 
         # -----------------------------
-        # FIX 1 — KEEP SESSION ALIVE
+        # FIX 1 — KEEP SESSION ALIVE (FIXED)
         # -----------------------------
         async def keep_session_alive_loop():
             while True:
                 try:
-                    await app.get_dialogs(limit=1)
+                    # FIXED: Properly handle async generator with async for
+                    async for dialog in app.get_dialogs(limit=1):
+                        break  # Just iterate once to keep connection alive
                     touch_activity()
                 except Exception as e:
                     log_error(f"keep_session_alive error: {e}")
                 await asyncio.sleep(20)
 
         # -----------------------------
-        # FIX 2 — FORCE STATE REFRESH
+        # FIX 2 — FORCE STATE REFRESH (FIXED)
         # -----------------------------
         async def force_state_update():
-            # Pyrogram doesn't expose GetStateRequest directly like Telethon; use a lightweight call pattern
+            # FIXED: Use correct Pyrogram method instead of non-existent get_chats
             while True:
                 try:
-                    # small harmless call to keep state updated
-                    await app.get_chats(limit=1)
+                    # Use get_me() which is a simple API call to keep state updated
+                    await app.get_me()
                     touch_activity()
                 except Exception as e:
                     log_error(f"force_state_update error: {e}")
