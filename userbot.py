@@ -1,4 +1,4 @@
-print("🔥 ULTIMATE BOT STARTING - ONLY 2 GROUPS FIX...")
+print("🔥 ULTIMATE BOT STARTING - STRONG CONNECTION FIX...")
 
 import asyncio
 import multiprocessing
@@ -172,16 +172,16 @@ def touch_activity():
     global last_activity
     last_activity = time.time()
 
-# 🔥 CONNECTION STABILITY MANAGER
-class ConnectionManager:
+# 🔥 STRONG CONNECTION MANAGER
+class StrongConnectionManager:
     def __init__(self):
         self.connection_retries = 0
-        self.max_retries = 5
-        self.reconnect_delay = 10
+        self.max_retries = 3
         self.last_successful_connection = time.time()
+        self.flood_wait_count = 0
         
     async def ensure_connection(self, app):
-        """Ensure bot is properly connected to Telegram"""
+        """Ensure bot is properly connected to Telegram - STRONG VERSION"""
         try:
             me = await app.get_me()
             self.connection_retries = 0
@@ -197,6 +197,12 @@ class ConnectionManager:
             
             return False
     
+    async def handle_flood_wait(self, wait_time):
+        """Handle flood wait gracefully"""
+        self.flood_wait_count += 1
+        log_info(f"⏳ Flood wait detected: {wait_time}s (count: {self.flood_wait_count})")
+        await asyncio.sleep(wait_time)
+    
     async def force_restart(self):
         """Force restart the bot"""
         log_info("🔄 Force restart initiated...")
@@ -211,9 +217,9 @@ class ConnectionManager:
             log_critical(f"Restart failed: {e}")
             sys.exit(1)
 
-# 🔥 TELEGRAM BOT - ONLY 2 GROUPS FIX
+# 🔥 TELEGRAM BOT - STRONG CONNECTION FIX
 async def start_telegram():
-    log_info("🔗 Starting Telegram Bot - ONLY 2 GROUPS FIX...")
+    log_info("🔗 Starting Telegram Bot - STRONG CONNECTION FIX...")
     
     # ✅ ENHANCED SESSION STABILITY VARIABLES
     session_active = True
@@ -222,8 +228,8 @@ async def start_telegram():
     delete_success_count = 0
     delete_fail_count = 0
     
-    # Initialize connection manager
-    conn_manager = ConnectionManager()
+    # Initialize STRONG connection manager
+    conn_manager = StrongConnectionManager()
 
     try:
         app = Client(
@@ -231,19 +237,21 @@ async def start_telegram():
             api_id=22294121,
             api_hash="0f7fa7216b26e3f52699dc3c5a560d2a",
             session_string="AQFULmkANrpQWKdmd5cy7VgvL2DA9KATYlSUq5PSoJ5K1easAzrA_p5fxgFRVEUyABixgFmrCGtF9x_KvrQUoAWdeQ1dGqYggCnST6nMPBipTv7GIgwU_w1kewukwsWPMUbWdos0VI7CtH1HYwW7wz3VQ2_hvtdwQCDRHsIxpwek3IcSXP-hpt8vz_8Z4NYf8uUiIwZCSJluef3vGSh7TLOfekcrjVcRd_2h59kBuGgV7DzyJxZwx8eyNJOyhpYQnlExnd24CnELB6ZNYObYBH6xnE2Rgo97YGN1WPbd9Ra8oQUx2phHT4KTWZNktzjenv6hM7AH8lyVyRvGtillQOA_Dq23TwAAAAHy0lZEAA",
-            sleep_threshold=30,  # Reduced sleep threshold
-            max_concurrent_transmissions=2  # Limit concurrent operations
+            sleep_threshold=60,  # Increased sleep threshold for stability
+            max_concurrent_transmissions=1,  # Reduced to avoid flood
+            workers=2,  # Limited workers
+            no_updates=True  # Disable updates to reduce load
         )
         
         def is_admin(user_id):
             return user_id == ADMIN_USER_ID
         
         # -----------------------------
-        # ENHANCED DELETE FUNCTION WITH RETRY
+        # ULTRA DELETE FUNCTION - FLOOD PROOF
         # -----------------------------
-        async def enhanced_delete_with_retry(message_obj, max_retries=3):
+        async def ultra_delete_with_retry(message_obj, max_retries=2):
             """
-            ENHANCED DELETE WITH RETRY MECHANISM
+            ULTRA DELETE WITH FLOOD PROTECTION
             """
             touch_activity()
             chat_id = message_obj.chat.id
@@ -253,10 +261,13 @@ async def start_telegram():
             
             for attempt in range(max_retries):
                 try:
-                    # First ensure connection is alive
-                    await conn_manager.ensure_connection(app)
+                    # Simple connection check - no heavy operations
+                    try:
+                        await app.get_me()
+                    except:
+                        pass
                     
-                    # DIRECT DELETE
+                    # DIRECT DELETE - NO EXTRA CHECKS
                     await app.delete_messages(chat_id, message_id)
                     log_info(f"✅ DELETE SUCCESS: {message_id} (attempt {attempt + 1})")
                     nonlocal delete_success_count
@@ -264,10 +275,21 @@ async def start_telegram():
                     return True
                     
                 except Exception as e:
+                    error_msg = str(e)
+                    
+                    # Handle flood wait specifically
+                    if "FLOOD_WAIT" in error_msg or "Wait" in error_msg:
+                        try:
+                            wait_time = int(re.search(r'(\d+)', error_msg).group(1))
+                            await conn_manager.handle_flood_wait(wait_time)
+                            continue  # Retry after flood wait
+                        except:
+                            await asyncio.sleep(5)  # Default wait
+                    
                     log_error(f"❌ DELETE FAILED (attempt {attempt + 1}): {e}")
                     
                     if attempt < max_retries - 1:
-                        wait_time = 2 ** attempt  # Exponential backoff
+                        wait_time = 1  # Short wait for retry
                         log_info(f"🔄 Retrying delete in {wait_time}s...")
                         await asyncio.sleep(wait_time)
                     else:
@@ -277,28 +299,28 @@ async def start_telegram():
             
             return False
 
-        async def delete_after_delay_enhanced(message_obj, seconds):
+        async def delete_after_delay_ultra(message_obj, seconds):
             await asyncio.sleep(seconds)
-            await enhanced_delete_with_retry(message_obj)
+            await ultra_delete_with_retry(message_obj)
 
-        # ✅ ENHANCED ONLINE STATUS WITH CONNECTION VERIFICATION
-        async def enhanced_online_status():
+        # ✅ LIGHTWEIGHT ONLINE STATUS
+        async def lightweight_online_status():
             online_count = 0
             while session_active:
                 online_count += 1
                 try:
-                    # Verify connection is actually working
-                    current_me = await app.get_me()
-                    connection_status = await conn_manager.ensure_connection(app)
-                    status_icon = "🟢" if connection_status else "🔴"
-                    log_info(f"{status_icon} Online #{online_count} - Connection: {connection_status}")
+                    # Lightweight connection check
+                    await app.get_me()
+                    if online_count % 10 == 0:  # Log less frequently
+                        log_info(f"🟢 Online #{online_count} - Active")
                     touch_activity()
                 except Exception as e:
-                    log_error(f"⚠️ Online Status Failed: {e}")
-                await asyncio.sleep(120)
+                    if online_count % 5 == 0:  # Log errors less frequently
+                        log_error(f"⚠️ Online Status Failed: {e}")
+                await asyncio.sleep(180)  # Increased from 120 to 180
 
-        # ✅ ENHANCED SESSION KEEP-ALIVE
-        async def enhanced_keep_alive():
+        # ✅ LIGHTWEIGHT KEEP-ALIVE
+        async def lightweight_keep_alive():
             keep_alive_count = 0
             
             while session_active:
@@ -307,19 +329,18 @@ async def start_telegram():
                 connection_checks += 1
                 
                 try:
-                    # More frequent connection checks
-                    if keep_alive_count % 3 == 0:
-                        connection_ok = await conn_manager.ensure_connection(app)
-                        if connection_ok:
-                            log_info(f"💓 Keep-Alive #{keep_alive_count} - Connection Stable")
-                        else:
-                            log_error(f"💔 Keep-Alive #{keep_alive_count} - Connection Issues")
+                    # Less frequent heavy operations
+                    if keep_alive_count % 5 == 0:  # Reduced frequency
+                        await app.get_me()
+                        if keep_alive_count % 10 == 0:
+                            log_info(f"💓 Keep-Alive #{keep_alive_count} - Stable")
                     
                     touch_activity()
                 except Exception as e:
-                    log_error(f"⚠️ Keep-Alive Failed: {e}")
+                    if keep_alive_count % 10 == 0:
+                        log_error(f"⚠️ Keep-Alive Failed: {e}")
                 
-                await asyncio.sleep(120)  # Reduced from 180 to 120
+                await asyncio.sleep(150)  # Increased from 120 to 150
 
         # -------------------------
         # ENHANCED WATCHDOG
@@ -333,10 +354,10 @@ async def start_telegram():
                     idle = time.time() - last_activity
                     
                     # Log watchdog status periodically
-                    if watchdog_count % 30 == 0:
+                    if watchdog_count % 50 == 0:  # Less frequent logging
                         log_info(f"🐕 Watchdog Active - Idle: {int(idle)}s, Success: {delete_success_count}, Fail: {delete_fail_count}")
                     
-                    if idle > 240:  # Reduced from 300 to 240 seconds
+                    if idle > 300:  # Increased from 240 to 300 seconds
                         nonlocal restart_attempts
                         restart_attempts += 1
                         log_error(f"⚠️ Watchdog: Restarting - No activity for {int(idle)}s")
@@ -350,34 +371,34 @@ async def start_telegram():
 
                         await asyncio.sleep(30)
                     else:
-                        await asyncio.sleep(10)
+                        await asyncio.sleep(15)  # Increased from 10 to 15
                 except Exception as e:
                     log_error(f"Watchdog error: {e}")
-                    await asyncio.sleep(5)
+                    await asyncio.sleep(10)
 
-        # ✅ SIMPLE GROUP CONNECTION MONITOR - NO VERIFICATION NEEDED
+        # ✅ SIMPLE GROUP MONITOR - NO HEAVY OPERATIONS
         async def simple_group_monitor():
-            """Simple monitor - no verification needed for our 2 groups"""
+            """Simple monitor - no heavy operations"""
             monitor_count = 0
             while session_active:
                 monitor_count += 1
                 try:
-                    # Just log that we're monitoring the 2 groups
-                    if monitor_count % 10 == 0:
+                    # Just log - no group verification
+                    if monitor_count % 15 == 0:  # Less frequent
                         log_info(f"👥 Monitoring 2 Groups: {allowed_groups}")
                     
-                    await asyncio.sleep(300)  # Check every 5 minutes
+                    await asyncio.sleep(300)
                 except Exception as e:
                     log_error(f"Group monitor error: {e}")
                     await asyncio.sleep(60)
 
-        # ✅ ALL COMMANDS - ENHANCED VERSION
+        # ✅ ALL COMMANDS - LIGHTWEIGHT VERSION
         @app.on_message(filters.command("start"))
         async def start_command(client, message: Message):
             log_info(f"📩 /start from {message.from_user.id}")
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
-                await message.reply("🚀 **BOT STARTED!**\nOnly 2 Groups Monitoring!")
+                await message.reply("🚀 **BOT STARTED!**\nStrong Connection Active!")
                 log_info("✅ /start executed")
 
         @app.on_message(filters.command("test"))
@@ -385,11 +406,11 @@ async def start_telegram():
             log_info(f"📩 /test from {message.from_user.id}")
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
-                test_msg = await message.reply("🧪 Testing ENHANCED DELETE...")
+                test_msg = await message.reply("🧪 Testing ULTRA DELETE...")
                 await asyncio.sleep(2)
-                success = await enhanced_delete_with_retry(test_msg)
+                success = await ultra_delete_with_retry(test_msg)
                 if success:
-                    await message.reply("✅ **ENHANCED DELETE WORKING!**")
+                    await message.reply("✅ **ULTRA DELETE WORKING!**")
                 else:
                     await message.reply("❌ DELETE FAILED!")
                 log_info("✅ /test executed")
@@ -406,15 +427,15 @@ async def start_telegram():
 ⏱️ **Last Activity:** {int(time.time() - last_activity)}s ago
 👥 **Monitored Groups:** {len(allowed_groups)}
 
-**Only 2 Groups: ACTIVE** 🔥
+**Strong Connection: ACTIVE** 🔥
                 """
                 await message.reply(status_msg)
 
         # ---------------------------------------------------------
-        # ENHANCED DELETE HANDLER - STABLE VERSION
+        # ULTRA DELETE HANDLER - FLOOD PROOF VERSION
         # ---------------------------------------------------------
         @app.on_message(filters.group)
-        async def enhanced_delete_handler(client, message: Message):
+        async def ultra_delete_handler(client, message: Message):
             try:
                 # UPDATE ACTIVITY IMMEDIATELY
                 touch_activity()
@@ -424,29 +445,25 @@ async def start_telegram():
                 if group_id not in allowed_groups:
                     return
 
-                # SELF CHECK
-                current_me = await app.get_me()
-                if message.from_user and message.from_user.id == current_me.id:
-                    return
+                # SELF CHECK - LIGHTWEIGHT
+                try:
+                    current_me = await app.get_me()
+                    if message.from_user and message.from_user.id == current_me.id:
+                        return
+                except:
+                    pass  # Skip if can't get me
 
-                # ENSURE CONNECTION BEFORE PROCESSING
-                connection_ok = await conn_manager.ensure_connection(app)
-                if not connection_ok:
-                    log_error("⚠️ Skipping message - Connection unstable")
-                    return
-
-                # GET BASIC INFO
+                # GET BASIC INFO - NO HEAVY OPERATIONS
                 is_bot = message.from_user.is_bot if message.from_user else False
                 username = (message.from_user.username or "").lower() if message.from_user else ""
                 message_text = message.text or message.caption or ""
                 message_text_lower = message_text.lower()
 
-                # LOG EVERY MESSAGE
-                log_info(f"🎯 MESSAGE DETECTED: @{username} (bot: {is_bot}) in {message.chat.title}")
+                # LOG MESSAGE - LESS VERBOSE
+                log_info(f"🎯 MSG: @{username} in {message.chat.title}")
 
                 # ✅ SAFE BOT - IGNORE
                 if username in safe_bots:
-                    log_info(f"✅ Safe bot ignored: @{username}")
                     return
 
                 # ⏰ DELAYED BOT - DELETE AFTER DELAY
@@ -455,17 +472,14 @@ async def start_telegram():
                     has_mentions = '@' in message_text
                     
                     if has_links or has_mentions:
-                        log_info(f"🚫 Delayed bot with links: DELETE NOW")
-                        await enhanced_delete_with_retry(message)
+                        await ultra_delete_with_retry(message)
                     else:
-                        log_info(f"⏰ Delayed bot normal: DELETE IN 30s")
-                        asyncio.create_task(delete_after_delay_enhanced(message, 30))
+                        asyncio.create_task(delete_after_delay_ultra(message, 30))
                     return
 
                 # 🗑️ OTHER BOTS - INSTANT DELETE
                 if is_bot:
-                    log_info(f"🗑️ Unsafe bot: DELETE NOW")
-                    await enhanced_delete_with_retry(message)
+                    await ultra_delete_with_retry(message)
                     return
 
                 # 🔗 USER MESSAGES WITH LINKS/MENTIONS - DELETE
@@ -473,80 +487,72 @@ async def start_telegram():
                 has_mentions = '@' in message_text
                 
                 if has_links or has_mentions:
-                    log_info(f"🔗 User with links: DELETE NOW")
-                    await enhanced_delete_with_retry(message)
+                    await ultra_delete_with_retry(message)
                     return
-
-                log_info(f"ℹ️ Normal message - No action")
 
             except Exception as e:
                 log_error(f"❌ Handler error: {e}")
                 touch_activity()
         
-        # ✅ BOT START - SIRF 2 GROUPS KE SAATH
-        log_info("🔗 Connecting to Telegram - ONLY 2 GROUPS...")
+        # ✅ BOT START - STRONG CONNECTION
+        log_info("🔗 Connecting to Telegram - STRONG CONNECTION...")
         await app.start()
         
         me = await app.get_me()
         log_info(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
         
-        # ✅ NO GROUP VERIFICATION NEEDED - SIRF 2 GROUPS DIRECT SET KIYE HAIN
+        # ✅ NO HEAVY OPERATIONS ON STARTUP
         log_info(f"👥 Monitoring ONLY 2 Groups: {allowed_groups}")
         
-        # Start ENHANCED background tasks
-        keep_alive_task = asyncio.create_task(enhanced_keep_alive())
-        online_task = asyncio.create_task(enhanced_online_status())
+        # Start LIGHTWEIGHT background tasks
+        keep_alive_task = asyncio.create_task(lightweight_keep_alive())
+        online_task = asyncio.create_task(lightweight_online_status())
         watchdog_task = asyncio.create_task(enhanced_watchdog())
         group_monitor_task = asyncio.create_task(simple_group_monitor())
         
-        # 🎯 NO AUTO SETUP NEEDED - SIRF 2 GROUPS FIXED HAIN
-        
         log_info(f"✅ Setup: {len(allowed_groups)} groups, {len(safe_bots)} safe bots")
-        log_info("💓 Enhanced Keep-Alive: ACTIVE")
-        log_info("🟢 Enhanced Online: WORKING") 
-        log_info("🗑️ Enhanced Delete: READY WITH RETRY")
+        log_info("💓 Lightweight Keep-Alive: ACTIVE")
+        log_info("🟢 Lightweight Online: WORKING") 
+        log_info("🗑️ Ultra Delete: READY WITH FLOOD PROTECTION")
         log_info("👥 Group Monitor: ACTIVE")
         
-        # Enhanced startup test
+        # Lightweight startup test
         try:
-            test_msg = await app.send_message("me", "🧪 Enhanced startup delete test...")
+            test_msg = await app.send_message("me", "🧪 Ultra delete test...")
             await asyncio.sleep(1)
-            success = await enhanced_delete_with_retry(test_msg)
+            success = await ultra_delete_with_retry(test_msg)
             if success:
-                log_info("✅ Enhanced startup test: DELETE WORKING!")
+                log_info("✅ Ultra startup test: DELETE WORKING!")
             else:
-                log_info("❌ Enhanced startup test: DELETE FAILED!")
+                log_info("❌ Ultra startup test: DELETE FAILED!")
         except Exception as e:
-            log_error(f"Enhanced startup test error: {e}")
+            log_error(f"Startup test error: {e}")
         
-        # Enhanced startup message
+        # Startup message
         try:
             await app.send_message("me", f"""
-✅ **BOT STARTED - ONLY 2 GROUPS!**
+✅ **BOT STARTED - STRONG CONNECTION!**
 
-🎯 **CONFIGURATION:**
-• Group 1: -1002382070176
-• Group 2: -1002497459144
-• Enhanced Delete with Retry Mechanism  
-• Stable Session Management
+🎯 **ULTRA FEATURES:**
+• Flood Wait Protection
+• Lightweight Operations
+• Strong Connection Management
+• Ultra Delete with Retry
 
 📊 **STATUS:**
 • Monitored Groups: {len(allowed_groups)}
 • Safe Bots: {len(safe_bots)}
 
-**Ab delete hamesha hoga!** 🔥
+**Ab delete pakka hoga!** 🔥
             """)
         except Exception as e:
             log_error(f"Startup DM failed: {e}")
         
-        log_info("🤖 BOT READY - Only 2 Groups Monitoring!")
+        log_info("🤖 BOT READY - Strong Connection Active!")
         
-        # Keep running with enhanced monitoring
+        # Keep running with lightweight monitoring
         try:
             while session_active:
-                # Periodic connection health check
-                if connection_checks % 10 == 0:
-                    await conn_manager.ensure_connection(app)
                 await asyncio.sleep(1)
         except:
             pass
@@ -566,7 +572,7 @@ async def main():
     await start_telegram()
 
 if __name__ == "__main__":
-    log_info("🚀 BOT STARTING - ONLY 2 GROUPS FIX...")
+    log_info("🚀 BOT STARTING - STRONG CONNECTION FIX...")
 
     try:
         asyncio.run(main())
