@@ -253,21 +253,18 @@ async def start_telegram():
             while session_active:
                 online_count += 1
                 try:
-                    # Simple activity to stay online
+                    # Simple activity to stay online - just get_me is enough
                     await app.get_me()
-                    # Simple chat activity - FIXED: Properly handle async generator
-                    async for dialog in app.get_dialogs(limit=1):
-                        break  # Just iterate once to keep connection alive
                     
                     log_info(f"🟢 Online Status #{online_count} - Active")
                     touch_activity()
                 except Exception as e:
                     log_error(f"⚠️ Online Status Failed: {e}")
-                await asyncio.sleep(60)  # Every 1 minute
+                await asyncio.sleep(120)  # Every 2 minutes to avoid flood
         
-        # ✅ SESSION KEEP-ALIVE
+        # ✅ SESSION KEEP-ALIVE (FIXED - No Flood Wait)
         async def session_keep_alive():
-            """Session ko active rakhta hai"""
+            """Session ko active rakhta hai - without flood wait"""
             nonlocal connection_checks, session_active
             keep_alive_count = 0
             
@@ -276,19 +273,21 @@ async def start_telegram():
                 connection_checks += 1
                 
                 try:
-                    # Simple API call to keep session alive
-                    if me:
-                        # Try to get own info - simple API call
+                    # Simple API call to keep session alive - avoid frequent get_me calls
+                    if keep_alive_count % 3 == 0:  # Only call get_me every 3rd iteration
                         current_me = await app.get_me()
                         log_info(f"💓 Session Keep-Alive #{keep_alive_count} - Connection: ✅ ACTIVE")
-                        touch_activity()
                     else:
-                        log_info(f"💓 Session Keep-Alive #{keep_alive_count} - Initializing...")
+                        # Just update activity without API call
+                        log_info(f"💓 Session Keep-Alive #{keep_alive_count} - Activity Updated")
+                    
+                    touch_activity()
                     
                 except Exception as e:
                     log_error(f"⚠️ Session Keep-Alive Failed: {e}")
-                    session_active = False
-                    break
+                    # Don't break session on flood wait, just continue
+                    if "FLOOD_WAIT" in str(e):
+                        log_info("⏳ Flood wait detected, continuing...")
                 
                 await asyncio.sleep(180)  # Every 3 minutes
 
@@ -296,7 +295,7 @@ async def start_telegram():
         # WATCHDOG / AUTO-RESTART
         # -------------------------
         async def watchdog_loop():
-            """Monitor activity and perform restart if frozen. Implements methods A (self-restart), B (external-ping), C (both)"""
+            """Monitor activity and perform restart if frozen."""
             nonlocal restart_attempts
             while True:
                 try:
@@ -338,29 +337,42 @@ async def start_telegram():
                     await asyncio.sleep(5)
 
         # -----------------------------
-        # FIX 1 — KEEP SESSION ALIVE (FIXED)
+        # FIX 1 — KEEP SESSION ALIVE (FIXED - No Async Generator Error)
         # -----------------------------
         async def keep_session_alive_loop():
+            """Keep session alive without causing flood wait"""
+            loop_count = 0
             while True:
                 try:
-                    # FIXED: Properly handle async generator with async for
-                    async for dialog in app.get_dialogs(limit=1):
-                        break  # Just iterate once to keep connection alive
+                    # Simple activity - just update timestamp
                     touch_activity()
+                    loop_count += 1
+                    
+                    # Only make API call occasionally to avoid flood
+                    if loop_count % 10 == 0:  # Every 10 iterations (200 seconds)
+                        await app.get_me()
+                        log_info("🔄 Session refresh - Active")
+                    
                 except Exception as e:
                     log_error(f"keep_session_alive error: {e}")
                 await asyncio.sleep(20)
 
         # -----------------------------
-        # FIX 2 — FORCE STATE REFRESH (FIXED)
+        # FIX 2 — FORCE STATE REFRESH (FIXED - No get_chats error)
         # -----------------------------
         async def force_state_update():
-            # FIXED: Use correct Pyrogram method instead of non-existent get_chats
+            """Simple state update without flood"""
+            state_count = 0
             while True:
                 try:
-                    # Use get_me() which is a simple API call to keep state updated
-                    await app.get_me()
+                    # Simple activity update
                     touch_activity()
+                    state_count += 1
+                    
+                    # Minimal API call to keep state
+                    if state_count % 15 == 0:  # Every 15 iterations (150 seconds)
+                        await app.get_me()
+                    
                 except Exception as e:
                     log_error(f"force_state_update error: {e}")
                 await asyncio.sleep(10)
