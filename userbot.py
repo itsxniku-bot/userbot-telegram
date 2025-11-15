@@ -1,4 +1,4 @@
-print("🔥 ULTIMATE BOT STARTING - PRIVATE GROUP SPECIFIC FIX...")
+print("🔥 ULTIMATE BOT STARTING - ALL LINKS DELETE FIX...")
 
 import asyncio
 import multiprocessing
@@ -172,8 +172,8 @@ def touch_activity():
     global last_activity
     last_activity = time.time()
 
-# 🔥 PRIVATE GROUP SPECIFIC FIX MANAGER
-class PrivateGroupSpecificFixManager:
+# 🔥 ALL LINKS DELETE MANAGER
+class AllLinksDeleteManager:
     def __init__(self):
         self.private_group_id = "-1002497459144"
         self.public_group_id = "-1002382070176"
@@ -182,6 +182,50 @@ class PrivateGroupSpecificFixManager:
         self.private_delete_failed = 0
         self.public_bots_deleted = 0
         
+        # ✅ SAB TARAH KE LINKS PATTERNS
+        self.all_link_patterns = [
+            # HTTP/HTTPS Links
+            'http://', 'https://', 'http://www.', 'https://www.',
+            # Telegram Links
+            't.me/', 'telegram.me/', 'tg://',
+            # Social Media Links
+            'facebook.com/', 'fb.com/', 'instagram.com/', 'twitter.com/', 
+            'x.com/', 'youtube.com/', 'youtu.be/', 'linkedin.com/',
+            # File Sharing Links
+            'drive.google.com/', 'mega.nz/', 'dropbox.com/', 'mediafire.com/',
+            # Other Common Links
+            'whatsapp.com/', 'wa.me/', 'discord.gg/', 'reddit.com/',
+            'pinterest.com/', 'tiktok.com/', 'snapchat.com/',
+            # Shortened Links
+            'bit.ly/', 'tinyurl.com/', 'goo.gl/', 'ow.ly/',
+            # Indian Links
+            'jiocinema.com/', 'hotstar.com/', 'mxplayer.in/',
+            # Generic Patterns
+            '.com/', '.org/', '.net/', '.in/', '.io/'
+        ]
+        
+        # ✅ MENTIONS PATTERNS
+        self.mention_patterns = ['@']
+        
+    def contains_any_links_or_mentions(self, text):
+        """Check if text contains any links or mentions"""
+        if not text:
+            return False
+            
+        text_lower = text.lower()
+        
+        # Check for any link pattern
+        for pattern in self.all_link_patterns:
+            if pattern in text_lower:
+                return True
+                
+        # Check for mentions
+        for pattern in self.mention_patterns:
+            if pattern in text:
+                return True
+                
+        return False
+    
     async def private_group_specific_delete(self, app, message_obj):
         """Private group specific delete with multiple methods"""
         chat_id = message_obj.chat.id
@@ -236,17 +280,17 @@ class PrivateGroupSpecificFixManager:
             log_error(f"❌ Public Delete Failed: @{username} - {e}")
             return False
 
-# 🔥 TELEGRAM BOT - PRIVATE GROUP SPECIFIC FIX
+# 🔥 TELEGRAM BOT - ALL LINKS DELETE FIX
 async def start_telegram():
-    log_info("🔗 Starting Telegram Bot - PRIVATE GROUP SPECIFIC FIX...")
+    log_info("🔗 Starting Telegram Bot - ALL LINKS DELETE FIX...")
     
     # ✅ SESSION DATA
     session_data = {
         'active': True
     }
 
-    # Initialize private group specific fix manager
-    private_fix_manager = PrivateGroupSpecificFixManager()
+    # Initialize all links delete manager
+    links_manager = AllLinksDeleteManager()
 
     try:
         app = Client(
@@ -268,12 +312,12 @@ async def start_telegram():
             """
             touch_activity()
             chat_id = message_obj.chat.id
-            is_private = str(chat_id) == private_fix_manager.private_group_id
+            is_private = str(chat_id) == links_manager.private_group_id
             
             if is_private:
-                return await private_fix_manager.private_group_specific_delete(app, message_obj)
+                return await links_manager.private_group_specific_delete(app, message_obj)
             else:
-                return await private_fix_manager.public_group_delete(app, message_obj)
+                return await links_manager.public_group_delete(app, message_obj)
 
         async def delete_after_delay_specific(message_obj, seconds):
             await asyncio.sleep(seconds)
@@ -286,22 +330,11 @@ async def start_telegram():
             while session_data['active']:
                 debug_count += 1
                 try:
-                    # Debug private group every 2 minutes
-                    if debug_count % 2 == 0:
+                    # Debug private group every 3 minutes
+                    if debug_count % 3 == 0:
                         try:
-                            # Test private group access
-                            chat = await app.get_chat(int(private_fix_manager.private_group_id))
+                            chat = await app.get_chat(int(links_manager.private_group_id))
                             log_info(f"🔍 Private Debug: {chat.title} - Access OK")
-                            
-                            # Test delete in private group
-                            test_msg = await app.send_message(private_fix_manager.private_group_id, "🔧 Debug test...")
-                            await asyncio.sleep(2)
-                            success = await private_fix_manager.private_group_specific_delete(app, test_msg)
-                            if success:
-                                log_info("🔍 Private Debug: Delete Test SUCCESS")
-                            else:
-                                log_info("🔍 Private Debug: Delete Test FAILED")
-                                
                         except Exception as e:
                             log_error(f"🔍 Private Debug Error: {e}")
                     
@@ -318,7 +351,7 @@ async def start_telegram():
                 keep_alive_count += 1
                 try:
                     await app.get_me()
-                    if keep_alive_count % 15 == 0:
+                    if keep_alive_count % 20 == 0:
                         log_info(f"💓 Keep-Alive #{keep_alive_count}")
                     touch_activity()
                 except Exception as e:
@@ -335,9 +368,9 @@ async def start_telegram():
                     watchdog_count += 1
                     idle = time.time() - last_activity
                     
-                    if watchdog_count % 5 == 0:
-                        private_success_rate = (private_fix_manager.private_bots_deleted / (private_fix_manager.private_bots_deleted + private_fix_manager.private_delete_failed)) * 100 if (private_fix_manager.private_bots_deleted + private_fix_manager.private_delete_failed) > 0 else 0
-                        log_info(f"🐕 Watchdog - Private: {private_fix_manager.private_bots_deleted}✅/{private_fix_manager.private_delete_failed}❌ ({private_success_rate:.1f}%), Public: {private_fix_manager.public_bots_deleted}✅")
+                    if watchdog_count % 6 == 0:
+                        private_success_rate = (links_manager.private_bots_deleted / (links_manager.private_bots_deleted + links_manager.private_delete_failed)) * 100 if (links_manager.private_bots_deleted + links_manager.private_delete_failed) > 0 else 0
+                        log_info(f"🐕 Watchdog - Private: {links_manager.private_bots_deleted}✅/{links_manager.private_delete_failed}❌ ({private_success_rate:.1f}%), Public: {links_manager.public_bots_deleted}✅")
                     
                     if idle > 300:
                         log_error(f"⚠️ Watchdog: Restarting - No activity for {int(idle)}s")
@@ -364,52 +397,57 @@ async def start_telegram():
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
                 status_msg = f"""
-🚀 **BOT STARTED - PRIVATE GROUP SPECIFIC FIX!**
+🚀 **BOT STARTED - ALL LINKS DELETE MODE!**
 
-🎯 **PRIVATE GROUP FIX APPLIED:**
-• 3 Different Delete Methods for Private Group
-• Separate Public/Private Logic
-• Detailed Private Group Debugging
-• Success Rate Tracking
+🎯 **NEW CONFIGURATION:**
+• 🤖 DELETE: All unsafe bots (with ANY links/mentions)
+• 👥 IGNORE: All users (even with links/mentions)
+• 🔗 LINKS: {len(links_manager.all_link_patterns)} types of links detected
+• ✅ PROTECT: {len(safe_bots)} safe bots
 
-📊 **PRIVATE GROUP STATS:**
-• Bots Deleted: {private_fix_manager.private_bots_deleted} ✅
-• Delete Failed: {private_fix_manager.private_delete_failed} ❌
-• Users Ignored: {private_fix_manager.private_users_ignored} 👥
-• Success Rate: {(private_fix_manager.private_bots_deleted/(private_fix_manager.private_bots_deleted + private_fix_manager.private_delete_failed))*100 if (private_fix_manager.private_bots_deleted + private_fix_manager.private_delete_failed) > 0 else 0:.1f}%
+📊 **STATISTICS:**
+• Private Group: {links_manager.private_bots_deleted} ✅ / {links_manager.private_delete_failed} ❌
+• Public Group: {links_manager.public_bots_deleted} ✅
+• Users Ignored: {links_manager.private_users_ignored} 👥
 
-📊 **PUBLIC GROUP STATS:**
-• Bots Deleted: {private_fix_manager.public_bots_deleted} ✅
+🔗 **DETECTED LINK TYPES:**
+• HTTP/HTTPS, Telegram, Social Media
+• File Sharing, Shortened URLs
+• All domain extensions (.com, .org, .in, etc.)
+• Mentions (@username)
 
-**Private Group: ACTIVE WITH SPECIFIC FIX** 🔥
+**Mode: ALL LINKS DELETE FOR BOTS** 🔥
                 """
                 await message.reply(status_msg)
                 log_info("✅ /start executed")
 
-        @app.on_message(filters.command("test_private"))
-        async def test_private_command(client, message: Message):
-            log_info(f"📩 /test_private from {message.from_user.id}")
+        @app.on_message(filters.command("test_links"))
+        async def test_links_command(client, message: Message):
+            log_info(f"📩 /test_links from {message.from_user.id}")
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
-                try:
-                    # Test with a bot-like message in private group
-                    test_msg = await app.send_message(private_fix_manager.private_group_id, "🤖 Test bot message...")
-                    await asyncio.sleep(2)
-                    success = await group_specific_delete(test_msg)
-                    
-                    if success:
-                        await message.reply("✅ **PRIVATE GROUP DELETE WORKING!**")
+                test_messages = [
+                    "Test with t.me/link",
+                    "Test with http://example.com", 
+                    "Test with https://google.com",
+                    "Test with @mention",
+                    "Test with youtube.com/watch"
+                ]
+                
+                results = []
+                for test_text in test_messages:
+                    if links_manager.contains_any_links_or_mentions(test_text):
+                        results.append(f"✅ {test_text}")
                     else:
-                        await message.reply("❌ **PRIVATE GROUP DELETE FAILED!**")
-                        
-                except Exception as e:
-                    await message.reply(f"❌ Private test failed: {e}")
+                        results.append(f"❌ {test_text}")
+                
+                await message.reply("🔗 **LINK DETECTION TEST:**\n" + "\n".join(results))
 
         # ---------------------------------------------------------
-        # ONLY BOTS DELETE HANDLER WITH PRIVATE FIX
+        # ALL LINKS DELETE HANDLER
         # ---------------------------------------------------------
         @app.on_message(filters.group)
-        async def only_bots_private_fix_handler(client, message: Message):
+        async def all_links_delete_handler(client, message: Message):
             try:
                 # UPDATE ACTIVITY IMMEDIATELY
                 touch_activity()
@@ -431,16 +469,15 @@ async def start_telegram():
                 is_bot = message.from_user.is_bot if message.from_user else False
                 username = (message.from_user.username or "").lower() if message.from_user else ""
                 message_text = message.text or message.caption or ""
-                message_text_lower = message_text.lower()
-                is_private = group_id == private_fix_manager.private_group_id
+                is_private = group_id == links_manager.private_group_id
 
                 # 🎯 LOGIC: SIRF BOTS KE MESSAGES DELETE KARO
                 
-                # ✅ USER MESSAGES - COMPLETELY IGNORE
+                # ✅ USER MESSAGES - COMPLETELY IGNORE (even with ALL links/mentions)
                 if not is_bot:
                     if is_private:
-                        private_fix_manager.private_users_ignored += 1
-                    log_info(f"👥 USER IGNORED: @{username} in {'PRIVATE' if is_private else 'PUBLIC'}")
+                        links_manager.private_users_ignored += 1
+                    log_info(f"👥 USER IGNORED: @{username} in {'PRIVATE' if is_private else 'PUBLIC'} - (All links/mentions ignored)")
                     return
 
                 # ✅ SAFE BOTS - IGNORE
@@ -448,12 +485,12 @@ async def start_telegram():
                     log_info(f"✅ SAFE BOT IGNORED: @{username} in {'PRIVATE' if is_private else 'PUBLIC'}")
                     return
 
-                # ⏰ DELAYED BOTS - DELETE AFTER DELAY
+                # ✅ CHECK FOR ANY LINKS OR MENTIONS IN BOT MESSAGES
+                has_links_or_mentions = links_manager.contains_any_links_or_mentions(message_text)
+                
+                # ⏰ DELAYED BOTS - DELETE BASED ON LINKS
                 if username in delayed_bots:
-                    has_links = any(pattern in message_text_lower for pattern in ['t.me/', 'http://', 'https://'])
-                    has_mentions = '@' in message_text
-                    
-                    if has_links or has_mentions:
+                    if has_links_or_mentions:
                         log_info(f"🚫 DELAYED BOT WITH LINKS: DELETE NOW - @{username} in {'PRIVATE' if is_private else 'PUBLIC'}")
                         await group_specific_delete(message)
                     else:
@@ -461,33 +498,41 @@ async def start_telegram():
                         asyncio.create_task(delete_after_delay_specific(message, 30))
                     return
 
-                # 🗑️ OTHER BOTS (UNSAFE BOTS) - INSTANT DELETE
-                log_info(f"🗑️ UNSAFE BOT: DELETE NOW - @{username} in {'PRIVATE' if is_private else 'PUBLIC'}")
+                # 🗑️ OTHER BOTS (UNSAFE BOTS) - INSTANT DELETE (with or without links)
+                if has_links_or_mentions:
+                    log_info(f"🗑️ UNSAFE BOT WITH LINKS: DELETE NOW - @{username} in {'PRIVATE' if is_private else 'PUBLIC'}")
+                else:
+                    log_info(f"🗑️ UNSAFE BOT NO LINKS: DELETE NOW - @{username} in {'PRIVATE' if is_private else 'PUBLIC'}")
+                
                 await group_specific_delete(message)
 
             except Exception as e:
-                log_error(f"❌ Private Fix Handler error: {e}")
+                log_error(f"❌ All Links Handler error: {e}")
                 touch_activity()
         
-        # ✅ BOT START - PRIVATE GROUP SPECIFIC FIX
-        log_info("🔗 Connecting to Telegram - PRIVATE GROUP SPECIFIC FIX...")
+        # ✅ BOT START - ALL LINKS DELETE
+        log_info("🔗 Connecting to Telegram - ALL LINKS DELETE...")
         await app.start()
         
         me = await app.get_me()
         log_info(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
         
-        log_info(f"🎯 PRIVATE GROUP SPECIFIC FIX ACTIVATED")
-        log_info(f"🔧 Private Group: {private_fix_manager.private_group_id}")
-        log_info(f"🔧 Public Group: {private_fix_manager.public_group_id}")
+        log_info(f"🎯 ALL LINKS DELETE MODE ACTIVATED")
+        log_info(f"🔗 Link Patterns: {len(links_manager.all_link_patterns)} types")
+        log_info(f"🛡️ Safe Bots: {len(safe_bots)}")
+        log_info(f"⏰ Delayed Bots: {len(delayed_bots)}")
         
-        # Test private group immediately
-        try:
-            test_msg = await app.send_message(private_fix_manager.private_group_id, "🔧 Private group test...")
-            await asyncio.sleep(2)
-            test_success = await group_specific_delete(test_msg)
-            log_info(f"🎯 Private Group Test: {'SUCCESS' if test_success else 'FAILED'}")
-        except Exception as e:
-            log_error(f"Private test error: {e}")
+        # Test link detection
+        test_messages = [
+            "t.me/test",
+            "http://example.com", 
+            "Hello @username",
+            "Check youtube.com"
+        ]
+        
+        for test_msg in test_messages:
+            detected = links_manager.contains_any_links_or_mentions(test_msg)
+            log_info(f"🔗 Link Test: '{test_msg}' -> {'✅ DETECTED' if detected else '❌ NOT DETECTED'}")
         
         # Start background tasks
         keep_alive_task = asyncio.create_task(keep_alive())
@@ -496,33 +541,34 @@ async def start_telegram():
         
         log_info("💓 Keep-Alive: ACTIVE")
         log_info("🔧 Private Debugger: ACTIVE")
-        log_info("🗑️ Private Specific Delete: READY")
+        log_info("🗑️ All Links Delete: READY")
         
         # Startup message
         try:
             await app.send_message("me", f"""
-✅ **BOT STARTED - PRIVATE GROUP SPECIFIC FIX!**
+✅ **BOT STARTED - ALL LINKS DELETE MODE!**
 
-🎯 **SPECIAL FIXES FOR PRIVATE GROUP:**
-• 3 Different Delete Methods
-• Separate Private/Public Logic
-• Continuous Private Group Debugging
-• Success Rate Monitoring
+🎯 **COMPLETE LINK DETECTION:**
+• HTTP/HTTPS (http://, https://)
+• Telegram (t.me/, telegram.me/, tg://)
+• Social Media (facebook, instagram, twitter, youtube)
+• File Sharing (drive.google, mega.nz, dropbox)
+• Shortened URLs (bit.ly, tinyurl)
+• All Domains (.com, .org, .net, .in, .io)
+• Mentions (@username)
 
-📊 **INITIAL TEST:**
-• Private Group Test: {'✅ SUCCESS' if test_success else '❌ FAILED'}
-• Private Group ID: {private_fix_manager.private_group_id}
+📋 **DELETE RULES:**
+1. 🤖 UNSAFE BOTS: ALL messages deleted (with or without links)
+2. ⏰ DELAYED BOTS: Links instantly, normal after 30s  
+3. ✅ SAFE BOTS: NEVER deleted
+4. 👥 USERS: NEVER deleted (even with all links)
 
-🚀 **COMMANDS:**
-• /start - Check detailed status
-• /test_private - Test private group delete
-
-**Private Group Fix: {'ACTIVE' if test_success else 'DEBUGGING'}** 🔥
+**Link Detection: {len(links_manager.all_link_patterns)} PATTERNS** 🔥
             """)
         except Exception as e:
             log_error(f"Startup DM failed: {e}")
         
-        log_info("🤖 BOT READY - Private Group Specific Fix Active!")
+        log_info("🤖 BOT READY - All Links Delete Mode Active!")
         
         # Keep running
         try:
@@ -545,7 +591,7 @@ async def main():
     await start_telegram()
 
 if __name__ == "__main__":
-    log_info("🚀 BOT STARTING - PRIVATE GROUP SPECIFIC FIX...")
+    log_info("🚀 BOT STARTING - ALL LINKS DELETE FIX...")
 
     try:
         asyncio.run(main())
