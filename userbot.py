@@ -1,4 +1,4 @@
-print("🔥 ULTIMATE BOT STARTING - PEER ID FIX...")
+print("🔥 ULTIMATE BOT STARTING - ADMIN ACCESS FIX...")
 
 import asyncio
 import multiprocessing
@@ -172,94 +172,125 @@ def touch_activity():
     global last_activity
     last_activity = time.time()
 
-# 🔥 SMART PRIVATE GROUP MANAGER
-class SmartPrivateGroupManager:
+# 🔥 ULTIMATE ACCESS FIX MANAGER
+class UltimateAccessFixManager:
     def __init__(self):
         self.private_group_id = "-1002497459144"
         self.public_group_id = "-1002382070176"
         self.private_group_accessible = False
-        self.private_delete_attempts = 0
-        self.private_delete_success = 0
-        self.last_access_check = 0
+        self.public_group_accessible = False
+        self.private_delete_count = 0
+        self.public_delete_count = 0
+        self.access_attempts = 0
         
-    async def smart_access_check(self, app):
-        """Smart access check that doesn't fail on PEER_ID_INVALID"""
-        current_time = time.time()
+    async def ultimate_access_fix(self, app):
+        """ULTIMATE ACCESS FIX - All methods to gain access"""
+        self.access_attempts += 1
         
-        # Don't check too frequently
-        if current_time - self.last_access_check < 300:  # 5 minutes
-            return self.private_group_accessible
-            
-        self.last_access_check = current_time
-        
+        # METHOD 1: Try simple chat access
         try:
-            # Try lightweight method first - just get chat
             chat = await app.get_chat(int(self.private_group_id))
+            log_info(f"✅ PRIVATE GROUP ACCESS: {chat.title}")
             self.private_group_accessible = True
-            log_info(f"✅ Private Group Access: {chat.title}")
             return True
         except Exception as e:
-            error_msg = str(e)
-            
-            if "PEER_ID_INVALID" in error_msg or "CHANNEL_INVALID" in error_msg:
-                log_info("ℹ️ Private Group: Bot not in group or no access")
-                self.private_group_accessible = False
-            else:
-                log_error(f"❌ Private Group Access Error: {e}")
-                self.private_group_accessible = False
-            
+            log_error(f"❌ Private Access Method 1 Failed: {e}")
+        
+        # METHOD 2: Try to send a message (activates chat)
+        try:
+            test_msg = await app.send_message(self.private_group_id, "🤖 Bot activation...")
+            await asyncio.sleep(2)
+            await app.delete_messages(self.private_group_id, test_msg.id)
+            log_info("✅ PRIVATE GROUP ACCESS: Activated via message")
+            self.private_group_accessible = True
+            return True
+        except Exception as e:
+            log_error(f"❌ Private Access Method 2 Failed: {e}")
+        
+        # METHOD 3: Check if we're in participants list
+        try:
+            async for member in app.get_chat_members(self.private_group_id, limit=5):
+                if member.user.id == (await app.get_me()).id:
+                    log_info("✅ PRIVATE GROUP ACCESS: Found in participants")
+                    self.private_group_accessible = True
+                    return True
+            log_info("ℹ️ Private Group: Bot not found in participants")
+        except Exception as e:
+            log_error(f"❌ Private Access Method 3 Failed: {e}")
+        
+        # METHOD 4: Try to get chat history (lightweight)
+        try:
+            async for message in app.get_chat_history(self.private_group_id, limit=1):
+                log_info("✅ PRIVATE GROUP ACCESS: Can access chat history")
+                self.private_group_accessible = True
+                return True
+        except Exception as e:
+            log_error(f"❌ Private Access Method 4 Failed: {e}")
+        
+        log_info("🔴 PRIVATE GROUP: All access methods failed - Bot may not be in group")
+        self.private_group_accessible = False
+        return False
+    
+    async def fix_public_group_access(self, app):
+        """Fix public group access"""
+        try:
+            chat = await app.get_chat(int(self.public_group_id))
+            log_info(f"✅ PUBLIC GROUP ACCESS: {chat.title}")
+            self.public_group_accessible = True
+            return True
+        except Exception as e:
+            log_error(f"❌ Public Group Access Failed: {e}")
+            self.public_group_accessible = False
             return False
     
-    async def smart_private_delete(self, app, message_obj):
-        """Smart delete that handles PEER_ID_INVALID gracefully"""
-        self.private_delete_attempts += 1
+    async def ultimate_delete(self, app, message_obj):
+        """ULTIMATE DELETE with access recovery"""
         chat_id = message_obj.chat.id
         message_id = message_obj.id
+        is_private = str(chat_id) == self.private_group_id
         
-        # First check if we have access
-        has_access = await self.smart_access_check(app)
-        
-        if not has_access:
-            log_info("⏩ Skipping private delete - No access to group")
-            return False
+        log_info(f"🗑️ ULTIMATE DELETE: {message_id} in {'PRIVATE' if is_private else 'PUBLIC'}")
         
         try:
-            # DIRECT DELETE ATTEMPT
+            # Try direct delete first
             await app.delete_messages(chat_id, message_id)
-            self.private_delete_success += 1
-            log_info(f"✅ PRIVATE DELETE SUCCESS: {message_id}")
+            
+            if is_private:
+                self.private_delete_count += 1
+                log_info(f"✅ ULTIMATE PRIVATE DELETE: {message_id}")
+            else:
+                self.public_delete_count += 1
+                log_info(f"✅ ULTIMATE PUBLIC DELETE: {message_id}")
+            
             return True
             
         except Exception as e:
             error_msg = str(e)
+            log_error(f"❌ ULTIMATE DELETE FAILED: {error_msg}")
             
+            # If access error, try to recover access
             if "PEER_ID_INVALID" in error_msg or "CHANNEL_INVALID" in error_msg:
-                log_info("ℹ️ Private Delete: Bot removed from group")
-                self.private_group_accessible = False
-            elif "MESSAGE_DELETE_FORBIDDEN" in error_msg:
-                log_error("❌ Private Delete: No permission to delete")
-            elif "CHAT_ADMIN_REQUIRED" in error_msg:
-                log_error("❌ Private Delete: Admin rights required")
-            else:
-                log_error(f"❌ Private Delete Failed: {e}")
+                log_info("🔄 Attempting access recovery...")
+                if is_private:
+                    await self.ultimate_access_fix(app)
+                else:
+                    await self.fix_public_group_access(app)
             
             return False
 
-# 🔥 TELEGRAM BOT - PEER ID FIX
+# 🔥 TELEGRAM BOT - ULTIMATE ACCESS FIX
 async def start_telegram():
-    log_info("🔗 Starting Telegram Bot - PEER ID FIX...")
+    log_info("🔗 Starting Telegram Bot - ULTIMATE ACCESS FIX...")
     
     # ✅ SESSION DATA
     session_data = {
         'active': True,
         'delete_success_count': 0,
-        'delete_fail_count': 0,
-        'public_group_delete_count': 0,
-        'private_group_delete_count': 0
+        'delete_fail_count': 0
     }
 
-    # Initialize smart private group manager
-    private_manager = SmartPrivateGroupManager()
+    # Initialize ultimate access manager
+    access_manager = UltimateAccessFixManager()
 
     try:
         app = Client(
@@ -273,99 +304,83 @@ async def start_telegram():
             return user_id == ADMIN_USER_ID
         
         # -----------------------------
-        # SMART DELETE FUNCTION
+        # ULTIMATE DELETE FUNCTION
         # -----------------------------
-        async def smart_delete(message_obj):
+        async def ultimate_delete_function(message_obj):
             """
-            SMART DELETE THAT HANDLES PEER_ID_INVALID
+            ULTIMATE DELETE WITH ACCESS RECOVERY
             """
             touch_activity()
-            chat_id = message_obj.chat.id
-            message_id = message_obj.id
-            is_private_group = str(chat_id) == private_manager.private_group_id
             
-            log_info(f"🗑️ SMART DELETE: {message_id} in {'PRIVATE' if is_private_group else 'PUBLIC'}")
-            
-            try:
-                if is_private_group:
-                    # PRIVATE GROUP: Use smart delete
-                    success = await private_manager.smart_private_delete(app, message_obj)
-                    if success:
-                        session_data['delete_success_count'] += 1
-                        session_data['private_group_delete_count'] += 1
-                        return True
-                    else:
-                        session_data['delete_fail_count'] += 1
-                        return False
-                else:
-                    # PUBLIC GROUP: Simple delete
-                    await app.delete_messages(chat_id, message_id)
-                    session_data['delete_success_count'] += 1
-                    session_data['public_group_delete_count'] += 1
-                    log_info(f"✅ PUBLIC DELETE SUCCESS: {message_id}")
-                    return True
-                    
-            except Exception as e:
-                log_error(f"❌ SMART DELETE FAILED: {e}")
+            success = await access_manager.ultimate_delete(app, message_obj)
+            if success:
+                session_data['delete_success_count'] += 1
+            else:
                 session_data['delete_fail_count'] += 1
-                return False
+            
+            return success
 
-        async def delete_after_delay_smart(message_obj, seconds):
+        async def delete_after_delay_ultimate(message_obj, seconds):
             await asyncio.sleep(seconds)
-            await smart_delete(message_obj)
+            await ultimate_delete_function(message_obj)
 
-        # ✅ ACCESS CHECKER
-        async def access_checker():
-            """Periodically check private group access"""
-            checker_count = 0
+        # ✅ ACCESS RECOVERY MANAGER
+        async def access_recovery_manager():
+            """Continuously recover access to groups"""
+            recovery_count = 0
             while session_data['active']:
-                checker_count += 1
+                recovery_count += 1
                 try:
-                    # Check access every 10 minutes
-                    if checker_count % 10 == 0:
-                        current_access = await private_manager.smart_access_check(app)
-                        if current_access:
-                            if checker_count % 20 == 0:
-                                log_info("✅ Access Checker: Private group accessible")
-                        else:
-                            log_info("ℹ️ Access Checker: Private group not accessible")
+                    # Try to recover private group access every 5 minutes
+                    if recovery_count % 5 == 0 and not access_manager.private_group_accessible:
+                        log_info("🔄 Attempting private group access recovery...")
+                        await access_manager.ultimate_access_fix(app)
+                    
+                    # Check public group access every 10 minutes
+                    if recovery_count % 10 == 0 and not access_manager.public_group_accessible:
+                        log_info("🔄 Checking public group access...")
+                        await access_manager.fix_public_group_access(app)
+                    
+                    # Log status every 15 minutes
+                    if recovery_count % 15 == 0:
+                        log_info(f"🔍 Access Status - Private: {access_manager.private_group_accessible}, Public: {access_manager.public_group_accessible}")
                     
                     await asyncio.sleep(60)  # Check every minute
                     
                 except Exception as e:
-                    log_error(f"Access checker error: {e}")
+                    log_error(f"Access recovery error: {e}")
                     await asyncio.sleep(120)
 
-        # ✅ SIMPLE KEEP-ALIVE
-        async def simple_keep_alive():
+        # ✅ STRONG KEEP-ALIVE
+        async def strong_keep_alive():
             keep_alive_count = 0
             while session_data['active']:
                 keep_alive_count += 1
                 try:
                     await app.get_me()
-                    if keep_alive_count % 30 == 0:
+                    if keep_alive_count % 20 == 0:
                         log_info(f"💓 Keep-Alive #{keep_alive_count}")
                     touch_activity()
                 except Exception as e:
                     log_error(f"⚠️ Keep-Alive Failed: {e}")
-                await asyncio.sleep(60)
+                await asyncio.sleep(45)
 
         # -------------------------
-        # SMART WATCHDOG
+        # ULTIMATE WATCHDOG
         # -------------------------
-        async def smart_watchdog():
+        async def ultimate_watchdog():
             watchdog_count = 0
             while True:
                 try:
                     watchdog_count += 1
                     idle = time.time() - last_activity
                     
-                    # Log status every 5 minutes
-                    if watchdog_count % 10 == 0:
-                        log_info(f"🐕 Watchdog - Idle: {int(idle)}s, Private: {session_data['private_group_delete_count']}, Public: {session_data['public_group_delete_count']}")
+                    # Log status every 3 minutes
+                    if watchdog_count % 6 == 0:
+                        log_info(f"🐕 Watchdog - Idle: {int(idle)}s, Private: {access_manager.private_delete_count}, Public: {access_manager.public_delete_count}")
                     
-                    # Restart if no activity for 10 minutes
-                    if idle > 600:
+                    # Restart if no activity for 8 minutes
+                    if idle > 480:
                         log_error(f"⚠️ Watchdog: Restarting - No activity for {int(idle)}s")
                         for h in logger.handlers:
                             try:
@@ -389,43 +404,84 @@ async def start_telegram():
             log_info(f"📩 /start from {message.from_user.id}")
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
-                private_access = await private_manager.smart_access_check(app)
+                # Force access check
+                private_access = await access_manager.ultimate_access_fix(app)
+                public_access = await access_manager.fix_public_group_access(app)
                 
                 status_msg = f"""
-🚀 **BOT STARTED - PEER ID FIX!**
+🚀 **BOT STARTED - ULTIMATE ACCESS FIX!**
 
 📊 **DELETE STATS:**
 • Total: {session_data['delete_success_count']} ✅ / {session_data['delete_fail_count']} ❌
-• Private: {session_data['private_group_delete_count']} ✅
-• Public: {session_data['public_group_delete_count']} ✅
+• Private: {access_manager.private_delete_count} ✅
+• Public: {access_manager.public_delete_count} ✅
 
-🔍 **Private Group:**
-• Access: {'✅ AVAILABLE' if private_access else '❌ NOT AVAILABLE'}
-• Attempts: {private_manager.private_delete_attempts}
-• Success: {private_manager.private_delete_success}
+🔍 **ACCESS STATUS:**
+• Private Group: {'✅ ACCESSIBLE' if private_access else '❌ NOT ACCESSIBLE'}
+• Public Group: {'✅ ACCESSIBLE' if public_access else '❌ NOT ACCESSIBLE'}
+• Access Attempts: {access_manager.access_attempts}
 
-**Status: ACTIVE** 🔥
+**Solution: {'FULL ACCESS' if private_access and public_access else 'PARTIAL ACCESS'}** 🔥
                 """
                 await message.reply(status_msg)
                 log_info("✅ /start executed")
 
-        @app.on_message(filters.command("check_private"))
-        async def check_private_command(client, message: Message):
-            log_info(f"📩 /check_private from {message.from_user.id}")
+        @app.on_message(filters.command("force_access"))
+        async def force_access_command(client, message: Message):
+            log_info(f"📩 /force_access from {message.from_user.id}")
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
-                private_access = await private_manager.smart_access_check(app)
-                if private_access:
-                    await message.reply("✅ **PRIVATE GROUP ACCESSIBLE**\nBot can delete messages in private group!")
+                await message.reply("🔄 **FORCING ACCESS RECOVERY...**")
+                
+                private_access = await access_manager.ultimate_access_fix(app)
+                public_access = await access_manager.fix_public_group_access(app)
+                
+                if private_access or public_access:
+                    await message.reply(f"✅ **ACCESS RECOVERY SUCCESS!**\nPrivate: {'✅' if private_access else '❌'}\nPublic: {'✅' if public_access else '❌'}")
                 else:
-                    await message.reply("❌ **PRIVATE GROUP NOT ACCESSIBLE**\nBot is not in the private group or has no access.")
-                log_info("✅ /check_private executed")
+                    await message.reply("❌ **ACCESS RECOVERY FAILED!**\nBot may not be in groups.")
+                
+                log_info("✅ /force_access executed")
+
+        @app.on_message(filters.command("test_groups"))
+        async def test_groups_command(client, message: Message):
+            log_info(f"📩 /test_groups from {message.from_user.id}")
+            touch_activity()
+            if message.from_user and is_admin(message.from_user.id):
+                results = []
+                
+                # Test private group
+                if access_manager.private_group_accessible:
+                    try:
+                        test_msg = await app.send_message(access_manager.private_group_id, "🧪 Private test...")
+                        await asyncio.sleep(2)
+                        success = await ultimate_delete_function(test_msg)
+                        results.append(f"Private: {'✅' if success else '❌'}")
+                    except Exception as e:
+                        results.append(f"Private: ❌ ({e})")
+                else:
+                    results.append("Private: ❌ (No access)")
+                
+                # Test public group  
+                if access_manager.public_group_accessible:
+                    try:
+                        test_msg = await app.send_message(access_manager.public_group_id, "🧪 Public test...")
+                        await asyncio.sleep(2)
+                        success = await ultimate_delete_function(test_msg)
+                        results.append(f"Public: {'✅' if success else '❌'}")
+                    except Exception as e:
+                        results.append(f"Public: ❌ ({e})")
+                else:
+                    results.append("Public: ❌ (No access)")
+                
+                await message.reply(f"🧪 **GROUP TESTS:**\n" + "\n".join(results))
+                log_info("✅ /test_groups executed")
 
         # ---------------------------------------------------------
-        # SMART DELETE HANDLER
+        # ULTIMATE DELETE HANDLER
         # ---------------------------------------------------------
         @app.on_message(filters.group)
-        async def smart_delete_handler(client, message: Message):
+        async def ultimate_delete_handler(client, message: Message):
             try:
                 # UPDATE ACTIVITY IMMEDIATELY
                 touch_activity()
@@ -449,11 +505,13 @@ async def start_telegram():
                 message_text = message.text or message.caption or ""
                 message_text_lower = message_text.lower()
 
-                is_private = group_id == private_manager.private_group_id
+                is_private = group_id == access_manager.private_group_id
                 
-                # Only log if it's private group and we have access, or it's public
-                if not is_private or private_manager.private_group_accessible:
-                    log_info(f"🎯 {'PRIVATE' if is_private else 'PUBLIC'} GROUP: @{username}")
+                # Only process if we have access to the group
+                if (is_private and not access_manager.private_group_accessible) or (not is_private and not access_manager.public_group_accessible):
+                    return
+                
+                log_info(f"🎯 {'PRIVATE' if is_private else 'PUBLIC'} GROUP: @{username}")
 
                 # ✅ SAFE BOT - IGNORE
                 if username in safe_bots:
@@ -465,14 +523,14 @@ async def start_telegram():
                     has_mentions = '@' in message_text
                     
                     if has_links or has_mentions:
-                        await smart_delete(message)
+                        await ultimate_delete_function(message)
                     else:
-                        asyncio.create_task(delete_after_delay_smart(message, 30))
+                        asyncio.create_task(delete_after_delay_ultimate(message, 30))
                     return
 
                 # 🗑️ OTHER BOTS - INSTANT DELETE
                 if is_bot:
-                    await smart_delete(message)
+                    await ultimate_delete_function(message)
                     return
 
                 # 🔗 USER MESSAGES WITH LINKS/MENTIONS - DELETE
@@ -480,72 +538,81 @@ async def start_telegram():
                 has_mentions = '@' in message_text
                 
                 if has_links or has_mentions:
-                    await smart_delete(message)
+                    await ultimate_delete_function(message)
                     return
 
             except Exception as e:
-                log_error(f"❌ Smart Handler error: {e}")
+                log_error(f"❌ Ultimate Handler error: {e}")
                 touch_activity()
         
-        # ✅ BOT START - PEER ID FIX
-        log_info("🔗 Connecting to Telegram - PEER ID FIX...")
+        # ✅ BOT START - ULTIMATE ACCESS FIX
+        log_info("🔗 Connecting to Telegram - ULTIMATE ACCESS FIX...")
         await app.start()
         
         me = await app.get_me()
         log_info(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
         
-        # Check private group access
-        log_info("🔍 Checking private group access...")
-        private_access = await private_manager.smart_access_check(app)
+        # ULTIMATE ACCESS FIX ATTEMPT
+        log_info("🔄 Attempting ULTIMATE ACCESS FIX...")
+        private_access = await access_manager.ultimate_access_fix(app)
+        public_access = await access_manager.fix_public_group_access(app)
         
         if private_access:
-            log_info("🎯 Private Group: ACCESS GRANTED - Ready for deletion")
+            log_info("🎯 Private Group: ULTIMATE ACCESS FIX SUCCESS!")
         else:
-            log_info("ℹ️ Private Group: NO ACCESS - Will only work in public group")
+            log_info("🔴 Private Group: ULTIMATE ACCESS FIX FAILED - Bot may need to be re-added")
         
-        log_info(f"👥 Public Group: READY - {private_manager.public_group_id}")
+        if public_access:
+            log_info("🎯 Public Group: ACCESS GRANTED!")
+        else:
+            log_info("🔴 Public Group: ACCESS FAILED - Check group ID")
         
         # Start background tasks
-        keep_alive_task = asyncio.create_task(simple_keep_alive())
-        access_checker_task = asyncio.create_task(access_checker())
-        watchdog_task = asyncio.create_task(smart_watchdog())
+        keep_alive_task = asyncio.create_task(strong_keep_alive())
+        recovery_task = asyncio.create_task(access_recovery_manager())
+        watchdog_task = asyncio.create_task(ultimate_watchdog())
         
-        log_info("💓 Keep-Alive: ACTIVE")
-        log_info("🔍 Access Checker: ACTIVE")
-        log_info("🗑️ Smart Delete: READY")
+        log_info("💓 Strong Keep-Alive: ACTIVE")
+        log_info("🔄 Access Recovery: ACTIVE")
+        log_info("🗑️ Ultimate Delete: READY")
         
-        # Test public group
+        # Test accessible groups
         try:
-            test_public = await app.send_message(private_manager.public_group_id, "🧪 Public group test...")
-            await asyncio.sleep(2)
-            public_success = await smart_delete(test_public)
-            log_info(f"✅ Public test: {'SUCCESS' if public_success else 'FAILED'}")
+            if public_access:
+                test_public = await app.send_message(access_manager.public_group_id, "🧪 Public test...")
+                await asyncio.sleep(2)
+                public_success = await ultimate_delete_function(test_public)
+                log_info(f"✅ Public test: {'SUCCESS' if public_success else 'FAILED'}")
         except Exception as e:
             log_error(f"Public test error: {e}")
         
         # Startup message
         try:
             await app.send_message("me", f"""
-✅ **BOT STARTED - PEER ID FIX!**
+✅ **BOT STARTED - ULTIMATE ACCESS FIX!**
 
-🎯 **SMART FEATURES:**
-• Handles PEER_ID_INVALID Gracefully
-• Smart Access Checking
-• No Crash on Invalid Groups
-• Focus on Working Groups
+🎯 **ULTIMATE FEATURES:**
+• 4 Different Access Methods
+• Continuous Access Recovery
+• Automatic Session Activation
+• Access Error Handling
 
-📊 **STATUS:**
-• Private Access: {'✅ AVAILABLE' if private_access else '❌ NOT AVAILABLE'}
-• Public Group: ✅ READY
-• Private Deletes: {session_data['private_group_delete_count']}
-• Public Deletes: {session_data['public_group_delete_count']}
+📊 **ACCESS STATUS:**
+• Private Group: {'✅ ACCESSIBLE' if private_access else '❌ NOT ACCESSIBLE'}
+• Public Group: {'✅ ACCESSIBLE' if public_access else '❌ NOT ACCESSIBLE'}
+• Access Attempts: {access_manager.access_attempts}
 
-**Strategy: {'DUAL GROUP' if private_access else 'PUBLIC ONLY'}** 🔥
+🚨 **IF NO ACCESS:**
+1. Re-add bot to private group
+2. Use /force_access command
+3. Check bot admin rights
+
+**Status: {'OPTIMAL' if private_access and public_access else 'NEEDS ATTENTION'}** 🔥
             """)
         except Exception as e:
             log_error(f"Startup DM failed: {e}")
         
-        log_info("🤖 BOT READY - Peer ID Fix Active!")
+        log_info("🤖 BOT READY - Ultimate Access Fix Active!")
         
         # Keep running
         try:
@@ -556,7 +623,7 @@ async def start_telegram():
         finally:
             session_data['active'] = False
             keep_alive_task.cancel()
-            access_checker_task.cancel()
+            recovery_task.cancel()
             watchdog_task.cancel()
             await app.stop()
         
@@ -568,7 +635,7 @@ async def main():
     await start_telegram()
 
 if __name__ == "__main__":
-    log_info("🚀 BOT STARTING - PEER ID FIX...")
+    log_info("🚀 BOT STARTING - ULTIMATE ACCESS FIX...")
 
     try:
         asyncio.run(main())
