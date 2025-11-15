@@ -26,7 +26,7 @@ def save_data(filename, data):
         pass
 
 # ---------------------------------------------------------
-# ✅ CLEAN MASTER LISTS (as you gave)
+# ✅ CLEAN MASTER LISTS
 # ---------------------------------------------------------
 allowed_groups = {
     "-1002382070176",
@@ -46,17 +46,15 @@ delayed_bots = {
     "crocodile_game4_bot"
 }
 
-# Save clean lists to files
 save_data(ALLOWED_GROUPS_FILE, allowed_groups)
 save_data(SAFE_BOTS_FILE, safe_bots)
 save_data(DELAYED_BOTS_FILE, delayed_bots)
 
-print("✅ Clean lists applied (old entries removed & replaced)")
+print("✅ Clean lists applied")
 
-# YOUR USER ID
 ADMIN_USER_ID = 8368838212
 
-# 🛡️ ULTIMATE SLEEP PROTECTION
+# Sleep protection
 class SleepProtection:
     def __init__(self):
         self.ping_count = 0
@@ -118,7 +116,6 @@ class SleepProtection:
         threading.Thread(target=external_pinger, daemon=True).start()
         print("✅ External Pings: RUNNING")
 
-# Start protection
 sleep_protector = SleepProtection()
 sleep_protector.start_protection()
 
@@ -128,7 +125,7 @@ async def start_telegram():
     
     session_active = True
     connection_checks = 0
-    
+
     try:
         app = Client(
             "ultimate_bot",
@@ -136,15 +133,35 @@ async def start_telegram():
             api_hash="0f7fa7216b26e3f52699dc3c5a560d2a",
             session_string="AQFULmkANrpQWKdmd5cy7VgvL2DA9KATYlSUq5PSoJ5K1easAzrA_p5fxgFRVEUyABixgFmrCGtF9x_KvrQUoAWdeQ1dGqYggCnST6nMPBipTv7GIgwU_w1kewukwsWPMUbWdos0VI7CtH1HYwW7wz3VQ2_hvtdwQCDRHsIxpwek3IcSXP-hpt8vz_8Z4NYf8uUiIwZCSJluef3vGSh7TLOfekcrjVcRd_2h59kBuGgV7DzyJxZwx8eyNJOyhpYQnlExnd24CnELB6ZNYObYBH6xnE2Rgo97YGN1WPbd9Ra8oQUx2phHT4KTWZNktzjenv6hM7AH8lyVyRvGtillQOA_Dq23TwAAAAHy0lZEAA"
         )
-        
+
         def is_admin(uid):
             return uid == ADMIN_USER_ID
         
         me = None
-        
-        # --------------------------
-        # ONLINE STATUS LOOP
-        # --------------------------
+
+        # ---------------------------------------------------------
+        # 🔥 FIX 1 — KEEP SESSION ALIVE (solves "only 1 group works")
+        # ---------------------------------------------------------
+        async def keep_session_alive():
+            while True:
+                try:
+                    await app.get_dialogs(limit=1)
+                except Exception as e:
+                    print("KeepAlive Error:", e)
+                await asyncio.sleep(20)
+
+        # ---------------------------------------------------------
+        # 🔥 FIX 2 — FORCE STATE REFRESH (prevents chat freeze)
+        # ---------------------------------------------------------
+        async def force_state_update():
+            while True:
+                try:
+                    await app.invoke({"@type": "getChat", "chat_id": 1})
+                except:
+                    pass
+                await asyncio.sleep(10)
+
+        # NORMAL STATUS LOOP
         async def simple_online_status():
             online_count = 0
             while session_active:
@@ -155,25 +172,8 @@ async def start_telegram():
                 except Exception as e:
                     print(f"⚠️ Online Status Error: {e}")
                 await asyncio.sleep(60)
-        
-        # --------------------------
-        # KEEP ALIVE LOOP
-        # --------------------------
-        async def session_keep_alive():
-            nonlocal connection_checks, session_active
-            count = 0
-            while session_active:
-                count += 1
-                connection_checks += 1
-                try:
-                    if me:
-                        await app.get_me()
-                except:
-                    session_active = False
-                    break
-                await asyncio.sleep(180)
 
-        # COMMANDS (unchanged)
+        # COMMANDS
         @app.on_message(filters.command("start"))
         async def start_command(client, message):
             if message.from_user and is_admin(message.from_user.id):
@@ -198,22 +198,20 @@ async def start_telegram():
                 await message.reply(f"Alive: {connection_checks}")
 
         # ---------------------------------------------------------
-        # 🚨 SUPER-STABLE DELETE HANDLER (UPGRADED)
+        # SUPER-STABLE DELETE HANDLER (UNCHANGED)
         # ---------------------------------------------------------
         @app.on_message(filters.group)
         async def deletion_handler(client, message: Message):
             try:
-                # Allowed group check
                 if str(message.chat.id) not in allowed_groups:
                     return
 
-                # Self-ignore
                 nonlocal me
                 if me is None:
                     me = await app.get_me()
+
                 if message.from_user and message.from_user.id == me.id:
                     return
-
                 if not message.from_user:
                     return
 
@@ -226,22 +224,20 @@ async def start_telegram():
 
                 print(f"🤖 Bot detected: @{username}")
 
-                # SAFE BOT
                 if username in safe_bots:
                     print(f"🟢 Safe bot ignored: @{username}")
                     return
 
-                # DELAY BOT LOGIC
                 if username in delayed_bots:
                     has_link = "t.me/" in text or "http" in text
                     has_at = "@" in text
 
                     if has_link or has_at:
-                        print("🚫 Link detected in delay bot — INSTANT DELETE")
+                        print("🚫 Link detected — delete")
                         await message.delete()
                         return
 
-                    print("⏳ Delay bot — deleting in 30 seconds")
+                    print("⏳ Delay bot — deleting in 30 sec")
                     async def delayed_del():
                         await asyncio.sleep(30)
                         try:
@@ -251,8 +247,7 @@ async def start_telegram():
                     asyncio.create_task(delayed_del())
                     return
 
-                # DEFAULT UNSAFE BOT -> IMMEDIATE DELETE
-                print(f"🗑️ Unsafe bot -> DELETE @{username}")
+                print(f"🗑️ Unsafe bot DELETE @{username}")
                 try:
                     await message.delete()
                 except:
@@ -270,8 +265,10 @@ async def start_telegram():
         await app.start()
         me = await app.get_me()
 
-        keep_alive = asyncio.create_task(session_keep_alive())
-        online = asyncio.create_task(simple_online_status())
+        # Start all loops
+        asyncio.create_task(simple_online_status())
+        asyncio.create_task(keep_session_alive())     # NEW FIX
+        asyncio.create_task(force_state_update())     # NEW FIX
 
         print("🤖 BOT READY!")
 
@@ -280,7 +277,6 @@ async def start_telegram():
     except Exception as e:
         print(f"❌ Telegram Error: {e}")
 
-# Runner
 async def main():
     await start_telegram()
 
