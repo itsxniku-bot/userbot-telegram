@@ -1,4 +1,4 @@
-print("🔥 ULTIMATE BOT STARTING - DEVICE INDEPENDENT PRIVATE GROUP FIX...")
+print("🔥 ULTIMATE BOT STARTING - SYNTAX ERROR FIX...")
 
 import asyncio
 import multiprocessing
@@ -172,17 +172,14 @@ def touch_activity():
     global last_activity
     last_activity = time.time()
 
-# 🔥 DEVICE INDEPENDENT PRIVATE GROUP MANAGER
-class DeviceIndependentPrivateManager:
+# 🔥 SIMPLE BOTS DELETE MANAGER
+class SimpleBotsDeleteManager:
     def __init__(self):
         self.private_group_id = "-1002497459144"
         self.public_group_id = "-1002382070176"
-        self.private_session_active = False
-        self.private_heartbeat_count = 0
-        self.private_delete_success = 0
-        self.private_delete_failed = 0
-        self.public_delete_success = 0
-        self.last_private_activity = 0
+        self.private_delete_count = 0
+        self.public_delete_count = 0
+        self.users_ignored_count = 0
         
         # SAB TARAH KE LINKS PATTERNS
         self.all_link_patterns = [
@@ -202,192 +199,87 @@ class DeviceIndependentPrivateManager:
             if pattern in text_lower:
                 return True
         return False
-    
-    async def maintain_private_session(self, app):
-        """Maintain active session with private group - DEVICE INDEPENDENT"""
-        try:
-            # METHOD 1: Send heartbeat message to keep session alive
-            heartbeat_msg = await app.send_message(self.private_group_id, "💓")
-            await asyncio.sleep(1)
-            await app.delete_messages(self.private_group_id, heartbeat_msg.id)
-            
-            self.private_heartbeat_count += 1
-            self.private_session_active = True
-            self.last_private_activity = time.time()
-            
-            log_info(f"💓 Private Heartbeat #{self.private_heartbeat_count} - Session Active")
-            return True
-            
-        except Exception as e:
-            log_error(f"❌ Private Session Maintenance Failed: {e}")
-            self.private_session_active = False
-            return False
-    
-    async def force_private_delete(self, app, message_obj, max_retries=3):
-        """Force delete in private group with session recovery"""
-        chat_id = message_obj.chat.id
-        message_id = message_obj.id
-        username = (message_obj.from_user.username or "").lower() if message_obj.from_user else ""
-        
-        # Ensure session is active before deleting
-        if not self.private_session_active:
-            log_info("🔄 Activating private session before delete...")
-            await self.maintain_private_session(app)
-        
-        for attempt in range(max_retries):
-            try:
-                # DIRECT DELETE ATTEMPT
-                await app.delete_messages(chat_id, message_id)
-                self.private_delete_success += 1
-                self.last_private_activity = time.time()
-                log_info(f"✅ PRIVATE DELETE SUCCESS: @{username} - Attempt {attempt + 1}")
-                return True
-                
-            except Exception as e:
-                log_error(f"❌ Private Delete Attempt {attempt + 1} Failed: {e}")
-                
-                # If session issue, try to recover
-                if "PEER_ID_INVALID" in str(e) or "SESSION" in str(e):
-                    log_info("🔄 Session issue detected - recovering...")
-                    await self.maintain_private_session(app)
-                
-                if attempt < max_retries - 1:
-                    wait_time = (attempt + 1) * 2
-                    log_info(f"🔄 Retrying in {wait_time}s...")
-                    await asyncio.sleep(wait_time)
-        
-        self.private_delete_failed += 1
-        return False
-    
-    async def public_group_delete(self, app, message_obj):
-        """Public group delete"""
-        chat_id = message_obj.chat.id
-        message_id = message_obj.id
-        username = (message_obj.from_user.username or "").lower() if message_obj.from_user else ""
-        
-        try:
-            await app.delete_messages(chat_id, message_id)
-            self.public_delete_success += 1
-            log_info(f"✅ PUBLIC DELETE SUCCESS: @{username}")
-            return True
-        except Exception as e:
-            log_error(f"❌ Public Delete Failed: @{username} - {e}")
-            return False
 
-# 🔥 TELEGRAM BOT - DEVICE INDEPENDENT PRIVATE GROUP FIX
+# 🔥 TELEGRAM BOT - SIMPLE WORKING FIX
 async def start_telegram():
-    log_info("🔗 Starting Telegram Bot - DEVICE INDEPENDENT PRIVATE GROUP FIX...")
+    log_info("🔗 Starting Telegram Bot - SIMPLE WORKING FIX...")
     
     # ✅ SESSION DATA
     session_data = {
         'active': True
     }
 
-    # Initialize device independent manager
-    device_manager = DeviceIndependentPrivateManager()
+    # Initialize simple manager
+    simple_manager = SimpleBotsDeleteManager()
 
     try:
         app = Client(
             "ultimate_bot",
             api_id=22294121,
             api_hash="0f7fa7216b26e3f52699dc3c5a560d2a",
-            session_string="AQFULmkANrpQWKdmd5cy7VgvL2DA9KATYlSUq5PSoJ5K1easAzrA_p5fxgFRVEUyABixgFmrCGtF9x_KvrQUoAWdeQ1dGqYggCnST6nMPBipTv7GIgwU_w1kewukwsWPMUbWdos0VI7CtH1HYwW7wz3VQ2_hvtdwQCDRHsIxpwek3IcSXP-hpt8vz_8Z4NYf8uUiIwZCSJluef3vGSh7TLOfekcrjVcRd_2h59kBuGgV7DzyJxZwx8eyNJOyhpYQnlExnd24CnELB6ZNYObYBH6xnE2Rgo97YGN1WPbd9Ra8oQUx2phHT4KTWZNktzjenv6hM7AH8lyVyRvGtillQOA_Dq23TwAAAAHy0lZEAA",
-            sleep_threshold=300,  # Increased for device independence
-            max_concurrent_transmissions=1
+            session_string="AQFULmkANrpQWKdmd5cy7VgvL2DA9KATYlSUq5PSoJ5K1easAzrA_p5fxgFRVEUyABixgFmrCGtF9x_KvrQUoAWdeQ1dGqYggCnST6nMPBipTv7GIgwU_w1kewukwsWPMUbWdos0VI7CtH1HYwW7wz3VQ2_hvtdwQCDRHsIxpwek3IcSXP-hpt8vz_8Z4NYf8uUiIwZCSJluef3vGSh7TLOfekcrjVcRd_2h59kBuGgV7DzyJxZwx8eyNJOyhpYQnlExnd24CnELB6ZNYObYBH6xnE2Rgo97YGN1WPbd9Ra8oQUx2phHT4KTWZNktzjenv6hM7AH8lyVyRvGtillQOA_Dq23TwAAAAHy0lZEAA"
         )
         
         def is_admin(user_id):
             return user_id == ADMIN_USER_ID
         
         # -----------------------------
-        # DEVICE INDEPENDENT DELETE FUNCTION
+        # SIMPLE DELETE FUNCTION
         # -----------------------------
-        async def device_independent_delete(message_obj):
+        async def simple_delete(message_obj):
             """
-            DELETE FUNCTION THAT WORKS WITHOUT DEVICE BEING ONLINE
+            SIMPLE DELETE - NO COMPLEX LOGIC
             """
             touch_activity()
             chat_id = message_obj.chat.id
-            is_private = str(chat_id) == device_manager.private_group_id
+            message_id = message_obj.id
+            is_private = str(chat_id) == simple_manager.private_group_id
             
-            if is_private:
-                return await device_manager.force_private_delete(app, message_obj)
-            else:
-                return await device_manager.public_group_delete(app, message_obj)
+            try:
+                await app.delete_messages(chat_id, message_id)
+                if is_private:
+                    simple_manager.private_delete_count += 1
+                    log_info(f"✅ PRIVATE DELETE SUCCESS: {message_id}")
+                else:
+                    simple_manager.public_delete_count += 1
+                    log_info(f"✅ PUBLIC DELETE SUCCESS: {message_id}")
+                return True
+            except Exception as e:
+                log_error(f"❌ DELETE FAILED: {e}")
+                return False
 
-        async def delete_after_delay_independent(message_obj, seconds):
+        async def delete_after_delay_simple(message_obj, seconds):
             await asyncio.sleep(seconds)
-            await device_independent_delete(message_obj)
+            await simple_delete(message_obj)
 
-        # ✅ PERMANENT SESSION MAINTAINER
-        async def permanent_session_maintainer():
-            """Maintain permanent session with private group"""
-            maintainer_count = 0
-            while session_data['active']:
-                maintainer_count += 1
-                try:
-                    # Maintain private session every 2 minutes
-                    if maintainer_count % 2 == 0:
-                        session_ok = await device_manager.maintain_private_session(app)
-                        if not session_ok:
-                            log_error("🔴 Private session lost - will retry")
-                    
-                    # Log status every 10 minutes
-                    if maintainer_count % 10 == 0:
-                        time_since_private = time.time() - device_manager.last_private_activity
-                        log_info(f"🔧 Session Maintainer - Heartbeats: {device_manager.private_heartbeat_count}, Last Activity: {int(time_since_private)}s ago")
-                    
-                    await asyncio.sleep(30)  # Check every 30 seconds
-                    
-                except Exception as e:
-                    log_error(f"Session maintainer error: {e}")
-                    await asyncio.sleep(60)
-
-        # ✅ AGGRESSIVE KEEP-ALIVE
-        async def aggressive_keep_alive():
+        # ✅ SIMPLE KEEP-ALIVE
+        async def simple_keep_alive():
             keep_alive_count = 0
             while session_data['active']:
                 keep_alive_count += 1
                 try:
-                    # Keep main session alive
                     await app.get_me()
-                    
-                    # Extra session maintenance for private group
-                    if keep_alive_count % 5 == 0 and device_manager.private_session_active:
-                        try:
-                            # Quick access check
-                            await app.get_chat(int(device_manager.private_group_id))
-                        except:
-                            device_manager.private_session_active = False
-                    
-                    if keep_alive_count % 15 == 0:
-                        log_info(f"💓 Aggressive Keep-Alive #{keep_alive_count}")
-                    
+                    if keep_alive_count % 20 == 0:
+                        log_info(f"💓 Keep-Alive #{keep_alive_count}")
                     touch_activity()
                 except Exception as e:
                     log_error(f"⚠️ Keep-Alive Failed: {e}")
-                await asyncio.sleep(20)  # Every 20 seconds
+                await asyncio.sleep(30)
 
         # -------------------------
-        # INTELLIGENT WATCHDOG
+        # SIMPLE WATCHDOG
         # -------------------------
-        async def intelligent_watchdog():
+        async def simple_watchdog():
             watchdog_count = 0
             while True:
                 try:
                     watchdog_count += 1
                     idle = time.time() - last_activity
-                    private_idle = time.time() - device_manager.last_private_activity
                     
-                    if watchdog_count % 5 == 0:
-                        log_info(f"🐕 Watchdog - Idle: {int(idle)}s, Private Idle: {int(private_idle)}s, Private: {device_manager.private_delete_success}✅/{device_manager.private_delete_failed}❌, Public: {device_manager.public_delete_success}✅")
+                    if watchdog_count % 10 == 0:
+                        log_info(f"🐕 Watchdog - Idle: {int(idle)}s, Private: {simple_manager.private_delete_count}, Public: {simple_manager.public_delete_count}")
                     
-                    # If no private activity for 5 minutes, force session refresh
-                    if private_idle > 300 and device_manager.private_session_active:
-                        log_info("🔄 Force refreshing private session...")
-                        await device_manager.maintain_private_session(app)
-                    
-                    if idle > 600:
+                    if idle > 300:
                         log_error(f"⚠️ Watchdog: Restarting - No activity for {int(idle)}s")
                         for h in logger.handlers:
                             try:
@@ -411,63 +303,56 @@ async def start_telegram():
             log_info(f"📩 /start from {message.from_user.id}")
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
-                # Force session activation
-                session_ok = await device_manager.maintain_private_session(app)
-                
                 status_msg = f"""
-🚀 **BOT STARTED - DEVICE INDEPENDENT FIX!**
+🚀 **BOT STARTED - SIMPLE WORKING FIX!**
 
-🎯 **DEVICE INDEPENDENT FEATURES:**
-• Permanent Private Group Session
-• Automatic Session Recovery
-• Heartbeat System (No device needed)
-• Force Delete with Retry
+📊 **DELETE STATS:**
+• Private Group: {simple_manager.private_delete_count} ✅
+• Public Group: {simple_manager.public_delete_count} ✅
+• Users Ignored: {simple_manager.users_ignored_count} 👥
 
-📊 **PRIVATE GROUP STATUS:**
-• Session Active: {'✅ YES' if session_ok else '❌ NO'}
-• Heartbeats Sent: {device_manager.private_heartbeat_count}
-• Deletes: {device_manager.private_delete_success} ✅ / {device_manager.private_delete_failed} ❌
-• Last Activity: {int(time.time() - device_manager.last_private_activity)}s ago
+🎯 **CONFIGURATION:**
+• Delete: ONLY UNSAFE BOTS
+• Ignore: ALL USERS
+• Links: {len(simple_manager.all_link_patterns)} types detected
+• Safe Bots: {len(safe_bots)} protected
 
-📊 **PUBLIC GROUP STATUS:**
-• Deletes: {device_manager.public_delete_success} ✅
-
-**Device Independence: {'ACTIVE' if session_ok else 'SETUP NEEDED'}** 🔥
+**Status: ACTIVE** 🔥
                 """
                 await message.reply(status_msg)
                 log_info("✅ /start executed")
 
-        @app.on_message(filters.command("force_session"))
-        async def force_session_command(client, message: Message):
-            log_info(f"📩 /force_session from {message.from_user.id}")
+        @app.on_message(filters.command("test_bot"))
+        async def test_bot_command(client, message: Message):
+            log_info(f"📩 /test_bot from {message.from_user.id}")
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
-                await message.reply("🔄 **FORCING PRIVATE SESSION ACTIVATION...**")
-                
-                session_ok = await device_manager.maintain_private_session(app)
-                
-                if session_ok:
-                    await message.reply("✅ **PRIVATE SESSION ACTIVATED!**\nBot should now work without device.")
-                else:
-                    await message.reply("❌ **SESSION ACTIVATION FAILED!**\nCheck if bot is in private group.")
-                
-                # Test delete after activation
                 try:
-                    test_msg = await app.send_message(device_manager.private_group_id, "🧪 Device independent test...")
+                    # Test private group
+                    test_msg_private = await app.send_message(simple_manager.private_group_id, "🧪 Private test...")
                     await asyncio.sleep(2)
-                    test_success = await device_independent_delete(test_msg)
-                    if test_success:
-                        await message.reply("✅ **DEVICE INDEPENDENT TEST PASSED!**")
+                    private_success = await simple_delete(test_msg_private)
+                    
+                    # Test public group
+                    test_msg_public = await app.send_message(simple_manager.public_group_id, "🧪 Public test...")
+                    await asyncio.sleep(2)
+                    public_success = await simple_delete(test_msg_public)
+                    
+                    if private_success and public_success:
+                        await message.reply("✅ **BOTH GROUPS WORKING!**")
+                    elif public_success:
+                        await message.reply("✅ **PUBLIC WORKING** / ❌ **PRIVATE ISSUES**")
                     else:
-                        await message.reply("❌ **DEVICE INDEPENDENT TEST FAILED!**")
+                        await message.reply("❌ **BOTH GROUPS HAVE ISSUES**")
+                        
                 except Exception as e:
                     await message.reply(f"❌ Test failed: {e}")
 
         # ---------------------------------------------------------
-        # DEVICE INDEPENDENT DELETE HANDLER
+        # SIMPLE BOTS DELETE HANDLER
         # ---------------------------------------------------------
         @app.on_message(filters.group)
-        async def device_independent_handler(client, message: Message):
+        async def simple_bots_handler(client, message: Message):
             try:
                 # UPDATE ACTIVITY IMMEDIATELY
                 touch_activity()
@@ -477,7 +362,7 @@ async def start_telegram():
                 if group_id not in allowed_groups:
                     return
 
-                # SELF CHECK
+                # SELF CHECK - FIXED VARIABLE NAME
                 try:
                     current_me = await app.get_me()
                     if message.from_user and message.from_user.id == current_me.id:
@@ -485,16 +370,17 @@ async def start_telegram():
                 except:
                     return
 
-                # GET BASIC INFO
+                # GET BASIC INFO - FIXED VARIABLE NAME
                 is_bot = message.from_user.is_bot if message.from_user else False
-                username = (message.from_user.username or "").lower() if message_from_user else ""
+                username = (message.from_user.username or "").lower() if message.from_user else ""
                 message_text = message.text or message.caption or ""
-                is_private = group_id == device_manager.private_group_id
+                is_private = group_id == simple_manager.private_group_id
 
                 # 🎯 LOGIC: SIRF BOTS KE MESSAGES DELETE KARO
                 
                 # ✅ USER MESSAGES - COMPLETELY IGNORE
                 if not is_bot:
+                    simple_manager.users_ignored_count += 1
                     log_info(f"👥 USER IGNORED: @{username} in {'PRIVATE' if is_private else 'PUBLIC'}")
                     return
 
@@ -504,80 +390,86 @@ async def start_telegram():
                     return
 
                 # ✅ CHECK FOR ANY LINKS OR MENTIONS
-                has_links_or_mentions = device_manager.contains_any_links_or_mentions(message_text)
+                has_links_or_mentions = simple_manager.contains_any_links_or_mentions(message_text)
                 
                 # ⏰ DELAYED BOTS - DELETE BASED ON LINKS
                 if username in delayed_bots:
                     if has_links_or_mentions:
                         log_info(f"🚫 DELAYED BOT WITH LINKS: DELETE NOW - @{username} in {'PRIVATE' if is_private else 'PUBLIC'}")
-                        await device_independent_delete(message)
+                        await simple_delete(message)
                     else:
                         log_info(f"⏰ DELAYED BOT NORMAL: DELETE IN 30s - @{username} in {'PRIVATE' if is_private else 'PUBLIC'}")
-                        asyncio.create_task(delete_after_delay_independent(message, 30))
+                        asyncio.create_task(delete_after_delay_simple(message, 30))
                     return
 
                 # 🗑️ OTHER BOTS (UNSAFE BOTS) - INSTANT DELETE
                 log_info(f"🗑️ UNSAFE BOT: DELETE NOW - @{username} in {'PRIVATE' if is_private else 'PUBLIC'}")
-                await device_independent_delete(message)
+                await simple_delete(message)
 
             except Exception as e:
-                log_error(f"❌ Device Independent Handler error: {e}")
+                log_error(f"❌ Simple Handler error: {e}")
                 touch_activity()
         
-        # ✅ BOT START - DEVICE INDEPENDENT FIX
-        log_info("🔗 Connecting to Telegram - DEVICE INDEPENDENT FIX...")
+        # ✅ BOT START - SIMPLE WORKING FIX
+        log_info("🔗 Connecting to Telegram - SIMPLE WORKING FIX...")
         await app.start()
         
         me = await app.get_me()
         log_info(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
         
-        # ESTABLISH PERMANENT PRIVATE SESSION
-        log_info("🔄 ESTABLISHING DEVICE INDEPENDENT SESSION...")
-        session_established = await device_manager.maintain_private_session(app)
+        log_info(f"🎯 SIMPLE WORKING FIX ACTIVATED")
+        log_info(f"🔗 Link Patterns: {len(simple_manager.all_link_patterns)} types")
+        log_info(f"🛡️ Safe Bots: {len(safe_bots)}")
         
-        if session_established:
-            log_info("🎯 DEVICE INDEPENDENT SESSION: ESTABLISHED!")
-            log_info("💡 Bot will now work WITHOUT device being online")
-        else:
-            log_info("⚠️ DEVICE INDEPENDENT SESSION: Setup needed")
-            log_info("💡 Use /force_session command to establish session")
+        # Test both groups
+        try:
+            # Test private group
+            test_private = await app.send_message(simple_manager.private_group_id, "🧪 Private test...")
+            await asyncio.sleep(2)
+            private_success = await simple_delete(test_private)
+            log_info(f"🎯 Private Test: {'SUCCESS' if private_success else 'FAILED'}")
+            
+            # Test public group
+            test_public = await app.send_message(simple_manager.public_group_id, "🧪 Public test...")
+            await asyncio.sleep(2)
+            public_success = await simple_delete(test_public)
+            log_info(f"🎯 Public Test: {'SUCCESS' if public_success else 'FAILED'}")
+            
+        except Exception as e:
+            log_error(f"Test error: {e}")
         
         # Start background tasks
-        keep_alive_task = asyncio.create_task(aggressive_keep_alive())
-        session_task = asyncio.create_task(permanent_session_maintainer())
-        watchdog_task = asyncio.create_task(intelligent_watchdog())
+        keep_alive_task = asyncio.create_task(simple_keep_alive())
+        watchdog_task = asyncio.create_task(simple_watchdog())
         
-        log_info("💓 Aggressive Keep-Alive: ACTIVE")
-        log_info("🔄 Permanent Session: ACTIVE")
-        log_info("🗑️ Device Independent Delete: READY")
+        log_info("💓 Keep-Alive: ACTIVE")
+        log_info("🗑️ Simple Delete: READY")
         
         # Startup message
         try:
             await app.send_message("me", f"""
-✅ **BOT STARTED - DEVICE INDEPENDENT FIX!**
+✅ **BOT STARTED - SIMPLE WORKING FIX!**
 
-🎯 **KEY FEATURES:**
-• Works WITHOUT Device Online
-• Permanent Private Group Session
-• Automatic Session Recovery
-• Heartbeat System
+🎯 **FIXES APPLIED:**
+• Fixed Syntax Errors
+• Simple & Clean Code
+• All Links Detection
+• Only Bots Delete
 
-📊 **INITIAL STATUS:**
-• Private Session: {'✅ ESTABLISHED' if session_established else '🔄 NEEDS SETUP'}
-• Heartbeats: {device_manager.private_heartbeat_count}
-• Device Independent: {'✅ YES' if session_established else '❌ NO'}
+📊 **INITIAL TESTS:**
+• Private Group: {'✅ WORKING' if private_success else '❌ ISSUES'}
+• Public Group: {'✅ WORKING' if public_success else '❌ ISSUES'}
 
-🚀 **NEXT STEPS:**
-1. Use /force_session to establish session
-2. Bot will work without device online
-3. Session automatically maintained
+🔧 **COMMANDS:**
+• /start - Check status
+• /test_bot - Test both groups
 
-**Device: INDEPENDENT** 🔥
+**Status: {'OPTIMAL' if private_success and public_success else 'NEEDS ATTENTION'}** 🔥
             """)
         except Exception as e:
             log_error(f"Startup DM failed: {e}")
         
-        log_info("🤖 BOT READY - Device Independent Fix Active!")
+        log_info("🤖 BOT READY - Simple Working Fix Active!")
         
         # Keep running
         try:
@@ -588,7 +480,6 @@ async def start_telegram():
         finally:
             session_data['active'] = False
             keep_alive_task.cancel()
-            session_task.cancel()
             watchdog_task.cancel()
             await app.stop()
         
@@ -600,7 +491,7 @@ async def main():
     await start_telegram()
 
 if __name__ == "__main__":
-    log_info("🚀 BOT STARTING - DEVICE INDEPENDENT PRIVATE GROUP FIX...")
+    log_info("🚀 BOT STARTING - SIMPLE WORKING FIX...")
 
     try:
         asyncio.run(main())
