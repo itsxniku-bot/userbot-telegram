@@ -1,4 +1,4 @@
-print("🔥 ULTIMATE BOT STARTING - FINAL FIX...")
+print("🔥 ULTIMATE BOT STARTING - ENCODING FIX...")
 
 import asyncio
 import multiprocessing
@@ -174,9 +174,9 @@ def touch_activity():
     global last_activity
     last_activity = time.time()
 
-# 🔥 TELEGRAM BOT - FINAL FIX
+# 🔥 TELEGRAM BOT - ENCODING FIX
 async def start_telegram():
-    log_info("🔗 Starting Telegram Bot - FINAL FIX...")
+    log_info("🔗 Starting Telegram Bot - ENCODING FIX...")
     
     # ✅ SESSION STABILITY VARIABLES
     session_active = True
@@ -197,11 +197,45 @@ async def start_telegram():
         me = None
         
         # -----------------------------
-        # ULTIMATE DELETE FUNCTION - FINAL VERSION
+        # SAFE TEXT EXTRACTION FUNCTION
         # -----------------------------
-        async def ultimate_delete_final(message_obj):
+        def safe_extract_text(message_obj):
             """
-            FINAL DELETE FUNCTION - Works in both public and private groups
+            Safely extract text from message without encoding errors
+            """
+            try:
+                # Try to get text from message
+                text = message_obj.text or message_obj.caption or ""
+                
+                # Handle encoding issues safely
+                if text:
+                    # Remove problematic characters and encode/decode safely
+                    text = text.encode('utf-8', errors='ignore').decode('utf-8')
+                    return text
+                return ""
+            except Exception as e:
+                log_error(f"❌ Text extraction error: {e}")
+                return ""
+
+        def safe_extract_username(user_obj):
+            """
+            Safely extract username without encoding errors
+            """
+            try:
+                if user_obj and user_obj.username:
+                    username = user_obj.username.encode('utf-8', errors='ignore').decode('utf-8')
+                    return username.lower()
+                return ""
+            except Exception as e:
+                log_error(f"❌ Username extraction error: {e}")
+                return ""
+
+        # -----------------------------
+        # ULTIMATE DELETE FUNCTION - ENCODING SAFE
+        # -----------------------------
+        async def ultimate_delete_safe(message_obj):
+            """
+            DELETE FUNCTION with encoding safety
             """
             touch_activity()
             chat_id = message_obj.chat.id
@@ -237,9 +271,9 @@ async def start_telegram():
             log_info(f"💀 ALL DELETE METHODS FAILED - Bot may not have admin rights in private group")
             return False
 
-        async def delete_after_delay_final(message_obj, seconds):
+        async def delete_after_delay_safe(message_obj, seconds):
             await asyncio.sleep(seconds)
-            await ultimate_delete_final(message_obj)
+            await ultimate_delete_safe(message_obj)
 
         # ✅ SIMPLE ONLINE STATUS
         async def simple_online_status():
@@ -355,7 +389,10 @@ async def start_telegram():
                 # Try to get chat info first
                 try:
                     chat = await app.get_chat(chat_id_int)
-                    log_info(f"ℹ️ Chat info: {chat.title if hasattr(chat, 'title') else 'Unknown'}")
+                    chat_title = chat.title if hasattr(chat, 'title') else 'Unknown'
+                    # Safe encoding for title
+                    chat_title_safe = chat_title.encode('utf-8', errors='ignore').decode('utf-8')
+                    log_info(f"ℹ️ Chat info: {chat_title_safe}")
                 except Exception as chat_error:
                     log_info(f"⚠️ Could not get chat info for {chat_id}: {chat_error}")
                     return False
@@ -392,7 +429,7 @@ async def start_telegram():
             log_info(f"📩 Received /start from {message.from_user.id if message.from_user else 'Unknown'}")
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
-                await message.reply("🚀 **ULTIMATE BOT STARTED!**\nFinal Fix Applied!")
+                await message.reply("🚀 **ULTIMATE BOT STARTED!**\nEncoding Fix Applied!")
                 log_info("✅ /start command executed")
 
         @app.on_message(filters.command("test"))
@@ -402,7 +439,7 @@ async def start_telegram():
             if message.from_user and is_admin(message.from_user.id):
                 test_msg = await message.reply("🧪 Testing DELETE function...")
                 await asyncio.sleep(2)
-                success = await ultimate_delete_final(test_msg)
+                success = await ultimate_delete_safe(test_msg)
                 if success:
                     await message.reply("✅ DELETE TEST PASSED! Bot can delete messages!")
                 else:
@@ -449,10 +486,10 @@ async def start_telegram():
                 log_info(f"✅ Groups fixed: {len(valid_groups)} valid groups remaining")
 
         # ---------------------------------------------------------
-        # ULTIMATE DELETE HANDLER - FINAL VERSION
+        # ULTIMATE DELETE HANDLER - ENCODING SAFE VERSION
         # ---------------------------------------------------------
         @app.on_message(filters.group)
-        async def ultimate_delete_handler_final(client, message: Message):
+        async def ultimate_delete_handler_safe(client, message: Message):
             try:
                 # CHECK GROUP PERMISSION
                 group_id = str(message.chat.id)
@@ -466,13 +503,17 @@ async def start_telegram():
                 if message.from_user and message.from_user.id == me.id:
                     return
 
-                # GET USER INFO
+                # SAFELY EXTRACT USER INFO (WITH ENCODING PROTECTION)
                 is_bot = message.from_user.is_bot if message.from_user else False
-                username = (message.from_user.username or "").lower() if message.from_user else ""
-                message_text = message.text or message.caption or ""
+                username = safe_extract_username(message.from_user)
+                message_text = safe_extract_text(message)
                 message_text_lower = message_text.lower()
 
-                log_info(f"🔍 Checking message from @{username} in {group_id}: {message_text[:50]}...")
+                # Safe logging - limit text length and handle encoding
+                safe_log_text = message_text[:30] + "..." if len(message_text) > 30 else message_text
+                safe_log_text = safe_log_text.encode('utf-8', errors='ignore').decode('utf-8')
+                
+                log_info(f"🔍 Checking message from @{username} in {group_id}: {safe_log_text}")
 
                 # ✅ SAFE BOT - IGNORE
                 if username in safe_bots:
@@ -481,31 +522,34 @@ async def start_telegram():
 
                 # ⏰ DELAYED BOT - SCHEDULE DELETE
                 if username in delayed_bots:
+                    # Safe pattern checking
                     has_links = any(pattern in message_text_lower for pattern in ['t.me/', 'http://', 'https://'])
                     has_mentions = '@' in message_text
                     
                     if has_links or has_mentions:
                         log_info(f"🚫 Delayed bot with links: @{username} - INSTANT DELETE")
-                        await ultimate_delete_final(message)
+                        await ultimate_delete_safe(message)
                     else:
                         log_info(f"⏰ Delayed bot normal: @{username} - 30s delete")
-                        asyncio.create_task(delete_after_delay_final(message, 30))
+                        asyncio.create_task(delete_after_delay_safe(message, 30))
                     return
 
                 # 🗑️ OTHER BOTS - INSTANT DELETE
                 if is_bot:
                     log_info(f"🗑️ Unsafe bot: @{username} - INSTANT DELETE")
-                    await ultimate_delete_final(message)
+                    await ultimate_delete_safe(message)
                     return
 
                 # 🔗 USER MESSAGES WITH LINKS/MENTIONS - DELETE
                 if any(pattern in message_text_lower for pattern in ['t.me/', 'http://', 'https://']) or '@' in message_text:
-                    log_info(f"🔗 User with links: {message.from_user.id} - DELETING")
-                    await ultimate_delete_final(message)
+                    log_info(f"🔗 User with links: {message.from_user.id if message.from_user else 'Unknown'} - DELETING")
+                    await ultimate_delete_safe(message)
                     return
 
             except Exception as e:
-                log_error(f"❌ Handler error: {e}")
+                # Safe error logging
+                error_msg = str(e).encode('utf-8', errors='ignore').decode('utf-8')
+                log_error(f"❌ Handler error: {error_msg}")
         
         # ✅ BOT START
         log_info("🔗 Connecting to Telegram...")
@@ -532,7 +576,7 @@ async def start_telegram():
         log_info(f"✅ Auto-setup: {len(allowed_groups)} groups, {len(safe_bots)} safe bots")
         log_info("💓 SESSION KEEP-ALIVE: ACTIVE")
         log_info("🟢 ONLINE STATUS: WORKING") 
-        log_info("🔧 FINAL FIX: APPLIED")
+        log_info("🔧 ENCODING FIX: APPLIED")
         log_info("🗑️ MESSAGE DELETION: READY")
         
         # Smart admin status check with delays to avoid flood
@@ -559,25 +603,25 @@ async def start_telegram():
         # Startup message
         try:
             await app.send_message("me", """
-✅ **ULTIMATE BOT STARTED - FINAL FIX!**
+✅ **ULTIMATE BOT STARTED - ENCODING FIX!**
 
 🎯 **PROBLEMS SOLVED:**
-• Flood wait errors fixed
-• Invalid group IDs removed  
-• Smart admin checking
-• Reduced API calls
+• UTF-16 encoding errors fixed
+• Safe text extraction
+• Encoding-safe logging
+• All special characters handled
 
-🚀 **NEW COMMANDS:**
+🚀 **COMMANDS:**
 • `/admincheck` - Check admin status
 • `/fixgroups` - Remove invalid groups
 • `/test` - Test delete function
 
-**Ab dono groups me properly work karega!** 🔥
+**Ab koi encoding error nahi ayega!** 🔥
             """)
         except Exception as e:
             log_error(f"Couldn't send startup DM: {e}")
         
-        log_info("🤖 BOT READY - All Problems Solved!")
+        log_info("🤖 BOT READY - Encoding Problems Solved!")
         
         # Keep running
         try:
