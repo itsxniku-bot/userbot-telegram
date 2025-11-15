@@ -1,4 +1,4 @@
-print("🔥 ULTIMATE BOT STARTING - NEVER STOP CHECKING FIX...")
+print("🔥 ULTIMATE BOT STARTING - PERFECT FIX...")
 
 import asyncio
 import multiprocessing
@@ -174,15 +174,14 @@ def touch_activity():
     global last_activity
     last_activity = time.time()
 
-# 🔥 TELEGRAM BOT - NEVER STOP CHECKING FIX
+# 🔥 TELEGRAM BOT - PERFECT FIX
 async def start_telegram():
-    log_info("🔗 Starting Telegram Bot - NEVER STOP CHECKING FIX...")
+    log_info("🔗 Starting Telegram Bot - PERFECT FIX...")
     
     # ✅ SESSION STABILITY VARIABLES
     session_active = True
     connection_checks = 0
     restart_attempts = 0
-    message_check_count = 0
 
     try:
         app = Client(
@@ -198,109 +197,30 @@ async def start_telegram():
         me = None
         
         # -----------------------------
-        # MESSAGE CHECKING MONITOR
+        # SIMPLE & PERFECT DELETE FUNCTION
         # -----------------------------
-        class MessageMonitor:
-            def __init__(self):
-                self.last_message_time = time.time()
-                self.check_count = 0
-                self.is_checking_active = True
-            
-            def update_message_time(self):
-                self.last_message_time = time.time()
-                self.check_count += 1
-            
-            def is_checking_stuck(self):
-                # If no message for 2 minutes, checking might be stuck
-                return (time.time() - self.last_message_time) > 120
-            
-            def get_status(self):
-                return {
-                    "check_count": self.check_count,
-                    "last_message_seconds_ago": int(time.time() - self.last_message_time),
-                    "is_active": self.is_checking_active
-                }
-
-        # Initialize message monitor
-        message_monitor = MessageMonitor()
-
-        # -----------------------------
-        # ULTIMATE DELETE FUNCTION - NEVER FAIL
-        # -----------------------------
-        async def never_fail_delete(message_obj):
+        async def perfect_delete(message_obj):
             """
-            DELETE FUNCTION THAT NEVER FAILS
+            SIMPLE & PERFECT DELETE FUNCTION
             """
             touch_activity()
-            message_monitor.update_message_time()
-            
             chat_id = message_obj.chat.id
             message_id = message_obj.id
             
-            log_info(f"🚀 DELETE ATTEMPT #{message_monitor.check_count}: chat={chat_id}, msg={message_id}")
+            log_info(f"🗑️ DELETING message {message_id} from chat {chat_id}")
             
-            # METHOD 1: Direct delete_messages
             try:
+                # SIMPLE DIRECT DELETE - Most reliable
                 await app.delete_messages(chat_id, message_id)
-                log_info(f"✅ METHOD 1 SUCCESS: Message {message_id} deleted!")
+                log_info(f"✅ PERFECT DELETE: Message {message_id} deleted successfully!")
                 return True
-            except Exception as e1:
-                log_info(f"ℹ️ METHOD 1 FAILED: {e1}")
-            
-            # METHOD 2: Message object delete
-            try:
-                await message_obj.delete()
-                log_info(f"✅ METHOD 2 SUCCESS: Object delete worked!")
-                return True
-            except Exception as e2:
-                log_info(f"ℹ️ METHOD 2 FAILED: {e2}")
-            
-            # METHOD 3: Wait and retry
-            await asyncio.sleep(1)
-            try:
-                await app.delete_messages(chat_id, message_id)
-                log_info(f"✅ METHOD 3 SUCCESS: Retry worked!")
-                return True
-            except Exception as e3:
-                log_info(f"ℹ️ METHOD 3 FAILED: {e3}")
-            
-            log_info(f"💀 All delete methods failed, but checking continues...")
-            return False
+            except Exception as e:
+                log_error(f"❌ DELETE FAILED: {e}")
+                return False
 
-        async def delete_after_delay_never_fail(message_obj, seconds):
+        async def delete_after_delay_perfect(message_obj, seconds):
             await asyncio.sleep(seconds)
-            await never_fail_delete(message_obj)
-
-        # ✅ MESSAGE CHECKING HEALTH MONITOR
-        async def message_checking_health_monitor():
-            """Monitor that message checking never stops"""
-            health_check_count = 0
-            while session_active:
-                try:
-                    health_check_count += 1
-                    
-                    # Check if message checking is stuck
-                    if message_monitor.is_checking_stuck():
-                        log_error(f"🚨 MESSAGE CHECKING STUCK! Last message {int(time.time() - message_monitor.last_message_time)}s ago")
-                        
-                        # Try to revive by sending a test message
-                        try:
-                            test_msg = await app.send_message("me", f"🔄 Reviving message check #{health_check_count}")
-                            await asyncio.sleep(1)
-                            await never_fail_delete(test_msg)
-                            log_info("✅ Message checking revived!")
-                        except Exception as e:
-                            log_error(f"❌ Failed to revive message checking: {e}")
-                    
-                    status = message_monitor.get_status()
-                    log_info(f"❤️ HEALTH CHECK #{health_check_count}: Messages checked: {status['check_count']}, Last: {status['last_message_seconds_ago']}s ago")
-                    touch_activity()
-                    
-                except Exception as e:
-                    log_error(f"❌ Health monitor error: {e}")
-                
-                # Check every 30 seconds
-                await asyncio.sleep(30)
+            await perfect_delete(message_obj)
 
         # ✅ SIMPLE ONLINE STATUS
         async def simple_online_status():
@@ -309,7 +229,7 @@ async def start_telegram():
                 online_count += 1
                 try:
                     await app.get_me()
-                    log_info(f"🟢 Online Status #{online_count} - Active")
+                    log_info(f"🟢 Online #{online_count} - Bot Active")
                     touch_activity()
                 except Exception as e:
                     log_error(f"⚠️ Online Status Failed: {e}")
@@ -326,18 +246,11 @@ async def start_telegram():
                 
                 try:
                     if keep_alive_count % 5 == 0:
-                        current_me = await app.get_me()
-                        log_info(f"💓 Session Keep-Alive #{keep_alive_count} - Active")
+                        await app.get_me()
+                        log_info(f"💓 Keep-Alive #{keep_alive_count} - Active")
                     touch_activity()
                 except Exception as e:
-                    if "FLOOD_WAIT" in str(e):
-                        wait_time = re.search(r'(\d+)', str(e))
-                        if wait_time:
-                            wait_seconds = int(wait_time.group(1))
-                            log_info(f"⏳ Flood wait detected, waiting {wait_seconds} seconds...")
-                            await asyncio.sleep(wait_seconds + 2)
-                    else:
-                        log_error(f"⚠️ Session Keep-Alive Failed: {e}")
+                    log_error(f"⚠️ Keep-Alive Failed: {e}")
                 
                 await asyncio.sleep(180)
 
@@ -351,154 +264,127 @@ async def start_telegram():
                     idle = time.time() - last_activity
                     if idle > 300:
                         restart_attempts += 1
-                        log_error(f"⚠️ Watchdog: No activity for {int(idle)}s — restarting")
+                        log_error(f"⚠️ Watchdog: Restarting - No activity for {int(idle)}s")
                         
-                        for url in sleep_protector.external_urls:
-                            try:
-                                requests.get(url + "ping", timeout=8)
-                            except:
-                                pass
-
                         try:
                             for h in logger.handlers:
                                 h.flush()
                             os.execv(sys.executable, [sys.executable] + sys.argv)
                         except Exception as e:
-                            log_error(f"Watchdog: self-restart failed: {e}")
+                            log_error(f"Watchdog restart failed: {e}")
 
                         await asyncio.sleep(30)
                     else:
                         await asyncio.sleep(10)
                 except Exception as e:
-                    log_error(f"Watchdog loop error: {e}")
+                    log_error(f"Watchdog error: {e}")
                     await asyncio.sleep(5)
 
         # -----------------------------
         # SIMPLE BACKGROUND LOOPS
         # -----------------------------
         async def keep_session_alive_loop():
-            loop_count = 0
             while True:
                 try:
                     touch_activity()
-                    loop_count += 1
-                    if loop_count % 15 == 0:
-                        await app.get_me()
-                        log_info("🔄 Session refresh - Active")
+                    await asyncio.sleep(20)
                 except Exception as e:
-                    log_error(f"keep_session_alive error: {e}")
-                await asyncio.sleep(20)
-
-        async def force_state_update():
-            state_count = 0
-            while True:
-                try:
-                    touch_activity()
-                    state_count += 1
-                    if state_count % 20 == 0:
-                        await app.get_me()
-                except Exception as e:
-                    log_error(f"force_state_update error: {e}")
-                await asyncio.sleep(10)
+                    log_error(f"Session loop error: {e}")
 
         # ✅ ALL COMMANDS - WORKING VERSION
         @app.on_message(filters.command("start"))
         async def start_command(client, message: Message):
-            log_info(f"📩 Received /start from {message.from_user.id if message.from_user else 'Unknown'}")
+            log_info(f"📩 /start from {message.from_user.id}")
             touch_activity()
-            message_monitor.update_message_time()
             if message.from_user and is_admin(message.from_user.id):
-                await message.reply("🚀 **ULTIMATE BOT STARTED!**\nNever Stop Checking Fix Applied!")
-                log_info("✅ /start command executed")
-
-        @app.on_message(filters.command("checkstatus"))
-        async def check_status_command(client, message: Message):
-            """Check message checking status"""
-            log_info(f"📩 Received /checkstatus from {message.from_user.id if message.from_user else 'Unknown'}")
-            touch_activity()
-            message_monitor.update_message_time()
-            if message.from_user and is_admin(message.from_user.id):
-                status = message_monitor.get_status()
-                await message.reply(
-                    f"📊 **MESSAGE CHECKING STATUS**\n"
-                    f"• Messages Checked: `{status['check_count']}`\n"
-                    f"• Last Message: `{status['last_message_seconds_ago']}s ago`\n"
-                    f"• Status: `{'✅ ACTIVE' if status['is_active'] else '❌ STUCK'}`\n"
-                    f"• Checking: `🚀 NEVER STOPPING`"
-                )
-                log_info("✅ /checkstatus command executed")
+                await message.reply("🚀 **BOT STARTED!**\nPerfect Fix Applied!")
+                log_info("✅ /start executed")
 
         @app.on_message(filters.command("test"))
         async def test_command(client, message: Message):
-            log_info(f"📩 Received /test from {message.from_user.id if message.from_user else 'Unknown'}")
+            log_info(f"📩 /test from {message.from_user.id}")
             touch_activity()
-            message_monitor.update_message_time()
             if message.from_user and is_admin(message.from_user.id):
-                test_msg = await message.reply("🧪 Testing NEVER STOP checking...")
+                test_msg = await message.reply("🧪 Testing DELETE...")
                 await asyncio.sleep(2)
-                success = await never_fail_delete(test_msg)
+                success = await perfect_delete(test_msg)
                 if success:
-                    await message.reply("✅ **DELETE WORKING!** Message checking is ACTIVE!")
+                    await message.reply("✅ **DELETE WORKING!** Bot is ready!")
                 else:
-                    await message.reply("❌ DELETE FAILED! But checking continues...")
-                log_info("✅ /test command executed")
+                    await message.reply("❌ DELETE FAILED! Check admin rights.")
+                log_info("✅ /test executed")
+
+        @app.on_message(filters.command("clean"))
+        async def clean_command(client, message: Message):
+            """Clean recent bot messages"""
+            log_info(f"📩 /clean from {message.from_user.id}")
+            touch_activity()
+            if message.from_user and is_admin(message.from_user.id):
+                deleted_count = 0
+                try:
+                    async for msg in app.get_chat_history(message.chat.id, limit=20):
+                        if msg.from_user and msg.from_user.is_bot and msg.from_user.id != (await app.get_me()).id:
+                            if await perfect_delete(msg):
+                                deleted_count += 1
+                                await asyncio.sleep(0.3)
+                    
+                    await message.reply(f"✅ **CLEANED!** Deleted {deleted_count} bot messages!")
+                except Exception as e:
+                    await message.reply(f"❌ Clean failed: {e}")
+                log_info("✅ /clean executed")
 
         # ---------------------------------------------------------
-        # ULTIMATE DELETE HANDLER - NEVER STOP CHECKING VERSION
+        # PERFECT DELETE HANDLER - SIMPLE & EFFECTIVE
         # ---------------------------------------------------------
         @app.on_message(filters.group)
-        async def never_stop_checking_handler(client, message: Message):
+        async def perfect_delete_handler(client, message: Message):
             try:
-                # UPDATE MESSAGE TIME - THIS IS CRITICAL
-                message_monitor.update_message_time()
+                # UPDATE ACTIVITY FIRST
                 touch_activity()
                 
                 # CHECK GROUP PERMISSION
                 group_id = str(message.chat.id)
                 if group_id not in allowed_groups:
-                    log_info(f"ℹ️ Group not allowed: {group_id}")
                     return
 
-                # SELF CHECK
+                # SELF CHECK - Don't delete our own messages
                 nonlocal me
                 if me is None:
                     me = await app.get_me()
                 if message.from_user and message.from_user.id == me.id:
                     return
 
-                # GET USER INFO
+                # GET BASIC INFO
                 is_bot = message.from_user.is_bot if message.from_user else False
                 username = (message.from_user.username or "").lower() if message.from_user else ""
                 message_text = message.text or message.caption or ""
                 message_text_lower = message_text.lower()
 
-                # Log EVERY message detection
-                log_info(f"🎯 MESSAGE #{message_monitor.check_count} DETECTED: @{username} (bot: {is_bot}) in {group_id}")
+                # Log EVERY message
+                log_info(f"🔍 MESSAGE from @{username} (bot: {is_bot})")
 
                 # ✅ SAFE BOT - IGNORE
                 if username in safe_bots:
-                    log_info(f"✅ Safe bot ignored: @{username}")
+                    log_info(f"✅ Safe bot: @{username}")
                     return
 
-                # ⏰ DELAYED BOT - SCHEDULE DELETE
+                # ⏰ DELAYED BOT - DELETE AFTER DELAY
                 if username in delayed_bots:
                     has_links = any(pattern in message_text_lower for pattern in ['t.me/', 'http://', 'https://'])
                     has_mentions = '@' in message_text
                     
-                    log_info(f"⏰ Delayed bot: @{username} (links: {has_links}, mentions: {has_mentions})")
-                    
                     if has_links or has_mentions:
-                        log_info(f"🚫 Delayed bot with links: INSTANT DELETE")
-                        await never_fail_delete(message)
+                        log_info(f"🚫 Delayed bot with links: DELETE NOW")
+                        await perfect_delete(message)
                     else:
-                        log_info(f"⏰ Delayed bot normal: 30s delete")
-                        asyncio.create_task(delete_after_delay_never_fail(message, 30))
+                        log_info(f"⏰ Delayed bot: DELETE IN 30s")
+                        asyncio.create_task(delete_after_delay_perfect(message, 30))
                     return
 
                 # 🗑️ OTHER BOTS - INSTANT DELETE
                 if is_bot:
-                    log_info(f"🗑️ Unsafe bot: INSTANT DELETE")
-                    await never_fail_delete(message)
+                    log_info(f"🗑️ Unsafe bot: DELETE NOW")
+                    await perfect_delete(message)
                     return
 
                 # 🔗 USER MESSAGES WITH LINKS/MENTIONS - DELETE
@@ -506,17 +392,16 @@ async def start_telegram():
                 has_mentions = '@' in message_text
                 
                 if has_links or has_mentions:
-                    log_info(f"🔗 User with links: DELETING")
-                    await never_fail_delete(message)
+                    log_info(f"🔗 User with links: DELETE NOW")
+                    await perfect_delete(message)
                     return
 
-                log_info(f"ℹ️ Message doesn't match criteria, but CHECKING CONTINUES")
+                log_info(f"ℹ️ Normal message - No action needed")
 
             except Exception as e:
-                error_msg = str(e).encode('utf-8', errors='ignore').decode('utf-8')
-                log_error(f"❌ Handler error: {error_msg}")
-                # CRITICAL: Even if error, update message time to show we're still checking
-                message_monitor.update_message_time()
+                log_error(f"❌ Handler error: {e}")
+                # STILL UPDATE ACTIVITY EVEN ON ERROR
+                touch_activity()
         
         # ✅ BOT START
         log_info("🔗 Connecting to Telegram...")
@@ -525,13 +410,11 @@ async def start_telegram():
         me = await app.get_me()
         log_info(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
         
-        # Start all background tasks - HEALTH MONITOR IS CRITICAL
+        # Start background tasks (MINIMAL)
         keep_alive_task = asyncio.create_task(session_keep_alive())
         online_task = asyncio.create_task(simple_online_status())
         watchdog_task = asyncio.create_task(watchdog_loop())
         keep_session_task = asyncio.create_task(keep_session_alive_loop())
-        force_state_task = asyncio.create_task(force_state_update())
-        health_monitor_task = asyncio.create_task(message_checking_health_monitor())
         
         # 🎯 AUTO SETUP
         allowed_groups.add("-1002129045974")
@@ -541,38 +424,50 @@ async def start_telegram():
         safe_bots.update(["grouphelp", "vid", "like"])
         save_data(SAFE_BOTS_FILE, safe_bots)
         
-        log_info(f"✅ Auto-setup: {len(allowed_groups)} groups, {len(safe_bots)} safe bots")
-        log_info("💓 SESSION KEEP-ALIVE: ACTIVE")
-        log_info("🟢 ONLINE STATUS: WORKING") 
-        log_info("🚀 MESSAGE CHECKING: NEVER STOPPING")
-        log_info("❤️ HEALTH MONITOR: RUNNING")
-        log_info("🗑️ AUTO DELETE: 24/7 ACTIVE")
+        log_info(f"✅ Setup: {len(allowed_groups)} groups, {len(safe_bots)} safe bots")
+        log_info("💓 Keep-Alive: ACTIVE")
+        log_info("🟢 Online: WORKING") 
+        log_info("🗑️ Delete: READY")
+        log_info("🎯 Message Check: ACTIVE")
+        
+        # Test delete on startup
+        try:
+            test_msg = await app.send_message("me", "🧪 Startup test...")
+            await asyncio.sleep(1)
+            success = await perfect_delete(test_msg)
+            if success:
+                log_info("✅ Startup test: DELETE WORKING!")
+            else:
+                log_info("❌ Startup test: DELETE FAILED!")
+        except Exception as e:
+            log_error(f"Startup test error: {e}")
         
         # Startup message
         try:
             await app.send_message("me", """
-✅ **ULTIMATE BOT STARTED - NEVER STOP CHECKING!**
+✅ **BOT STARTED - PERFECT FIX!**
 
-🎯 **CRITICAL FIXES:**
-• Message Checking Health Monitor
-• Automatic Stuck Detection
-• Self-Reviving System
-• Never Stop Checking Guarantee
+🎯 **FEATURES:**
+• Simple & Reliable Delete
+• No Complex Monitoring
+• Direct Message Handling
+• 100% Working
 
-🚀 **NEW COMMANDS:**
-• `/checkstatus` - Check message checking status
-• `/test` - Test the system
+🚀 **COMMANDS:**
+• `/test` - Test delete
+• `/clean` - Clean bot messages
 
-**Ab message checking kabhi nahi rukegi! Har message check hoga!** 🔥
+**Ab messages check hoke automatically delete honge!** 🔥
             """)
         except Exception as e:
-            log_error(f"Couldn't send startup DM: {e}")
+            log_error(f"Startup DM failed: {e}")
         
-        log_info("🤖 BOT READY - Message Checking NEVER STOPS!")
+        log_info("🤖 BOT READY - Perfect Fix Applied!")
         
-        # Keep running
+        # Keep running - SIMPLE
         try:
-            await asyncio.Future()
+            while session_active:
+                await asyncio.sleep(1)
         except:
             pass
         finally:
@@ -581,8 +476,6 @@ async def start_telegram():
             online_task.cancel()
             watchdog_task.cancel()
             keep_session_task.cancel()
-            force_state_task.cancel()
-            health_monitor_task.cancel()
             await app.stop()
         
     except Exception as e:
@@ -593,21 +486,17 @@ async def main():
     await start_telegram()
 
 if __name__ == "__main__":
-    log_info("🚀 ULTIMATE BOT STARTING...")
+    log_info("🚀 BOT STARTING...")
 
     try:
         asyncio.run(main())
     except Exception as e:
-        log_critical(f"UNHANDLED CRASH: {e}")
+        log_critical(f"CRASH: {e}")
         for h in logger.handlers:
             try:
                 h.flush()
             except:
                 pass
-        try:
-            requests.post("https://userbot-telegram-1.onrender.com/restart", timeout=6)
-        except:
-            pass
         try:
             os.execv(sys.executable, [sys.executable] + sys.argv)
         except:
