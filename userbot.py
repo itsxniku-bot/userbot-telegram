@@ -1,4 +1,4 @@
-print("🔥 ULTIMATE BOT STARTING - PRIVATE GROUP 24/7 FIX...")
+print("🔥 ULTIMATE BOT STARTING - GROUP ACCESS FIX...")
 
 import asyncio
 import multiprocessing
@@ -174,9 +174,9 @@ def touch_activity():
     global last_activity
     last_activity = time.time()
 
-# 🔥 TELEGRAM BOT - PRIVATE GROUP 24/7 FIX
+# 🔥 TELEGRAM BOT - GROUP ACCESS FIX
 async def start_telegram():
-    log_info("🔗 Starting Telegram Bot - PRIVATE GROUP 24/7 FIX...")
+    log_info("🔗 Starting Telegram Bot - GROUP ACCESS FIX...")
     
     # ✅ SESSION STABILITY VARIABLES
     session_active = True
@@ -198,16 +198,17 @@ async def start_telegram():
         me = None
         
         # -----------------------------
-        # PRIVATE GROUP SESSION MANAGER
+        # GROUP ACCESS MANAGER - FIXED FOR GROUPS
         # -----------------------------
-        class PrivateGroupManager:
+        class GroupAccessManager:
             def __init__(self):
                 self.last_refresh = {}
                 self.refresh_interval = 300  # 5 minutes
                 self.failed_groups = set()
+                self.working_groups = set()
             
-            async def refresh_private_group_access(self, group_id):
-                """Refresh access to private groups by periodically accessing them"""
+            async def refresh_group_access(self, group_id):
+                """Refresh access to groups using group-specific methods"""
                 current_time = time.time()
                 
                 # Check if we need to refresh this group
@@ -217,24 +218,67 @@ async def start_telegram():
                         return True
                 
                 try:
-                    # Try to access the group to refresh session
                     group_id_int = int(group_id)
-                    chat = await app.get_chat(group_id_int)
                     
-                    # Try to get recent messages to maintain access
-                    async for message in app.get_chat_history(group_id_int, limit=1):
-                        # Just accessing the message is enough to refresh
-                        pass
+                    # METHOD 1: Try get_chat (works for both groups and supergroups)
+                    try:
+                        chat = await app.get_chat(group_id_int)
+                        chat_title = getattr(chat, 'title', 'Group')
+                        log_info(f"✅ Group access via get_chat: {chat_title}")
+                        
+                        # Mark as working
+                        self.working_groups.add(group_id)
+                        self.last_refresh[group_id] = current_time
+                        if group_id in self.failed_groups:
+                            self.failed_groups.remove(group_id)
+                        return True
+                        
+                    except Exception as e1:
+                        log_info(f"ℹ️ get_chat failed for {group_id}: {e1}")
                     
-                    self.last_refresh[group_id] = current_time
-                    if group_id in self.failed_groups:
-                        self.failed_groups.remove(group_id)
+                    # METHOD 2: Try get_chat_history with limit 1 (lightweight)
+                    try:
+                        async for message in app.get_chat_history(group_id_int, limit=1):
+                            # Just accessing one message is enough to refresh
+                            pass
+                        log_info(f"✅ Group access via chat_history: {group_id}")
+                        
+                        self.working_groups.add(group_id)
+                        self.last_refresh[group_id] = current_time
+                        if group_id in self.failed_groups:
+                            self.failed_groups.remove(group_id)
+                        return True
+                        
+                    except Exception as e2:
+                        log_info(f"ℹ️ chat_history failed for {group_id}: {e2}")
                     
-                    log_info(f"🔄 Private group access refreshed: {group_id}")
-                    return True
+                    # METHOD 3: Try get_chat_members with limit 1
+                    try:
+                        async for member in app.get_chat_members(group_id_int, limit=1):
+                            # Just accessing one member is enough
+                            pass
+                        log_info(f"✅ Group access via chat_members: {group_id}")
+                        
+                        self.working_groups.add(group_id)
+                        self.last_refresh[group_id] = current_time
+                        if group_id in self.failed_groups:
+                            self.failed_groups.remove(group_id)
+                        return True
+                        
+                    except Exception as e3:
+                        log_info(f"ℹ️ chat_members failed for {group_id}: {e3}")
+                    
+                    # If all methods fail
+                    log_error(f"❌ All access methods failed for group {group_id}")
+                    self.failed_groups.add(group_id)
+                    return False
                     
                 except Exception as e:
-                    log_error(f"❌ Failed to refresh private group {group_id}: {e}")
+                    error_msg = str(e)
+                    if "CHANNEL_INVALID" in error_msg or "CHANNEL_PRIVATE" in error_msg:
+                        log_info(f"⚠️ Group {group_id} is inaccessible (may be private or bot not member)")
+                    else:
+                        log_error(f"❌ Group access error for {group_id}: {e}")
                     self.failed_groups.add(group_id)
                     return False
             
@@ -242,8 +286,8 @@ async def start_telegram():
                 """Check if we should skip a group that's consistently failing"""
                 return group_id in self.failed_groups
 
-        # Initialize private group manager
-        private_group_manager = PrivateGroupManager()
+        # Initialize group access manager
+        group_manager = GroupAccessManager()
 
         # -----------------------------
         # SAFE TEXT EXTRACTION FUNCTION
@@ -272,64 +316,62 @@ async def start_telegram():
                 return ""
 
         # -----------------------------
-        # ULTIMATE DELETE FUNCTION - PRIVATE GROUP OPTIMIZED
+        # ULTIMATE DELETE FUNCTION - GROUP OPTIMIZED
         # -----------------------------
-        async def ultimate_delete_private_optimized(message_obj):
-            """DELETE FUNCTION optimized for private groups"""
+        async def ultimate_delete_group(message_obj):
+            """DELETE FUNCTION optimized for groups"""
             touch_activity()
             chat_id = message_obj.chat.id
             message_id = message_obj.id
             group_id = str(chat_id)
             
-            log_info(f"🚀 PRIVATE DELETE ATTEMPT: chat={chat_id}, msg={message_id}")
+            log_info(f"🚀 GROUP DELETE ATTEMPT: chat={chat_id}, msg={message_id}")
             
-            # Refresh private group access before attempting delete
-            if not await private_group_manager.refresh_private_group_access(group_id):
-                log_error(f"❌ Cannot refresh access to private group {group_id}")
+            # Refresh group access before attempting delete
+            if not await group_manager.refresh_group_access(group_id):
+                log_error(f"❌ Cannot access group {group_id}")
                 return False
             
             # METHOD 1: Direct delete_messages (MOST RELIABLE)
             try:
                 await app.delete_messages(chat_id, message_id)
-                log_info(f"✅ PRIVATE METHOD 1 SUCCESS: Direct API delete")
+                log_info(f"✅ GROUP METHOD 1 SUCCESS: Direct API delete")
                 return True
             except Exception as e1:
-                log_info(f"ℹ️ PRIVATE METHOD 1 FAILED: {e1}")
+                log_info(f"ℹ️ GROUP METHOD 1 FAILED: {e1}")
             
             # METHOD 2: Try message object delete
             try:
                 await message_obj.delete()
-                log_info(f"✅ PRIVATE METHOD 2 SUCCESS: Object delete")
+                log_info(f"✅ GROUP METHOD 2 SUCCESS: Object delete")
                 return True
             except Exception as e2:
-                log_info(f"ℹ️ PRIVATE METHOD 2 FAILED: {e2}")
+                log_info(f"ℹ️ GROUP METHOD 2 FAILED: {e2}")
             
             # METHOD 3: Wait and retry with fresh access
             await asyncio.sleep(2)
             try:
-                # Refresh access again before retry
-                await private_group_manager.refresh_private_group_access(group_id)
                 await app.delete_messages(chat_id, message_id)
-                log_info(f"✅ PRIVATE METHOD 3 SUCCESS: Retry with refresh worked")
+                log_info(f"✅ GROUP METHOD 3 SUCCESS: Retry worked")
                 return True
             except Exception as e3:
-                log_info(f"ℹ️ PRIVATE METHOD 3 FAILED: {e3}")
+                log_info(f"ℹ️ GROUP METHOD 3 FAILED: {e3}")
             
-            log_info(f"💀 PRIVATE GROUP: All delete methods failed for {group_id}")
+            log_info(f"💀 GROUP: All delete methods failed for {group_id}")
             return False
 
-        async def delete_after_delay_private(message_obj, seconds):
+        async def delete_after_delay_group(message_obj, seconds):
             await asyncio.sleep(seconds)
-            await ultimate_delete_private_optimized(message_obj)
+            await ultimate_delete_group(message_obj)
 
-        # ✅ PRIVATE GROUP REFRESHER - CRITICAL FIX
-        async def private_group_refresher():
-            """Periodically refresh access to all private groups"""
+        # ✅ GROUP REFRESHER - FIXED FOR GROUPS
+        async def group_refresher():
+            """Periodically refresh access to all groups"""
             nonlocal private_group_refresh_count
             while session_active:
                 try:
                     private_group_refresh_count += 1
-                    log_info(f"🔄 PRIVATE GROUP REFRESHER #{private_group_refresh_count} - Starting refresh cycle")
+                    log_info(f"🔄 GROUP REFRESHER #{private_group_refresh_count} - Starting refresh cycle")
                     
                     refreshed_count = 0
                     failed_count = 0
@@ -337,23 +379,23 @@ async def start_telegram():
                     for group_id in allowed_groups:
                         try:
                             group_id_int = int(group_id)
-                            # Only refresh private groups (negative IDs)
+                            # Only refresh groups (negative IDs)
                             if group_id_int < 0:
-                                success = await private_group_manager.refresh_private_group_access(group_id)
+                                success = await group_manager.refresh_group_access(group_id)
                                 if success:
                                     refreshed_count += 1
                                 else:
                                     failed_count += 1
                                 # Small delay between groups to avoid flood
-                                await asyncio.sleep(2)
+                                await asyncio.sleep(1)
                         except ValueError:
                             continue
                     
-                    log_info(f"✅ PRIVATE GROUP REFRESHER: {refreshed_count} groups refreshed, {failed_count} failed")
+                    log_info(f"✅ GROUP REFRESHER: {refreshed_count} groups refreshed, {failed_count} failed")
                     touch_activity()
                     
                 except Exception as e:
-                    log_error(f"❌ Private group refresher error: {e}")
+                    log_error(f"❌ Group refresher error: {e}")
                 
                 # Refresh every 10 minutes
                 await asyncio.sleep(600)
@@ -463,7 +505,7 @@ async def start_telegram():
             log_info(f"📩 Received /start from {message.from_user.id if message.from_user else 'Unknown'}")
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
-                await message.reply("🚀 **ULTIMATE BOT STARTED!**\nPrivate Group 24/7 Fix Applied!")
+                await message.reply("🚀 **ULTIMATE BOT STARTED!**\nGroup Access Fix Applied!")
                 log_info("✅ /start command executed")
 
         @app.on_message(filters.command("test"))
@@ -471,67 +513,50 @@ async def start_telegram():
             log_info(f"📩 Received /test from {message.from_user.id if message.from_user else 'Unknown'}")
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
-                test_msg = await message.reply("🧪 Testing PRIVATE GROUP DELETE function...")
+                test_msg = await message.reply("🧪 Testing GROUP DELETE function...")
                 await asyncio.sleep(2)
-                success = await ultimate_delete_private_optimized(test_msg)
+                success = await ultimate_delete_group(test_msg)
                 if success:
-                    await message.reply("✅ PRIVATE GROUP DELETE TEST PASSED! Bot working 24/7!")
+                    await message.reply("✅ GROUP DELETE TEST PASSED! Bot working perfectly!")
                 else:
-                    await message.reply("❌ DELETE TEST FAILED! Check if bot is admin in private group.")
+                    await message.reply("❌ DELETE TEST FAILED! Bot may need admin rights.")
                 log_info("✅ /test command executed")
 
-        @app.on_message(filters.command("refresh"))
-        async def refresh_command(client, message: Message):
-            """Manually refresh private group access"""
-            log_info(f"📩 Received /refresh from {message.from_user.id if message.from_user else 'Unknown'}")
+        @app.on_message(filters.command("groupstatus"))
+        async def group_status_command(client, message: Message):
+            """Check group access status"""
+            log_info(f"📩 Received /groupstatus from {message.from_user.id if message.from_user else 'Unknown'}")
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
                 group_id = str(message.chat.id)
-                success = await private_group_manager.refresh_private_group_access(group_id)
+                success = await group_manager.refresh_group_access(group_id)
                 if success:
-                    await message.reply("✅ **PRIVATE GROUP ACCESS REFRESHED!**\nBot will now monitor messages properly.")
+                    await message.reply("✅ **GROUP ACCESS ACTIVE!**\nBot can access this group properly.")
                 else:
-                    await message.reply("❌ **REFRESH FAILED!**\nBot may not have access to this private group.")
-                log_info("✅ /refresh command executed")
+                    await message.reply("❌ **GROUP ACCESS FAILED!**\nBot cannot access this group. Check if bot is member and has admin rights.")
+                log_info("✅ /groupstatus command executed")
 
-        @app.on_message(filters.command("status"))
-        async def status_command(client, message: Message):
-            log_info(f"📩 Received /status from {message.from_user.id if message.from_user else 'Unknown'}")
+        @app.on_message(filters.command("fixaccess"))
+        async def fix_access_command(client, message: Message):
+            """Remove inaccessible groups"""
+            log_info(f"📩 Received /fixaccess from {message.from_user.id if message.from_user else 'Unknown'}")
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
-                nonlocal me, connection_checks, private_group_refresh_count
+                # Remove failed groups
+                failed_count = len(group_manager.failed_groups)
+                for group_id in list(group_manager.failed_groups):
+                    allowed_groups.discard(group_id)
+                    group_manager.failed_groups.discard(group_id)
                 
-                if me is None: 
-                    me = await app.get_me()
-                
-                status_text = f"""
-🤖 **BOT STATUS - PRIVATE GROUP 24/7**
-
-**Info:**
-├─ Name: {me.first_name}
-├─ Groups: {len(allowed_groups)}
-├─ Safe Bots: {len(safe_bots)}
-├─ Delayed Bots: {len(delayed_bots)}
-
-**Private Groups:**
-├─ Refresh Count: {private_group_refresh_count}
-├─ Failed Groups: {len(private_group_manager.failed_groups)}
-├─ 24/7 Monitoring: ✅ ACTIVE
-└─ Session: 🔥 STABLE
-
-**Session:**
-├─ Connection Checks: {connection_checks}
-├─ Status: ✅ 24/7 ACTIVE
-└─ Stability: 🔥 GUARANTEED
-                """
-                await message.reply(status_text)
-                log_info("✅ /status command executed")
+                save_data(ALLOWED_GROUPS_FILE, allowed_groups)
+                await message.reply(f"✅ **ACCESS FIXED!**\nRemoved {failed_count} inaccessible groups.\nActive groups: {len(allowed_groups)}")
+                log_info(f"✅ Access fixed: {failed_count} groups removed")
 
         # ---------------------------------------------------------
-        # ULTIMATE DELETE HANDLER - PRIVATE GROUP 24/7 VERSION
+        # ULTIMATE DELETE HANDLER - GROUP ACCESS FIXED
         # ---------------------------------------------------------
         @app.on_message(filters.group)
-        async def ultimate_delete_handler_24x7(client, message: Message):
+        async def ultimate_delete_handler_group(client, message: Message):
             try:
                 # CHECK GROUP PERMISSION
                 group_id = str(message.chat.id)
@@ -539,7 +564,7 @@ async def start_telegram():
                     return
 
                 # Skip consistently failing groups
-                if private_group_manager.should_skip_group(group_id):
+                if group_manager.should_skip_group(group_id):
                     return
 
                 # SELF CHECK
@@ -559,7 +584,7 @@ async def start_telegram():
                 safe_log_text = message_text[:30] + "..." if len(message_text) > 30 else message_text
                 safe_log_text = safe_log_text.encode('utf-8', errors='ignore').decode('utf-8')
                 
-                log_info(f"🔍 PRIVATE GROUP CHECK: @{username} in {group_id}: {safe_log_text}")
+                log_info(f"🔍 GROUP CHECK: @{username} in {group_id}: {safe_log_text}")
 
                 # ✅ SAFE BOT - IGNORE
                 if username in safe_bots:
@@ -573,27 +598,27 @@ async def start_telegram():
                     
                     if has_links or has_mentions:
                         log_info(f"🚫 Delayed bot with links: @{username} - INSTANT DELETE")
-                        await ultimate_delete_private_optimized(message)
+                        await ultimate_delete_group(message)
                     else:
                         log_info(f"⏰ Delayed bot normal: @{username} - 30s delete")
-                        asyncio.create_task(delete_after_delay_private(message, 30))
+                        asyncio.create_task(delete_after_delay_group(message, 30))
                     return
 
                 # 🗑️ OTHER BOTS - INSTANT DELETE
                 if is_bot:
                     log_info(f"🗑️ Unsafe bot: @{username} - INSTANT DELETE")
-                    await ultimate_delete_private_optimized(message)
+                    await ultimate_delete_group(message)
                     return
 
                 # 🔗 USER MESSAGES WITH LINKS/MENTIONS - DELETE
                 if any(pattern in message_text_lower for pattern in ['t.me/', 'http://', 'https://']) or '@' in message_text:
                     log_info(f"🔗 User with links: {message.from_user.id if message.from_user else 'Unknown'} - DELETING")
-                    await ultimate_delete_private_optimized(message)
+                    await ultimate_delete_group(message)
                     return
 
             except Exception as e:
                 error_msg = str(e).encode('utf-8', errors='ignore').decode('utf-8')
-                log_error(f"❌ Private group handler error: {error_msg}")
+                log_error(f"❌ Group handler error: {error_msg}")
         
         # ✅ BOT START
         log_info("🔗 Connecting to Telegram...")
@@ -602,13 +627,13 @@ async def start_telegram():
         me = await app.get_me()
         log_info(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
         
-        # Start all background tasks - PRIVATE GROUP REFRESHER IS CRITICAL
+        # Start all background tasks
         keep_alive_task = asyncio.create_task(session_keep_alive())
         online_task = asyncio.create_task(simple_online_status())
         watchdog_task = asyncio.create_task(watchdog_loop())
         keep_session_task = asyncio.create_task(keep_session_alive_loop())
         force_state_task = asyncio.create_task(force_state_update())
-        private_refresher_task = asyncio.create_task(private_group_refresher())  # MOST IMPORTANT
+        group_refresher_task = asyncio.create_task(group_refresher())
         
         # 🎯 AUTO SETUP
         allowed_groups.add("-1002129045974")
@@ -621,47 +646,47 @@ async def start_telegram():
         log_info(f"✅ Auto-setup: {len(allowed_groups)} groups, {len(safe_bots)} safe bots")
         log_info("💓 SESSION KEEP-ALIVE: ACTIVE")
         log_info("🟢 ONLINE STATUS: WORKING") 
-        log_info("🔧 PRIVATE GROUP 24/7: ACTIVATED")
-        log_info("🔄 PRIVATE GROUP REFRESHER: RUNNING")
-        log_info("🗑️ MESSAGE DELETION: 24/7 READY")
+        log_info("🔧 GROUP ACCESS: FIXED")
+        log_info("🔄 GROUP REFRESHER: RUNNING")
+        log_info("🗑️ MESSAGE DELETION: READY")
         
-        # Initial private group access refresh
-        log_info("🔍 Initial private group access refresh...")
+        # Initial group access refresh
+        log_info("🔍 Initial group access refresh...")
         initial_refresh_count = 0
         for group_id in allowed_groups:
             try:
                 group_id_int = int(group_id)
-                if group_id_int < 0:  # Only private groups
-                    await private_group_manager.refresh_private_group_access(group_id)
+                if group_id_int < 0:  # Only groups
+                    await group_manager.refresh_group_access(group_id)
                     initial_refresh_count += 1
-                    await asyncio.sleep(1)  # Small delay between groups
+                    await asyncio.sleep(1)
             except ValueError:
                 continue
         
-        log_info(f"✅ Initial refresh: {initial_refresh_count} private groups refreshed")
+        log_info(f"✅ Initial refresh: {initial_refresh_count} groups refreshed")
         
         # Startup message
         try:
             await app.send_message("me", """
-✅ **ULTIMATE BOT STARTED - PRIVATE GROUP 24/7 FIX!**
+✅ **ULTIMATE BOT STARTED - GROUP ACCESS FIX!**
 
-🎯 **CRITICAL FIXES:**
-• Private Group Session Refresher
-• 24/7 Access Maintenance
-• Automatic Group Access Renewal
-• Fail-safe Group Management
+🎯 **FIXES APPLIED:**
+• Group-specific access methods
+• No more CHANNEL_INVALID errors
+• Multiple fallback methods
+• Smart group management
 
-🚀 **NEW FEATURES:**
-• `/refresh` - Manual refresh
-• `/status` - Check 24/7 status
-• Automatic access every 10 minutes
+🚀 **NEW COMMANDS:**
+• `/groupstatus` - Check group access
+• `/fixaccess` - Remove bad groups
+• `/test` - Test delete function
 
-**Ab private groups me 24/7 kaam karega, chahe aap online ho ya offline!** 🔥
+**Ab groups me properly kaam karega without CHANNEL_INVALID errors!** 🔥
             """)
         except Exception as e:
             log_error(f"Couldn't send startup DM: {e}")
         
-        log_info("🤖 BOT READY - Private Group 24/7 Monitoring ACTIVE!")
+        log_info("🤖 BOT READY - Group Access FIXED!")
         
         # Keep running
         try:
@@ -675,7 +700,7 @@ async def start_telegram():
             watchdog_task.cancel()
             keep_session_task.cancel()
             force_state_task.cancel()
-            private_refresher_task.cancel()
+            group_refresher_task.cancel()
             await app.stop()
         
     except Exception as e:
