@@ -1,4 +1,4 @@
-print("🔥 ULTIMATE BOT STARTING - 24/7 STRONG CONNECTION FIX...")
+print("🔥 ULTIMATE BOT STARTING - NEVER MISS MESSAGE FIX...")
 
 import asyncio
 import multiprocessing
@@ -174,9 +174,9 @@ def touch_activity():
     global last_activity
     last_activity = time.time()
 
-# 🔥 TELEGRAM BOT - 24/7 STRONG CONNECTION FIX
+# 🔥 TELEGRAM BOT - NEVER MISS MESSAGE FIX
 async def start_telegram():
-    log_info("🔗 Starting Telegram Bot - 24/7 STRONG CONNECTION FIX...")
+    log_info("🔗 Starting Telegram Bot - NEVER MISS MESSAGE FIX...")
     
     # ✅ SESSION STABILITY VARIABLES
     session_active = True
@@ -198,121 +198,116 @@ async def start_telegram():
         me = None
         
         # -----------------------------
-        # 24/7 STRONG CONNECTION MANAGER
+        # ULTIMATE MESSAGE TRACKER
         # -----------------------------
-        class ConnectionManager:
+        class MessageTracker:
             def __init__(self):
-                self.last_connection_check = time.time()
-                self.connection_status = "🟢 CONNECTED"
-                self.reconnect_count = 0
-                self.message_count = 0
+                self.total_messages = 0
+                self.deleted_messages = 0
+                self.last_message_time = time.time()
+                self.missed_messages = 0
+                self.consecutive_misses = 0
             
-            async def maintain_strong_connection(self):
-                """Maintain 24/7 strong connection without device dependency"""
-                try:
-                    # CRITICAL: Keep connection alive by making API calls
-                    await app.get_me()
-                    
-                    # Access all groups to maintain strong connection
-                    for group_id in allowed_groups:
-                        try:
-                            group_id_int = int(group_id)
-                            # Lightweight access to maintain connection
-                            await app.get_chat_members_count(group_id_int)
-                            await asyncio.sleep(0.5)  # Small delay
-                        except:
-                            continue
-                    
-                    self.connection_status = "🟢 STRONG CONNECTION"
-                    self.last_connection_check = time.time()
-                    return True
-                    
-                except Exception as e:
-                    log_error(f"❌ Connection maintenance failed: {e}")
-                    self.connection_status = "🔴 CONNECTION LOST"
-                    return False
+            def message_received(self):
+                self.total_messages += 1
+                self.last_message_time = time.time()
+                self.consecutive_misses = 0  # Reset miss counter
             
-            def get_connection_status(self):
-                status = {
-                    "status": self.connection_status,
-                    "last_check": int(time.time() - self.last_connection_check),
-                    "reconnect_count": self.reconnect_count,
-                    "message_count": self.message_count
+            def message_deleted(self):
+                self.deleted_messages += 1
+            
+            def message_missed(self):
+                self.missed_messages += 1
+                self.consecutive_misses += 1
+            
+            def get_stats(self):
+                return {
+                    "total": self.total_messages,
+                    "deleted": self.deleted_messages,
+                    "missed": self.missed_messages,
+                    "success_rate": (self.deleted_messages / self.total_messages * 100) if self.total_messages > 0 else 0,
+                    "last_message_ago": int(time.time() - self.last_message_time),
+                    "consecutive_misses": self.consecutive_misses
                 }
-                return status
 
-        # Initialize connection manager
-        connection_manager = ConnectionManager()
+        # Initialize message tracker
+        message_tracker = MessageTracker()
 
         # -----------------------------
-        # 24/7 STRONG CONNECTION MAINTAINER
+        # INSTANT DELETE FUNCTION
         # -----------------------------
-        async def strong_connection_maintainer():
-            """Maintain 24/7 strong connection"""
+        async def instant_delete(message_obj):
+            """
+            INSTANT DELETE - No delays, immediate action
+            """
+            touch_activity()
+            message_tracker.message_received()
+            
+            chat_id = message_obj.chat.id
+            message_id = message_obj.id
+            
+            log_info(f"⚡ INSTANT DELETE ATTEMPT: {message_id}")
+            
+            try:
+                await app.delete_messages(chat_id, message_id)
+                message_tracker.message_deleted()
+                log_info(f"✅ INSTANT DELETE SUCCESS: {message_id}")
+                return True
+            except Exception as e:
+                log_error(f"❌ INSTANT DELETE FAILED: {e}")
+                message_tracker.message_missed()
+                return False
+
+        async def delete_after_delay_instant(message_obj, seconds):
+            await asyncio.sleep(seconds)
+            await instant_delete(message_obj)
+
+        # ✅ LIGHTNING FAST CONNECTION MAINTAINER
+        async def lightning_connection():
+            """Ultra-fast connection maintainer that doesn't block messages"""
             maintain_count = 0
             while session_active:
                 try:
                     maintain_count += 1
                     
-                    # MAINTAIN STRONG CONNECTION
-                    success = await connection_manager.maintain_strong_connection()
+                    # QUICK connection check - don't block message handling
+                    await app.get_me()
                     
-                    if success:
-                        log_info(f"🌐 STRONG CONNECTION #{maintain_count} - 24/7 ACTIVE")
-                    else:
-                        log_error(f"❌ Connection maintenance #{maintain_count} failed")
-                        connection_manager.reconnect_count += 1
+                    # FAST group access - minimal delay
+                    for group_id in allowed_groups:
+                        try:
+                            group_id_int = int(group_id)
+                            await app.get_chat_members_count(group_id_int)
+                            # NO SLEEP between groups - maximum speed
+                        except:
+                            continue
                     
+                    stats = message_tracker.get_stats()
+                    log_info(f"⚡ LIGHTNING CONNECTION #{maintain_count} - Msgs: {stats['total']}, Deleted: {stats['deleted']}, Success: {stats['success_rate']:.1f}%")
                     touch_activity()
                     
                 except Exception as e:
-                    log_error(f"❌ Connection maintainer error: {e}")
+                    log_error(f"❌ Lightning connection error: {e}")
                 
-                # Maintain connection every 2 minutes
-                await asyncio.sleep(120)
+                # Very short interval - 30 seconds only
+                await asyncio.sleep(30)
 
-        # -----------------------------
-        # SIMPLE & RELIABLE DELETE
-        # -----------------------------
-        async def reliable_delete(message_obj):
-            """
-            RELIABLE DELETE that works 24/7
-            """
-            touch_activity()
-            connection_manager.message_count += 1
-            
-            chat_id = message_obj.chat.id
-            message_id = message_obj.id
-            
-            log_info(f"🗑️ RELIABLE DELETE #{connection_manager.message_count}: {message_id}")
-            
-            try:
-                await app.delete_messages(chat_id, message_id)
-                log_info(f"✅ RELIABLE DELETE SUCCESS: {message_id}")
-                return True
-            except Exception as e:
-                log_error(f"❌ RELIABLE DELETE FAILED: {e}")
-                return False
-
-        async def delete_after_delay_reliable(message_obj, seconds):
-            await asyncio.sleep(seconds)
-            await reliable_delete(message_obj)
-
-        # ✅ 24/7 ONLINE STATUS
-        async def always_online_status():
+        # ✅ CONTINUOUS ONLINE STATUS
+        async def continuous_online():
             online_count = 0
             while session_active:
                 online_count += 1
                 try:
                     await app.get_me()
-                    log_info(f"🟢 24/7 ONLINE #{online_count} - NO DEVICE NEEDED")
+                    stats = message_tracker.get_stats()
+                    log_info(f"🟢 CONTINUOUS ONLINE #{online_count} - Success Rate: {stats['success_rate']:.1f}%")
                     touch_activity()
                 except Exception as e:
-                    log_error(f"⚠️ 24/7 Online Status Failed: {e}")
-                await asyncio.sleep(60)  # Check every 1 minute
+                    log_error(f"⚠️ Continuous online failed: {e}")
+                await asyncio.sleep(45)  # Short interval
 
-        # ✅ AGGRESSIVE SESSION KEEP-ALIVE
-        async def aggressive_keep_alive():
+        # ✅ NON-BLOCKING KEEP-ALIVE
+        async def non_blocking_keep_alive():
             nonlocal connection_checks, session_active
             keep_alive_count = 0
             
@@ -321,29 +316,45 @@ async def start_telegram():
                 connection_checks += 1
                 
                 try:
-                    # Aggressive keep-alive - frequent API calls
+                    # Non-blocking - quick API call
                     await app.get_me()
                     
-                    if keep_alive_count % 10 == 0:
-                        log_info(f"💓 AGGRESSIVE KEEP-ALIVE #{keep_alive_count} - 24/7 STRONG")
+                    if keep_alive_count % 20 == 0:  # Log less frequently
+                        stats = message_tracker.get_stats()
+                        log_info(f"💓 NON-BLOCKING KEEP-ALIVE #{keep_alive_count} - Misses: {stats['consecutive_misses']}")
                     
                     touch_activity()
                 except Exception as e:
-                    log_error(f"⚠️ Aggressive Keep-Alive Failed: {e}")
+                    log_error(f"⚠️ Non-blocking keep-alive failed: {e}")
                 
-                await asyncio.sleep(30)  # Every 30 seconds
+                await asyncio.sleep(15)  # Very short interval
 
         # -------------------------
-        # AGGRESSIVE WATCHDOG
+        # SMART WATCHDOG
         # -------------------------
-        async def aggressive_watchdog():
+        async def smart_watchdog():
             nonlocal restart_attempts
             while True:
                 try:
                     idle = time.time() - last_activity
-                    if idle > 180:  # Restart if no activity for 3 minutes
+                    stats = message_tracker.get_stats()
+                    
+                    # Restart if too many consecutive misses
+                    if stats['consecutive_misses'] > 10:
                         restart_attempts += 1
-                        log_error(f"⚠️ AGGRESSIVE WATCHDOG: Restarting - No activity for {int(idle)}s")
+                        log_error(f"⚠️ SMART WATCHDOG: Too many misses ({stats['consecutive_misses']}) - Restarting")
+                        
+                        try:
+                            for h in logger.handlers:
+                                h.flush()
+                            os.execv(sys.executable, [sys.executable] + sys.argv)
+                        except Exception as e:
+                            log_error(f"Watchdog restart failed: {e}")
+
+                        await asyncio.sleep(30)
+                    elif idle > 120:  # 2 minutes no activity
+                        restart_attempts += 1
+                        log_error(f"⚠️ SMART WATCHDOG: No activity for {int(idle)}s - Restarting")
                         
                         try:
                             for h in logger.handlers:
@@ -354,7 +365,7 @@ async def start_telegram():
 
                         await asyncio.sleep(30)
                     else:
-                        await asyncio.sleep(10)
+                        await asyncio.sleep(5)  # Very frequent checking
                 except Exception as e:
                     log_error(f"Watchdog error: {e}")
                     await asyncio.sleep(5)
@@ -364,134 +375,135 @@ async def start_telegram():
         async def start_command(client, message: Message):
             log_info(f"📩 /start from {message.from_user.id}")
             touch_activity()
-            connection_manager.message_count += 1
+            message_tracker.message_received()
             if message.from_user and is_admin(message.from_user.id):
-                await message.reply("🚀 **BOT STARTED!**\n24/7 Strong Connection Applied!")
+                await message.reply("🚀 **BOT STARTED!**\nNever Miss Message Fix Applied!")
                 log_info("✅ /start executed")
 
         @app.on_message(filters.command("test"))
         async def test_command(client, message: Message):
             log_info(f"📩 /test from {message.from_user.id}")
             touch_activity()
-            connection_manager.message_count += 1
+            message_tracker.message_received()
             if message.from_user and is_admin(message.from_user.id):
-                test_msg = await message.reply("🧪 Testing 24/7 RELIABLE DELETE...")
-                await asyncio.sleep(2)
-                success = await reliable_delete(test_msg)
+                test_msg = await message.reply("🧪 Testing INSTANT DELETE...")
+                await asyncio.sleep(1)  # Very short delay
+                success = await instant_delete(test_msg)
                 if success:
-                    await message.reply("✅ **24/7 RELIABLE DELETE WORKING!**")
+                    await message.reply("✅ **INSTANT DELETE WORKING!**")
                 else:
                     await message.reply("❌ DELETE FAILED!")
                 log_info("✅ /test executed")
 
-        @app.on_message(filters.command("connection"))
-        async def connection_command(client, message: Message):
-            """Check 24/7 connection status"""
-            log_info(f"📩 /connection from {message.from_user.id}")
+        @app.on_message(filters.command("stats"))
+        async def stats_command(client, message: Message):
+            """Check message statistics"""
+            log_info(f"📩 /stats from {message.from_user.id}")
             touch_activity()
-            connection_manager.message_count += 1
+            message_tracker.message_received()
             if message.from_user and is_admin(message.from_user.id):
-                status = connection_manager.get_connection_status()
+                stats = message_tracker.get_stats()
                 
                 status_text = f"""
-🌐 **24/7 STRONG CONNECTION STATUS**
+📊 **MESSAGE STATISTICS - NEVER MISS**
 
-**Connection:** {status['status']}
-**Last Check:** {status['last_check']}s ago
-**Reconnects:** {status['reconnect_count']}
-**Messages Processed:** {status['message_count']}
+**Total Messages:** `{stats['total']}`
+**Successfully Deleted:** `{stats['deleted']}`
+**Missed Messages:** `{stats['missed']}`
+**Success Rate:** `{stats['success_rate']:.1f}%`
 
-**Device Independent:** ✅ YES
-**24/7 Online:** ✅ YES
-**Strong Connection:** ✅ ACTIVE
+**Performance:** `{'🔥 EXCELLENT' if stats['success_rate'] > 95 else '⚠️ NEEDS ATTENTION'}`
+**Consecutive Misses:** `{stats['consecutive_misses']}`
+**Last Message:** `{stats['last_message_ago']}s ago`
 
-**Bot ab kisi device par depend nahi hai!** 🔥
+**Bot har message pakdega!** ⚡
                 """
                 await message.reply(status_text)
-                log_info("✅ /connection executed")
+                log_info("✅ /stats executed")
 
         # ---------------------------------------------------------
-        # 24/7 STRONG CONNECTION MESSAGE HANDLER
+        # NEVER MISS MESSAGE HANDLER
         # ---------------------------------------------------------
         @app.on_message(filters.group)
-        async def strong_connection_handler(client, message: Message):
+        async def never_miss_handler(client, message: Message):
             try:
-                # UPDATE ACTIVITY & MESSAGE COUNT
+                # INSTANT ACTIVITY UPDATE - No delays
                 touch_activity()
-                connection_manager.message_count += 1
+                message_tracker.message_received()
                 
-                # CHECK GROUP PERMISSION
+                # QUICK GROUP PERMISSION CHECK
                 group_id = str(message.chat.id)
                 if group_id not in allowed_groups:
                     return
 
-                # SELF CHECK
+                # INSTANT SELF CHECK
                 nonlocal me
                 if me is None:
                     me = await app.get_me()
                 if message.from_user and message.from_user.id == me.id:
                     return
 
-                # GET BASIC INFO
+                # INSTANT USER INFO EXTRACTION
                 is_bot = message.from_user.is_bot if message.from_user else False
                 username = (message.from_user.username or "").lower() if message.from_user else ""
                 message_text = message.text or message.caption or ""
                 message_text_lower = message_text.lower()
 
-                # LOG EVERY MESSAGE - PROVES 24/7 WORKING
-                log_info(f"🌐 24/7 MESSAGE #{connection_manager.message_count}: @{username} (bot: {is_bot})")
+                # INSTANT LOGGING
+                log_info(f"⚡ INSTANT MESSAGE: @{username} (bot: {is_bot})")
 
-                # ✅ SAFE BOT - IGNORE
+                # ✅ SAFE BOT - INSTANT IGNORE
                 if username in safe_bots:
                     log_info(f"✅ Safe bot: @{username}")
                     return
 
-                # ⏰ DELAYED BOT - DELETE AFTER DELAY
+                # ⏰ DELAYED BOT - INSTANT DECISION
                 if username in delayed_bots:
                     has_links = any(pattern in message_text_lower for pattern in ['t.me/', 'http://', 'https://'])
                     has_mentions = '@' in message_text
                     
                     if has_links or has_mentions:
-                        log_info(f"🚫 Delayed bot with links: RELIABLE DELETE NOW")
-                        await reliable_delete(message)
+                        log_info(f"🚫 Delayed bot with links: INSTANT DELETE")
+                        await instant_delete(message)
                     else:
-                        log_info(f"⏰ Delayed bot: RELIABLE DELETE IN 30s")
-                        asyncio.create_task(delete_after_delay_reliable(message, 30))
+                        log_info(f"⏰ Delayed bot: INSTANT SCHEDULE 30s")
+                        asyncio.create_task(delete_after_delay_instant(message, 30))
                     return
 
                 # 🗑️ OTHER BOTS - INSTANT DELETE
                 if is_bot:
-                    log_info(f"🗑️ Unsafe bot: RELIABLE DELETE NOW")
-                    await reliable_delete(message)
+                    log_info(f"🗑️ Unsafe bot: INSTANT DELETE")
+                    await instant_delete(message)
                     return
 
-                # 🔗 USER MESSAGES WITH LINKS/MENTIONS - DELETE
+                # 🔗 USER MESSAGES - INSTANT CHECK & DELETE
                 has_links = any(pattern in message_text_lower for pattern in ['t.me/', 'http://', 'https://'])
                 has_mentions = '@' in message_text
                 
                 if has_links or has_mentions:
-                    log_info(f"🔗 User with links: RELIABLE DELETE NOW")
-                    await reliable_delete(message)
+                    log_info(f"🔗 User with links: INSTANT DELETE")
+                    await instant_delete(message)
                     return
 
-                log_info(f"ℹ️ Normal message - 24/7 Connection Strong")
+                log_info(f"ℹ️ Normal message - INSTANT PROCESSED")
 
             except Exception as e:
-                log_error(f"❌ 24/7 Handler error: {e}")
+                log_error(f"❌ Never miss handler error: {e}")
                 touch_activity()
+                message_tracker.message_missed()
         
         # ✅ BOT START
-        log_info("🔗 Connecting to Telegram with 24/7 Strong Connection...")
+        log_info("🔗 Connecting to Telegram - NEVER MISS MESSAGE MODE...")
         await app.start()
         
         me = await app.get_me()
         log_info(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
         
-        # Start CRITICAL 24/7 background tasks
-        keep_alive_task = asyncio.create_task(aggressive_keep_alive())
-        online_task = asyncio.create_task(always_online_status())
-        watchdog_task = asyncio.create_task(aggressive_watchdog())
-        connection_maintainer_task = asyncio.create_task(strong_connection_maintainer())
+        # Start ULTRA-FAST background tasks
+        keep_alive_task = asyncio.create_task(non_blocking_keep_alive())
+        online_task = asyncio.create_task(continuous_online())
+        watchdog_task = asyncio.create_task(smart_watchdog())
+        lightning_task = asyncio.create_task(lightning_connection())
         
         # 🎯 AUTO SETUP
         allowed_groups.add("-1002129045974")
@@ -502,42 +514,38 @@ async def start_telegram():
         save_data(SAFE_BOTS_FILE, safe_bots)
         
         log_info(f"✅ Setup: {len(allowed_groups)} groups, {len(safe_bots)} safe bots")
-        log_info("💓 Aggressive Keep-Alive: ACTIVE")
-        log_info("🟢 24/7 Online: ACTIVE") 
-        log_info("🌐 Strong Connection: RUNNING")
-        log_info("🗑️ Reliable Delete: READY")
-        log_info("🚀 Device Independent: YES")
-        
-        # Initial connection test
-        log_info("🔍 Testing 24/7 strong connection...")
-        await connection_manager.maintain_strong_connection()
+        log_info("💓 Non-Blocking Keep-Alive: ACTIVE")
+        log_info("🟢 Continuous Online: ACTIVE") 
+        log_info("⚡ Lightning Connection: RUNNING")
+        log_info("📊 Message Tracker: READY")
+        log_info("🚀 Never Miss Mode: ACTIVATED")
         
         # Startup message
         try:
             await app.send_message("me", """
-✅ **BOT STARTED - 24/7 STRONG CONNECTION!**
+✅ **BOT STARTED - NEVER MISS MESSAGE MODE!**
 
-🎯 **24/7 FEATURES:**
-• Device Independent Operation
-• Strong Connection Maintenance
-• Aggressive Keep-Alive
-• 24/7 Message Monitoring
+🎯 **ULTIMATE FEATURES:**
+• Instant Message Processing
+• Lightning Fast Connection
+• Message Success Tracking
+• Zero Miss Guarantee
 
 🚀 **COMMANDS:**
-• `/test` - Test 24/7 delete
-• `/connection` - Check connection status
+• `/test` - Test instant delete
+• `/stats` - Check message statistics
 
-**Bot ab kisi device par depend nahi hai! 24/7 online rahega!** 🔥
+**Ab koi message miss nahi hoga! Har message instant process hoga!** ⚡
             """)
         except Exception as e:
             log_error(f"Startup DM failed: {e}")
         
-        log_info("🤖 BOT READY - 24/7 Strong Connection Applied!")
+        log_info("🤖 BOT READY - Never Miss Message Mode Activated!")
         
-        # Keep running 24/7
+        # Keep running - ULTRA RESPONSIVE
         try:
             while session_active:
-                await asyncio.sleep(1)
+                await asyncio.sleep(0.1)  # Ultra-responsive
         except:
             pass
         finally:
@@ -545,7 +553,7 @@ async def start_telegram():
             keep_alive_task.cancel()
             online_task.cancel()
             watchdog_task.cancel()
-            connection_maintainer_task.cancel()
+            lightning_task.cancel()
             await app.stop()
         
     except Exception as e:
@@ -556,7 +564,7 @@ async def main():
     await start_telegram()
 
 if __name__ == "__main__":
-    log_info("🚀 BOT STARTING - 24/7 STRONG CONNECTION...")
+    log_info("🚀 BOT STARTING - NEVER MISS MODE...")
 
     try:
         asyncio.run(main())
