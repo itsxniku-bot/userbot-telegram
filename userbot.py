@@ -234,11 +234,13 @@ class PrivateGroupDeleteManager:
 async def start_telegram():
     log_info("🔗 Starting Telegram Bot - PRIVATE GROUP DELETE FIX...")
     
-    # ✅ SESSION VARIABLES
-    session_active = True
-    delete_success_count = 0
-    delete_fail_count = 0
-    public_group_delete_count = 0
+    # ✅ SESSION VARIABLES - Use dictionary to avoid nonlocal issues
+    session_data = {
+        'active': True,
+        'delete_success_count': 0,
+        'delete_fail_count': 0,
+        'public_group_delete_count': 0
+    }
 
     # Initialize private group manager
     private_manager = PrivateGroupDeleteManager()
@@ -274,26 +276,22 @@ async def start_telegram():
                     # PRIVATE GROUP: Use special force delete
                     success = await private_manager.force_private_group_delete(app, message_obj)
                     if success:
-                        nonlocal delete_success_count
-                        delete_success_count += 1
+                        session_data['delete_success_count'] += 1
                         return True
                     else:
-                        nonlocal delete_fail_count
-                        delete_fail_count += 1
+                        session_data['delete_fail_count'] += 1
                         return False
                 else:
                     # PUBLIC GROUP: Simple delete
                     await app.delete_messages(chat_id, message_id)
-                    nonlocal delete_success_count, public_group_delete_count
-                    delete_success_count += 1
-                    public_group_delete_count += 1
+                    session_data['delete_success_count'] += 1
+                    session_data['public_group_delete_count'] += 1
                     log_info(f"✅ PUBLIC DELETE SUCCESS: {message_id}")
                     return True
                     
             except Exception as e:
                 log_error(f"❌ ULTIMATE DELETE FAILED in {'PRIVATE' if is_private_group else 'PUBLIC'}: {e}")
-                nonlocal delete_fail_count
-                delete_fail_count += 1
+                session_data['delete_fail_count'] += 1
                 return False
 
         async def delete_after_delay_ultimate(message_obj, seconds):
@@ -304,7 +302,7 @@ async def start_telegram():
         async def private_group_activator():
             """Keep private group active by sending periodic messages"""
             activator_count = 0
-            while session_active:
+            while session_data['active']:
                 activator_count += 1
                 try:
                     # Every 10 minutes, send a keep-alive message to private group
@@ -332,7 +330,7 @@ async def start_telegram():
         # ✅ STRONG KEEP-ALIVE
         async def strong_keep_alive():
             keep_alive_count = 0
-            while session_active:
+            while session_data['active']:
                 keep_alive_count += 1
                 try:
                     await app.get_me()
@@ -355,7 +353,7 @@ async def start_telegram():
                     
                     # Log status every 2 minutes
                     if watchdog_count % 4 == 0:
-                        log_info(f"🐕 Watchdog - Idle: {int(idle)}s, Private: {private_manager.private_delete_success}/{private_manager.private_delete_attempts}, Public: {public_group_delete_count}")
+                        log_info(f"🐕 Watchdog - Idle: {int(idle)}s, Private: {private_manager.private_delete_success}/{private_manager.private_delete_attempts}, Public: {session_data['public_group_delete_count']}")
                     
                     if idle > 180:  # 3 minutes
                         log_error(f"⚠️ Watchdog: Restarting - No activity for {int(idle)}s")
@@ -386,9 +384,9 @@ async def start_telegram():
 🚀 **BOT STARTED - PRIVATE DELETE FIX!**
 
 📊 **DELETE STATS:**
-• Total: {delete_success_count} ✅ / {delete_fail_count} ❌
+• Total: {session_data['delete_success_count']} ✅ / {session_data['delete_fail_count']} ❌
 • Private: {private_manager.private_delete_success}/{private_manager.private_delete_attempts}
-• Public: {public_group_delete_count} ✅
+• Public: {session_data['public_group_delete_count']} ✅
 
 🔍 **Private Group:**
 • Access: {'✅' if private_access else '❌'}
@@ -566,7 +564,7 @@ async def start_telegram():
 📊 **STATUS:**
 • Private Access: {'✅' if private_access else '❌'}
 • Private Deletes: {private_manager.private_delete_success}
-• Public Deletes: {public_group_delete_count}
+• Public Deletes: {session_data['public_group_delete_count']}
 
 **Private Group: {'ACTIVE' if private_access else 'RETRYING'}** 🔥
             """)
@@ -577,12 +575,12 @@ async def start_telegram():
         
         # Keep running
         try:
-            while session_active:
+            while session_data['active']:
                 await asyncio.sleep(1)
         except:
             pass
         finally:
-            session_active = False
+            session_data['active'] = False
             keep_alive_task.cancel()
             private_activator_task.cancel()
             watchdog_task.cancel()
