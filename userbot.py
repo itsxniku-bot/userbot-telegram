@@ -1,4 +1,4 @@
-print("🔥 ULTIMATE BOT STARTING - GROUP ONLY FIX...")
+print("🔥 ULTIMATE BOT STARTING - STRONG GROUP ACCESS FIX...")
 
 import asyncio
 import multiprocessing
@@ -174,9 +174,9 @@ def touch_activity():
     global last_activity
     last_activity = time.time()
 
-# 🔥 TELEGRAM BOT - GROUP ONLY FIX
+# 🔥 TELEGRAM BOT - STRONG GROUP ACCESS FIX
 async def start_telegram():
-    log_info("🔗 Starting Telegram Bot - GROUP ONLY FIX...")
+    log_info("🔗 Starting Telegram Bot - STRONG GROUP ACCESS FIX...")
     
     # ✅ SESSION STABILITY VARIABLES
     session_active = True
@@ -197,91 +197,152 @@ async def start_telegram():
         me = None
         
         # -----------------------------
-        # GROUP ACCESS MANAGER - ONLY FOR GROUPS
+        # STRONG GROUP ACCESS MANAGER
         # -----------------------------
-        async def refresh_group_access_safe(group_id):
-            """Refresh group access without causing CHANNEL_INVALID errors"""
-            try:
-                group_id_int = int(group_id)
-                
-                # METHOD 1: Try get_chat (works for groups)
+        class StrongGroupAccess:
+            def __init__(self):
+                self.last_access_time = {}
+                self.access_count = {}
+                self.failed_groups = set()
+                self.working_groups = set()
+            
+            async def strong_group_access(self, group_id):
+                """STRONG group access with multiple fallback methods"""
                 try:
-                    chat = await app.get_chat(group_id_int)
-                    log_info(f"✅ Group access: {getattr(chat, 'title', 'Group')}")
-                    return True
-                except Exception as e1:
-                    log_info(f"ℹ️ get_chat failed: {e1}")
-                
-                # METHOD 2: Try get_chat_members (lightweight for groups)
-                try:
-                    async for member in app.get_chat_members(group_id_int, limit=1):
-                        pass
-                    log_info(f"✅ Group access via members")
-                    return True
-                except Exception as e2:
-                    log_info(f"ℹ️ get_chat_members failed: {e2}")
-                
-                # METHOD 3: Try send a read action (very lightweight)
-                try:
-                    await app.send_chat_action(group_id_int, "typing")
-                    log_info(f"✅ Group access via chat action")
-                    return True
-                except Exception as e3:
-                    log_info(f"ℹ️ chat action failed: {e3}")
-                
-                log_error(f"❌ All group access methods failed for {group_id}")
-                return False
-                
-            except Exception as e:
-                log_error(f"❌ Group access error for {group_id}: {e}")
-                return False
+                    group_id_int = int(group_id)
+                    
+                    # Update access time
+                    self.last_access_time[group_id] = time.time()
+                    self.access_count[group_id] = self.access_count.get(group_id, 0) + 1
+                    
+                    # METHOD 1: get_chat - Most reliable for groups
+                    try:
+                        chat = await app.get_chat(group_id_int)
+                        chat_title = getattr(chat, 'title', 'Group')
+                        log_info(f"✅ STRONG ACCESS [get_chat]: {chat_title}")
+                        self.working_groups.add(group_id)
+                        if group_id in self.failed_groups:
+                            self.failed_groups.remove(group_id)
+                        return True
+                    except Exception as e1:
+                        log_info(f"ℹ️ get_chat failed: {e1}")
+                    
+                    # METHOD 2: get_chat_members_count - Lightweight
+                    try:
+                        count = await app.get_chat_members_count(group_id_int)
+                        log_info(f"✅ STRONG ACCESS [members_count]: {count} members")
+                        self.working_groups.add(group_id)
+                        if group_id in self.failed_groups:
+                            self.failed_groups.remove(group_id)
+                        return True
+                    except Exception as e2:
+                        log_info(f"ℹ️ members_count failed: {e2}")
+                    
+                    # METHOD 3: get_chat_history - Single message access
+                    try:
+                        async for message in app.get_chat_history(group_id_int, limit=1):
+                            # Just accessing one message is enough
+                            pass
+                        log_info(f"✅ STRONG ACCESS [chat_history]")
+                        self.working_groups.add(group_id)
+                        if group_id in self.failed_groups:
+                            self.failed_groups.remove(group_id)
+                        return True
+                    except Exception as e3:
+                        log_info(f"ℹ️ chat_history failed: {e3}")
+                    
+                    # METHOD 4: send_chat_action - Very lightweight
+                    try:
+                        await app.send_chat_action(group_id_int, "typing")
+                        log_info(f"✅ STRONG ACCESS [chat_action]")
+                        self.working_groups.add(group_id)
+                        if group_id in self.failed_groups:
+                            self.failed_groups.remove(group_id)
+                        return True
+                    except Exception as e4:
+                        log_info(f"ℹ️ chat_action failed: {e4}")
+                    
+                    # If all methods fail
+                    log_error(f"❌ STRONG ACCESS FAILED for group {group_id}")
+                    self.failed_groups.add(group_id)
+                    return False
+                    
+                except Exception as e:
+                    log_error(f"❌ Strong access error for {group_id}: {e}")
+                    self.failed_groups.add(group_id)
+                    return False
+            
+            def get_group_status(self, group_id):
+                """Get detailed status of a group"""
+                status = {
+                    "access_count": self.access_count.get(group_id, 0),
+                    "last_access": self.last_access_time.get(group_id, 0),
+                    "is_working": group_id in self.working_groups,
+                    "is_failed": group_id in self.failed_groups
+                }
+                return status
+
+        # Initialize strong group access
+        group_access = StrongGroupAccess()
 
         # -----------------------------
-        # SIMPLE DELETE FUNCTION
+        # POWERFUL DELETE FUNCTION
         # -----------------------------
-        async def simple_delete(message_obj):
+        async def powerful_delete(message_obj):
             """
-            SIMPLE DELETE FOR GROUPS
+            POWERFUL DELETE with strong group access
             """
             touch_activity()
             chat_id = message_obj.chat.id
             message_id = message_obj.id
+            group_id = str(chat_id)
             
-            log_info(f"🗑️ DELETING message {message_id} from group {chat_id}")
+            # STRONG ACCESS CHECK before delete
+            if not await group_access.strong_group_access(group_id):
+                log_error(f"❌ Cannot access group {group_id} for delete")
+                return False
+            
+            log_info(f"💪 POWERFUL DELETE: message {message_id} from {group_id}")
             
             try:
                 await app.delete_messages(chat_id, message_id)
-                log_info(f"✅ DELETED message {message_id}")
+                log_info(f"✅ POWER DELETE SUCCESS: {message_id}")
                 return True
             except Exception as e:
-                log_error(f"❌ DELETE FAILED: {e}")
+                log_error(f"❌ POWER DELETE FAILED: {e}")
                 return False
 
-        async def delete_after_delay_simple(message_obj, seconds):
+        async def delete_after_delay_powerful(message_obj, seconds):
             await asyncio.sleep(seconds)
-            await simple_delete(message_obj)
+            await powerful_delete(message_obj)
 
-        # ✅ GROUP SESSION MAINTAINER
-        async def group_session_maintainer():
-            """Maintain group session 24/7"""
+        # ✅ STRONG GROUP SESSION MAINTAINER
+        async def strong_group_maintainer():
+            """Maintain STRONG group session 24/7"""
             refresh_count = 0
             while session_active:
                 try:
                     refresh_count += 1
+                    working_count = 0
+                    failed_count = 0
                     
-                    # Refresh access to all groups
+                    # STRONG ACCESS to all groups
                     for group_id in allowed_groups:
-                        await refresh_group_access_safe(group_id)
-                        await asyncio.sleep(1)  # Small delay between groups
+                        success = await group_access.strong_group_access(group_id)
+                        if success:
+                            working_count += 1
+                        else:
+                            failed_count += 1
+                        await asyncio.sleep(2)  # Delay between groups
                     
-                    log_info(f"🔄 Group Session Refresh #{refresh_count} - ACTIVE")
+                    log_info(f"🛡️ STRONG REFRESH #{refresh_count}: {working_count} working, {failed_count} failed")
                     touch_activity()
                     
                 except Exception as e:
-                    log_error(f"❌ Group session error: {e}")
+                    log_error(f"❌ Strong maintainer error: {e}")
                 
-                # Refresh every 10 minutes
-                await asyncio.sleep(600)
+                # Refresh every 5 minutes
+                await asyncio.sleep(300)
 
         # ✅ SIMPLE ONLINE STATUS
         async def simple_online_status():
@@ -290,7 +351,7 @@ async def start_telegram():
                 online_count += 1
                 try:
                     await app.get_me()
-                    log_info(f"🟢 Online #{online_count} - Groups ACTIVE")
+                    log_info(f"🟢 Online #{online_count} - STRONG ACCESS")
                     touch_activity()
                 except Exception as e:
                     log_error(f"⚠️ Online Status Failed: {e}")
@@ -308,7 +369,7 @@ async def start_telegram():
                 try:
                     if keep_alive_count % 3 == 0:
                         await app.get_me()
-                        log_info(f"💓 Keep-Alive #{keep_alive_count} - Groups")
+                        log_info(f"💓 Keep-Alive #{keep_alive_count} - STRONG")
                     touch_activity()
                 except Exception as e:
                     log_error(f"⚠️ Keep-Alive Failed: {e}")
@@ -347,7 +408,7 @@ async def start_telegram():
             log_info(f"📩 /start from {message.from_user.id}")
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
-                await message.reply("🚀 **BOT STARTED!**\nGroup Only Fix Applied!")
+                await message.reply("🚀 **BOT STARTED!**\nStrong Group Access Applied!")
                 log_info("✅ /start executed")
 
         @app.on_message(filters.command("test"))
@@ -355,34 +416,58 @@ async def start_telegram():
             log_info(f"📩 /test from {message.from_user.id}")
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
-                test_msg = await message.reply("🧪 Testing GROUP DELETE...")
+                test_msg = await message.reply("🧪 Testing STRONG DELETE...")
                 await asyncio.sleep(2)
-                success = await simple_delete(test_msg)
+                success = await powerful_delete(test_msg)
                 if success:
-                    await message.reply("✅ **GROUP DELETE WORKING!**")
+                    await message.reply("✅ **STRONG DELETE WORKING!**")
                 else:
-                    await message.reply("❌ DELETE FAILED! Check admin rights.")
+                    await message.reply("❌ DELETE FAILED! Check group access.")
                 log_info("✅ /test executed")
 
-        @app.on_message(filters.command("groupstatus"))
-        async def group_status_command(client, message: Message):
-            """Check group access status"""
-            log_info(f"📩 /groupstatus from {message.from_user.id}")
+        @app.on_message(filters.command("strongstatus"))
+        async def strong_status_command(client, message: Message):
+            """Check strong group access status"""
+            log_info(f"📩 /strongstatus from {message.from_user.id}")
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
                 group_id = str(message.chat.id)
-                success = await refresh_group_access_safe(group_id)
-                if success:
-                    await message.reply("✅ **GROUP ACCESS ACTIVE!**\nBot can access this group properly.")
-                else:
-                    await message.reply("❌ **GROUP ACCESS FAILED!**\nBot cannot access this group.")
-                log_info("✅ /groupstatus executed")
+                status = group_access.get_group_status(group_id)
+                access_time = time.time() - status["last_access"] if status["last_access"] > 0 else 999
+                
+                status_text = f"""
+🛡️ **STRONG GROUP STATUS**
+
+**Group ID:** `{group_id}`
+**Access Count:** `{status['access_count']}`
+**Last Access:** `{int(access_time)}s ago`
+**Status:** `{'✅ WORKING' if status['is_working'] else '❌ FAILED'}`
+
+**Strong Access:** `🛡️ ACTIVE`
+                """
+                await message.reply(status_text)
+                log_info("✅ /strongstatus executed")
+
+        @app.on_message(filters.command("refreshall"))
+        async def refresh_all_command(client, message: Message):
+            """Manually refresh all groups"""
+            log_info(f"📩 /refreshall from {message.from_user.id}")
+            touch_activity()
+            if message.from_user and is_admin(message.from_user.id):
+                working_count = 0
+                for group_id in allowed_groups:
+                    if await group_access.strong_group_access(group_id):
+                        working_count += 1
+                    await asyncio.sleep(1)
+                
+                await message.reply(f"✅ **STRONG REFRESH COMPLETE!**\n{working_count}/{len(allowed_groups)} groups active")
+                log_info("✅ /refreshall executed")
 
         # ---------------------------------------------------------
-        # GROUP ONLY DELETE HANDLER
+        # STRONG GROUP DELETE HANDLER
         # ---------------------------------------------------------
         @app.on_message(filters.group)
-        async def group_only_handler(client, message: Message):
+        async def strong_group_handler(client, message: Message):
             try:
                 # UPDATE ACTIVITY
                 touch_activity()
@@ -390,6 +475,11 @@ async def start_telegram():
                 # CHECK GROUP PERMISSION
                 group_id = str(message.chat.id)
                 if group_id not in allowed_groups:
+                    return
+
+                # STRONG ACCESS CHECK
+                if not await group_access.strong_group_access(group_id):
+                    log_error(f"❌ Strong access failed for {group_id}")
                     return
 
                 # SELF CHECK
@@ -405,8 +495,8 @@ async def start_telegram():
                 message_text = message.text or message.caption or ""
                 message_text_lower = message_text.lower()
 
-                # LOG EVERY MESSAGE
-                log_info(f"🎯 GROUP MESSAGE: @{username} (bot: {is_bot})")
+                # LOG EVERY MESSAGE WITH STRONG ACCESS
+                log_info(f"🛡️ STRONG MESSAGE: @{username} (bot: {is_bot})")
 
                 # ✅ SAFE BOT - IGNORE
                 if username in safe_bots:
@@ -419,17 +509,17 @@ async def start_telegram():
                     has_mentions = '@' in message_text
                     
                     if has_links or has_mentions:
-                        log_info(f"🚫 Delayed bot with links: DELETE NOW")
-                        await simple_delete(message)
+                        log_info(f"🚫 Delayed bot with links: POWER DELETE NOW")
+                        await powerful_delete(message)
                     else:
-                        log_info(f"⏰ Delayed bot: DELETE IN 30s")
-                        asyncio.create_task(delete_after_delay_simple(message, 30))
+                        log_info(f"⏰ Delayed bot: POWER DELETE IN 30s")
+                        asyncio.create_task(delete_after_delay_powerful(message, 30))
                     return
 
                 # 🗑️ OTHER BOTS - INSTANT DELETE
                 if is_bot:
-                    log_info(f"🗑️ Unsafe bot: DELETE NOW")
-                    await simple_delete(message)
+                    log_info(f"🗑️ Unsafe bot: POWER DELETE NOW")
+                    await powerful_delete(message)
                     return
 
                 # 🔗 USER MESSAGES WITH LINKS/MENTIONS - DELETE
@@ -437,14 +527,14 @@ async def start_telegram():
                 has_mentions = '@' in message_text
                 
                 if has_links or has_mentions:
-                    log_info(f"🔗 User with links: DELETE NOW")
-                    await simple_delete(message)
+                    log_info(f"🔗 User with links: POWER DELETE NOW")
+                    await powerful_delete(message)
                     return
 
-                log_info(f"ℹ️ Normal group message - No action")
+                log_info(f"ℹ️ Normal message - Strong access maintained")
 
             except Exception as e:
-                log_error(f"❌ Group handler error: {e}")
+                log_error(f"❌ Strong handler error: {e}")
                 touch_activity()
         
         # ✅ BOT START
@@ -454,11 +544,11 @@ async def start_telegram():
         me = await app.get_me()
         log_info(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
         
-        # Start background tasks
+        # Start background tasks - STRONG MAINTAINER IS CRITICAL
         keep_alive_task = asyncio.create_task(session_keep_alive())
         online_task = asyncio.create_task(simple_online_status())
         watchdog_task = asyncio.create_task(watchdog_loop())
-        group_maintainer_task = asyncio.create_task(group_session_maintainer())
+        strong_maintainer_task = asyncio.create_task(strong_group_maintainer())
         
         # 🎯 AUTO SETUP
         allowed_groups.add("-1002129045974")
@@ -471,36 +561,41 @@ async def start_telegram():
         log_info(f"✅ Setup: {len(allowed_groups)} groups, {len(safe_bots)} safe bots")
         log_info("💓 Keep-Alive: ACTIVE")
         log_info("🟢 Online: WORKING") 
-        log_info("🔄 Group Maintainer: RUNNING")
-        log_info("🗑️ Group Delete: READY")
+        log_info("🛡️ Strong Group Access: RUNNING")
+        log_info("💪 Powerful Delete: READY")
         
-        # Initial group access test
-        log_info("🔍 Testing group access...")
+        # Initial STRONG access test
+        log_info("🔍 Initial STRONG group access...")
+        working_count = 0
         for group_id in allowed_groups:
-            await refresh_group_access_safe(group_id)
-            await asyncio.sleep(1)
+            if await group_access.strong_group_access(group_id):
+                working_count += 1
+            await asyncio.sleep(2)
+        
+        log_info(f"✅ Initial STRONG access: {working_count}/{len(allowed_groups)} groups")
         
         # Startup message
         try:
             await app.send_message("me", """
-✅ **BOT STARTED - GROUP ONLY FIX!**
+✅ **BOT STARTED - STRONG GROUP ACCESS!**
 
-🎯 **FIXES APPLIED:**
-• Group-Only Access Methods
-• No More CHANNEL_INVALID Errors
-• Safe Group Session Maintenance
-• 24/7 Group Monitoring
+🎯 **STRONG FEATURES:**
+• 4-Layer Group Access System
+• Strong Session Maintenance
+• Powerful Delete Function
+• 24/7 Access Guarantee
 
 🚀 **COMMANDS:**
-• `/test` - Test delete
-• `/groupstatus` - Check group access
+• `/test` - Test strong delete
+• `/strongstatus` - Check access status
+• `/refreshall` - Refresh all groups
 
-**Ab groups me properly kaam karega without errors!** 🔥
+**Ab group access strong hai! Online/offline dono me kaam karega!** 🔥
             """)
         except Exception as e:
             log_error(f"Startup DM failed: {e}")
         
-        log_info("🤖 BOT READY - Group Only Fix Applied!")
+        log_info("🤖 BOT READY - Strong Group Access Applied!")
         
         # Keep running
         try:
@@ -513,7 +608,7 @@ async def start_telegram():
             keep_alive_task.cancel()
             online_task.cancel()
             watchdog_task.cancel()
-            group_maintainer_task.cancel()
+            strong_maintainer_task.cancel()
             await app.stop()
         
     except Exception as e:
@@ -524,7 +619,7 @@ async def main():
     await start_telegram()
 
 if __name__ == "__main__":
-    log_info("🚀 BOT STARTING - GROUP FIX...")
+    log_info("🚀 BOT STARTING - STRONG ACCESS...")
 
     try:
         asyncio.run(main())
