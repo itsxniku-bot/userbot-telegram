@@ -1,4 +1,4 @@
-print("🔥 ULTIMATE BOT STARTING - REJOIN ADMIN FIX...")
+print("🔥 ULTIMATE BOT STARTING - ONLY BOTS DELETE FIX...")
 
 import asyncio
 import multiprocessing
@@ -172,219 +172,110 @@ def touch_activity():
     global last_activity
     last_activity = time.time()
 
-# 🔥 REJOIN ADMIN FIX MANAGER
-class RejoinAdminFixManager:
+# 🔥 ONLY BOTS DELETE MANAGER
+class OnlyBotsDeleteManager:
     def __init__(self):
         self.private_group_id = "-1002497459144"
         self.public_group_id = "-1002382070176"
-        self.session_refreshed = False
-        self.groups_activated = False
-        self.delete_count = 0
-        self.cache_clear_attempts = 0
+        self.bots_deleted_count = 0
+        self.users_ignored_count = 0
+        self.safe_bots_ignored_count = 0
         
-    async def force_session_refresh(self, app):
-        """Force session refresh after rejoin"""
-        try:
-            # METHOD 1: Send message to activate session
-            log_info("🔄 Force activating private group session...")
-            activation_msg = await app.send_message(self.private_group_id, "🤖 Session activation...")
-            await asyncio.sleep(1)
-            await app.delete_messages(self.private_group_id, activation_msg.id)
-            log_info("✅ Private group session activated")
-            
-            # METHOD 2: Send message to public group
-            log_info("🔄 Force activating public group session...")
-            activation_msg2 = await app.send_message(self.public_group_id, "🤖 Session activation...")
-            await asyncio.sleep(1)
-            await app.delete_messages(self.public_group_id, activation_msg2.id)
-            log_info("✅ Public group session activated")
-            
-            self.session_refreshed = True
-            return True
-            
-        except Exception as e:
-            log_error(f"❌ Session activation failed: {e}")
-            return False
-    
-    async def clear_cache_and_retry(self, app, group_id, group_name):
-        """Clear cache and retry access"""
-        self.cache_clear_attempts += 1
-        
-        try:
-            # METHOD 1: Direct access
-            chat = await app.get_chat(int(group_id))
-            log_info(f"✅ {group_name}: {chat.title}")
-            return True
-        except Exception as e:
-            log_error(f"❌ {group_name} direct access failed: {e}")
-        
-        try:
-            # METHOD 2: Send and delete message
-            test_msg = await app.send_message(group_id, "🧪 Cache clearance test...")
-            await asyncio.sleep(2)
-            await app.delete_messages(group_id, test_msg.id)
-            log_info(f"✅ {group_name}: Cache cleared via message")
-            return True
-        except Exception as e:
-            log_error(f"❌ {group_name} message test failed: {e}")
-        
-        return False
-    
-    async def rejoin_admin_delete(self, app, message_obj):
-        """Delete function for rejoin admin scenario"""
+    async def delete_unsafe_bot_message(self, app, message_obj):
+        """Delete only unsafe bot messages"""
         chat_id = message_obj.chat.id
         message_id = message_obj.id
-        is_private = str(chat_id) == self.private_group_id
-        
-        log_info(f"🗑️ REJOIN ADMIN DELETE: {message_id} in {'PRIVATE' if is_private else 'PUBLIC'}")
+        username = (message_obj.from_user.username or "").lower() if message_obj.from_user else ""
         
         try:
-            # DIRECT DELETE ATTEMPT
             await app.delete_messages(chat_id, message_id)
-            self.delete_count += 1
-            log_info(f"✅ REJOIN DELETE SUCCESS: {message_id}")
+            self.bots_deleted_count += 1
+            log_info(f"✅ UNSAFE BOT DELETED: @{username} - {message_id}")
             return True
-            
         except Exception as e:
-            error_msg = str(e)
-            log_error(f"❌ REJOIN DELETE FAILED: {error_msg}")
-            
-            # If session needs refresh, try to activate
-            if not self.session_refreshed:
-                log_info("🔄 Attempting session refresh...")
-                await self.force_session_refresh(app)
-                
-                # Retry delete after refresh
-                try:
-                    await app.delete_messages(chat_id, message_id)
-                    self.delete_count += 1
-                    log_info(f"✅ DELETE SUCCESS AFTER REFRESH: {message_id}")
-                    return True
-                except Exception as e2:
-                    log_error(f"❌ DELETE FAILED AFTER REFRESH: {e2}")
-            
+            log_error(f"❌ BOT DELETE FAILED: @{username} - {e}")
             return False
 
-# 🔥 TELEGRAM BOT - REJOIN ADMIN FIX
+# 🔥 TELEGRAM BOT - ONLY BOTS DELETE FIX
 async def start_telegram():
-    log_info("🔗 Starting Telegram Bot - REJOIN ADMIN FIX...")
+    log_info("🔗 Starting Telegram Bot - ONLY BOTS DELETE FIX...")
     
     # ✅ SESSION DATA
     session_data = {
-        'active': True,
-        'delete_success_count': 0,
-        'delete_fail_count': 0
+        'active': True
     }
 
-    # Initialize rejoin admin fix manager
-    rejoin_manager = RejoinAdminFixManager()
+    # Initialize only bots delete manager
+    bots_manager = OnlyBotsDeleteManager()
 
     try:
         app = Client(
             "ultimate_bot",
             api_id=22294121,
             api_hash="0f7fa7216b26e3f52699dc3c5a560d2a",
-            session_string="AQFULmkANrpQWKdmd5cy7VgvL2DA9KATYlSUq5PSoJ5K1easAzrA_p5fxgFRVEUyABixgFmrCGtF9x_KvrQUoAWdeQ1dGqYggCnST6nMPBipTv7GIgwU_w1kewukwsWPMUbWdos0VI7CtH1HYwW7wz3VQ2_hvtdwQCDRHsIxpwek3IcSXP-hpt8vz_8Z4NYf8uUiIwZCSJluef3vGSh7TLOfekcrjVcRd_2h59kBuGgV7DzyJxZwx8eyNJOyhpYQnlExnd24CnELB6ZNYObYBH6xnE2Rgo97YGN1WPbd9Ra8oQUx2phHT4KTWZNktzjenv6hM7AH8lyVyRvGtillQOA_Dq23TwAAAAHy0lZEAA",
-            sleep_threshold=60
+            session_string="AQFULmkANrpQWKdmd5cy7VgvL2DA9KATYlSUq5PSoJ5K1easAzrA_p5fxgFRVEUyABixgFmrCGtF9x_KvrQUoAWdeQ1dGqYggCnST6nMPBipTv7GIgwU_w1kewukwsWPMUbWdos0VI7CtH1HYwW7wz3VQ2_hvtdwQCDRHsIxpwek3IcSXP-hpt8vz_8Z4NYf8uUiIwZCSJluef3vGSh7TLOfekcrjVcRd_2h59kBuGgV7DzyJxZwx8eyNJOyhpYQnlExnd24CnELB6ZNYObYBH6xnE2Rgo97YGN1WPbd9Ra8oQUx2phHT4KTWZNktzjenv6hM7AH8lyVyRvGtillQOA_Dq23TwAAAAHy0lZEAA"
         )
         
         def is_admin(user_id):
             return user_id == ADMIN_USER_ID
         
         # -----------------------------
-        # REJOIN ADMIN DELETE FUNCTION
+        # ONLY BOTS DELETE FUNCTION
         # -----------------------------
-        async def rejoin_admin_delete_function(message_obj):
+        async def only_bots_delete(message_obj):
             """
-            DELETE FUNCTION FOR REJOIN ADMIN SCENARIO
+            DELETE ONLY UNSAFE BOTS MESSAGES
             """
             touch_activity()
-            
-            success = await rejoin_manager.rejoin_admin_delete(app, message_obj)
-            if success:
-                session_data['delete_success_count'] += 1
-            else:
-                session_data['delete_fail_count'] += 1
-            
-            return success
+            return await bots_manager.delete_unsafe_bot_message(app, message_obj)
 
-        async def delete_after_delay_rejoin(message_obj, seconds):
+        async def delete_after_delay_bots(message_obj, seconds):
             await asyncio.sleep(seconds)
-            await rejoin_admin_delete_function(message_obj)
+            await only_bots_delete(message_obj)
 
-        # ✅ SESSION ACTIVATOR
-        async def session_activator():
-            """Activate session in both groups"""
-            activator_count = 0
+        # ✅ STATS MONITOR
+        async def stats_monitor():
+            """Monitor deletion statistics"""
+            monitor_count = 0
             while session_data['active']:
-                activator_count += 1
+                monitor_count += 1
                 try:
-                    # Force session activation every 2 minutes until successful
-                    if activator_count % 2 == 0 and not rejoin_manager.session_refreshed:
-                        log_info("🔄 Session Activator: Attempting session refresh...")
-                        success = await rejoin_manager.force_session_refresh(app)
-                        if success:
-                            log_info("✅ Session Activator: Session refreshed successfully")
+                    # Log stats every 10 minutes
+                    if monitor_count % 10 == 0:
+                        log_info(f"📊 BOTS STATS - Deleted: {bots_manager.bots_deleted_count}, Ignored Users: {bots_manager.users_ignored_count}, Safe Bots: {bots_manager.safe_bots_ignored_count}")
                     
-                    # Clear cache in both groups every 5 minutes
-                    if activator_count % 5 == 0:
-                        log_info("🔄 Session Activator: Clearing group cache...")
-                        private_ok = await rejoin_manager.clear_cache_and_retry(app, rejoin_manager.private_group_id, "PRIVATE GROUP")
-                        public_ok = await rejoin_manager.clear_cache_and_retry(app, rejoin_manager.public_group_id, "PUBLIC GROUP")
-                        rejoin_manager.groups_activated = private_ok or public_ok
-                    
-                    await asyncio.sleep(30)
+                    await asyncio.sleep(60)
                     
                 except Exception as e:
-                    log_error(f"Session activator error: {e}")
-                    await asyncio.sleep(60)
+                    log_error(f"Stats monitor error: {e}")
+                    await asyncio.sleep(120)
 
-        # ✅ AGGRESSIVE KEEP-ALIVE
-        async def aggressive_keep_alive():
+        # ✅ KEEP-ALIVE
+        async def keep_alive():
             keep_alive_count = 0
             while session_data['active']:
                 keep_alive_count += 1
                 try:
                     await app.get_me()
-                    
-                    # Send keep-alive messages to groups
-                    if keep_alive_count % 10 == 0 and rejoin_manager.session_refreshed:
-                        try:
-                            # Keep private group active
-                            ka_msg = await app.send_message(rejoin_manager.private_group_id, "💓")
-                            await asyncio.sleep(1)
-                            await app.delete_messages(rejoin_manager.private_group_id, ka_msg.id)
-                        except:
-                            pass
-                        
-                        try:
-                            # Keep public group active  
-                            ka_msg2 = await app.send_message(rejoin_manager.public_group_id, "💓")
-                            await asyncio.sleep(1)
-                            await app.delete_messages(rejoin_manager.public_group_id, ka_msg2.id)
-                        except:
-                            pass
-                    
-                    if keep_alive_count % 15 == 0:
-                        log_info(f"💓 Aggressive Keep-Alive #{keep_alive_count}")
-                    
+                    if keep_alive_count % 20 == 0:
+                        log_info(f"💓 Keep-Alive #{keep_alive_count}")
                     touch_activity()
                 except Exception as e:
                     log_error(f"⚠️ Keep-Alive Failed: {e}")
-                await asyncio.sleep(20)
+                await asyncio.sleep(30)
 
         # -------------------------
-        # REJOIN WATCHDOG
+        # SIMPLE WATCHDOG
         # -------------------------
-        async def rejoin_watchdog():
+        async def simple_watchdog():
             watchdog_count = 0
             while True:
                 try:
                     watchdog_count += 1
                     idle = time.time() - last_activity
                     
-                    if watchdog_count % 5 == 0:
-                        log_info(f"🐕 Rejoin Watchdog - Idle: {int(idle)}s, Deletes: {rejoin_manager.delete_count}, Cache Attempts: {rejoin_manager.cache_clear_attempts}")
+                    if watchdog_count % 10 == 0:
+                        log_info(f"🐕 Watchdog - Idle: {int(idle)}s, Bots Deleted: {bots_manager.bots_deleted_count}")
                     
                     if idle > 300:
                         log_error(f"⚠️ Watchdog: Restarting - No activity for {int(idle)}s")
@@ -410,89 +301,52 @@ async def start_telegram():
             log_info(f"📩 /start from {message.from_user.id}")
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
-                # Force session refresh
-                session_ok = await rejoin_manager.force_session_refresh(app)
-                private_ok = await rejoin_manager.clear_cache_and_retry(app, rejoin_manager.private_group_id, "PRIVATE GROUP")
-                public_ok = await rejoin_manager.clear_cache_and_retry(app, rejoin_manager.public_group_id, "PUBLIC GROUP")
-                
                 status_msg = f"""
-🚀 **BOT STARTED - REJOIN ADMIN FIX!**
+🚀 **BOT STARTED - ONLY BOTS DELETE!**
 
-📊 **REJOIN STATUS:**
-• Session Refreshed: {'✅ YES' if session_ok else '❌ NO'}
-• Private Group: {'✅ ACTIVATED' if private_ok else '🔄 PENDING'}
-• Public Group: {'✅ ACTIVATED' if public_ok else '🔄 PENDING'}
-• Cache Clear Attempts: {rejoin_manager.cache_clear_attempts}
-• Successful Deletes: {rejoin_manager.delete_count}
+🎯 **CONFIGURATION:**
+• Delete: ONLY UNSAFE BOTS
+• Ignore: ALL USERS (even with links/mentions)
+• Safe Bots: {len(safe_bots)} bots ignored
+• Delayed Bots: {len(delayed_bots)} bots with delay
 
-🎯 **FIX APPLIED:**
-• Force Session Refresh
-• Cache Clearance
-• Aggressive Activation
-• Rejoin Admin Handling
+📊 **STATISTICS:**
+• Bots Deleted: {bots_manager.bots_deleted_count}
+• Users Ignored: {bots_manager.users_ignored_count}
+• Safe Bots Ignored: {bots_manager.safe_bots_ignored_count}
 
-**Status: {'ACTIVE' if session_ok else 'ACTIVATING'}** 🔥
+🔧 **SETTINGS:**
+• Groups: {len(allowed_groups)}
+• Safe Bots: {', '.join(list(safe_bots)[:5])}{'...' if len(safe_bots) > 5 else ''}
+
+**Mode: ONLY BOTS DELETE** 🔥
                 """
                 await message.reply(status_msg)
                 log_info("✅ /start executed")
 
-        @app.on_message(filters.command("force_activation"))
-        async def force_activation_command(client, message: Message):
-            log_info(f"📩 /force_activation from {message.from_user.id}")
+        @app.on_message(filters.command("stats"))
+        async def stats_command(client, message: Message):
+            log_info(f"📩 /stats from {message.from_user.id}")
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
-                await message.reply("🔄 **FORCING GROUP ACTIVATION...**")
-                
-                # Test both groups with actual messages
-                results = []
-                
-                # Test private group
-                try:
-                    test_msg = await app.send_message(rejoin_manager.private_group_id, "🧪 Private activation test...")
-                    await asyncio.sleep(2)
-                    await app.delete_messages(rejoin_manager.private_group_id, test_msg.id)
-                    results.append("Private: ✅ ACTIVATED")
-                    rejoin_manager.session_refreshed = True
-                except Exception as e:
-                    results.append(f"Private: ❌ ({e})")
-                
-                # Test public group
-                try:
-                    test_msg = await app.send_message(rejoin_manager.public_group_id, "🧪 Public activation test...")
-                    await asyncio.sleep(2)
-                    await app.delete_messages(rejoin_manager.public_group_id, test_msg.id)
-                    results.append("Public: ✅ ACTIVATED")
-                    rejoin_manager.session_refreshed = True
-                except Exception as e:
-                    results.append(f"Public: ❌ ({e})")
-                
-                await message.reply("🧪 **ACTIVATION RESULTS:**\n" + "\n".join(results))
-                log_info("✅ /force_activation executed")
+                stats_msg = f"""
+📊 **LIVE STATISTICS**
 
-        @app.on_message(filters.command("test_rejoin"))
-        async def test_rejoin_command(client, message: Message):
-            log_info(f"📩 /test_rejoin from {message.from_user.id}")
-            touch_activity()
-            if message.from_user and is_admin(message.from_user.id):
-                try:
-                    # Test in private group
-                    test_msg = await app.send_message(rejoin_manager.private_group_id, "🧪 Rejoin delete test...")
-                    await asyncio.sleep(2)
-                    success = await rejoin_admin_delete_function(test_msg)
-                    
-                    if success:
-                        await message.reply("✅ **REJOIN DELETE WORKING!**\nBot can delete in private group!")
-                    else:
-                        await message.reply("❌ **REJOIN DELETE FAILED!**\nSession may need manual activation.")
-                        
-                except Exception as e:
-                    await message.reply(f"❌ Rejoin test failed: {e}")
+• 🤖 Bots Deleted: {bots_manager.bots_deleted_count}
+• 👥 Users Ignored: {bots_manager.users_ignored_count}
+• ✅ Safe Bots Ignored: {bots_manager.safe_bots_ignored_count}
+
+• 🎯 Active Groups: {len(allowed_groups)}
+• 🛡️ Protected Bots: {len(safe_bots)}
+                """
+                await message.reply(stats_msg)
+                log_info("✅ /stats executed")
 
         # ---------------------------------------------------------
-        # REJOIN ADMIN DELETE HANDLER
+        # ONLY BOTS DELETE HANDLER
         # ---------------------------------------------------------
         @app.on_message(filters.group)
-        async def rejoin_admin_handler(client, message: Message):
+        async def only_bots_handler(client, message: Message):
             try:
                 # UPDATE ACTIVITY IMMEDIATELY
                 touch_activity()
@@ -502,7 +356,7 @@ async def start_telegram():
                 if group_id not in allowed_groups:
                     return
 
-                # SELF CHECK
+                # SELF CHECK - Bot ke apne messages ignore karo
                 try:
                     current_me = await app.get_me()
                     if message.from_user and message.from_user.id == current_me.id:
@@ -516,102 +370,85 @@ async def start_telegram():
                 message_text = message.text or message.caption or ""
                 message_text_lower = message_text.lower()
 
-                log_info(f"🎯 REJOIN GROUP: @{username} in {message.chat.title}")
-
-                # ✅ SAFE BOT - IGNORE
-                if username in safe_bots:
+                # 🎯 LOGIC: SIRF BOTS KE MESSAGES DELETE KARO
+                
+                # ✅ USER MESSAGES - COMPLETELY IGNORE (even with links/mentions)
+                if not is_bot:
+                    bots_manager.users_ignored_count += 1
+                    log_info(f"👥 USER IGNORED: @{username} - (Links/Mentions ignored)")
                     return
 
-                # ⏰ DELAYED BOT - DELETE AFTER DELAY
+                # ✅ SAFE BOTS - IGNORE
+                if username in safe_bots:
+                    bots_manager.safe_bots_ignored_count += 1
+                    log_info(f"✅ SAFE BOT IGNORED: @{username}")
+                    return
+
+                # ⏰ DELAYED BOTS - DELETE AFTER DELAY
                 if username in delayed_bots:
                     has_links = any(pattern in message_text_lower for pattern in ['t.me/', 'http://', 'https://'])
                     has_mentions = '@' in message_text
                     
                     if has_links or has_mentions:
-                        await rejoin_admin_delete_function(message)
+                        log_info(f"🚫 DELAYED BOT WITH LINKS: DELETE NOW - @{username}")
+                        await only_bots_delete(message)
                     else:
-                        asyncio.create_task(delete_after_delay_rejoin(message, 30))
+                        log_info(f"⏰ DELAYED BOT NORMAL: DELETE IN 30s - @{username}")
+                        asyncio.create_task(delete_after_delay_bots(message, 30))
                     return
 
-                # 🗑️ OTHER BOTS - INSTANT DELETE
-                if is_bot:
-                    await rejoin_admin_delete_function(message)
-                    return
-
-                # 🔗 USER MESSAGES WITH LINKS/MENTIONS - DELETE
-                has_links = any(pattern in message_text_lower for pattern in ['t.me/', 'http://', 'https://'])
-                has_mentions = '@' in message_text
-                
-                if has_links or has_mentions:
-                    await rejoin_admin_delete_function(message)
-                    return
+                # 🗑️ OTHER BOTS (UNSAFE BOTS) - INSTANT DELETE
+                log_info(f"🗑️ UNSAFE BOT: DELETE NOW - @{username}")
+                await only_bots_delete(message)
 
             except Exception as e:
-                log_error(f"❌ Rejoin Handler error: {e}")
+                log_error(f"❌ Only Bots Handler error: {e}")
                 touch_activity()
         
-        # ✅ BOT START - REJOIN ADMIN FIX
-        log_info("🔗 Connecting to Telegram - REJOIN ADMIN FIX...")
+        # ✅ BOT START - ONLY BOTS DELETE
+        log_info("🔗 Connecting to Telegram - ONLY BOTS DELETE...")
         await app.start()
         
         me = await app.get_me()
         log_info(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
         
-        # FORCE SESSION REFRESH AFTER REJOIN
-        log_info("🔄 FORCING SESSION REFRESH AFTER REJOIN...")
-        session_activated = await rejoin_manager.force_session_refresh(app)
-        
-        if session_activated:
-            log_info("🎯 REJOIN FIX: Session successfully refreshed!")
-        else:
-            log_info("⚠️ REJOIN FIX: Session refresh failed - will retry automatically")
+        log_info(f"🎯 ONLY BOTS DELETE MODE ACTIVATED")
+        log_info(f"🛡️ Safe Bots: {len(safe_bots)}")
+        log_info(f"⏰ Delayed Bots: {len(delayed_bots)}")
+        log_info(f"👥 Users: COMPLETELY IGNORED (even with links)")
         
         # Start background tasks
-        keep_alive_task = asyncio.create_task(aggressive_keep_alive())
-        activator_task = asyncio.create_task(session_activator())
-        watchdog_task = asyncio.create_task(rejoin_watchdog())
+        keep_alive_task = asyncio.create_task(keep_alive())
+        stats_task = asyncio.create_task(stats_monitor())
+        watchdog_task = asyncio.create_task(simple_watchdog())
         
-        log_info("💓 Aggressive Keep-Alive: ACTIVE")
-        log_info("🔄 Session Activator: ACTIVE")
-        log_info("🗑️ Rejoin Admin Delete: READY")
-        
-        # Test rejoin functionality
-        try:
-            if session_activated:
-                test_msg = await app.send_message(rejoin_manager.private_group_id, "🧪 Rejoin functionality test...")
-                await asyncio.sleep(2)
-                test_success = await rejoin_admin_delete_function(test_msg)
-                log_info(f"✅ Rejoin test: {'SUCCESS' if test_success else 'FAILED'}")
-        except Exception as e:
-            log_error(f"Rejoin test error: {e}")
+        log_info("💓 Keep-Alive: ACTIVE")
+        log_info("📊 Stats Monitor: ACTIVE")
+        log_info("🗑️ Only Bots Delete: READY")
         
         # Startup message
         try:
             await app.send_message("me", f"""
-✅ **BOT STARTED - REJOIN ADMIN FIX!**
+✅ **BOT STARTED - ONLY BOTS DELETE MODE!**
 
-🎯 **SPECIAL FEATURES:**
-• Force Session Refresh
-• Cache Clearance System
-• Aggressive Group Activation
-• Rejoin Admin Handling
+🎯 **NEW CONFIGURATION:**
+• 🤖 DELETE: Only unsafe bots
+• 👥 IGNORE: All users (even with links/mentions)
+• ✅ PROTECT: {len(safe_bots)} safe bots
+• ⏰ DELAY: {len(delayed_bots)} delayed bots
 
-📊 **STATUS:**
-• Session Refreshed: {'✅ YES' if session_activated else '🔄 RETRYING'}
-• Cache Attempts: {rejoin_manager.cache_clear_attempts}
-• Successful Deletes: {rejoin_manager.delete_count}
+📋 **RULES:**
+1. Users ke messages NEVER delete (chahe links/mentions ho)
+2. Safe bots ke messages NEVER delete  
+3. Delayed bots - normal messages after 30s, links instantly
+4. Other bots - INSTANT DELETE
 
-🚀 **NEXT STEPS:**
-1. Use /force_activation command
-2. Use /test_rejoin to verify
-3. Bot will auto-activate groups
-
-**Rejoin Fix: {'ACTIVE' if session_activated else 'ACTIVATING'}** 🔥
+**Mode: ONLY BOTS DELETE** 🔥
             """)
         except Exception as e:
             log_error(f"Startup DM failed: {e}")
         
-        log_info("🤖 BOT READY - Rejoin Admin Fix Active!")
+        log_info("🤖 BOT READY - Only Bots Delete Mode Active!")
         
         # Keep running
         try:
@@ -622,7 +459,7 @@ async def start_telegram():
         finally:
             session_data['active'] = False
             keep_alive_task.cancel()
-            activator_task.cancel()
+            stats_task.cancel()
             watchdog_task.cancel()
             await app.stop()
         
@@ -634,7 +471,7 @@ async def main():
     await start_telegram()
 
 if __name__ == "__main__":
-    log_info("🚀 BOT STARTING - REJOIN ADMIN FIX...")
+    log_info("🚀 BOT STARTING - ONLY BOTS DELETE FIX...")
 
     try:
         asyncio.run(main())
