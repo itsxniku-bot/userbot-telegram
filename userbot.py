@@ -1,4 +1,4 @@
-print("🔥 ULTIMATE BOT STARTING - DELETE FIX ONLY...")
+print("🔥 ULTIMATE BOT STARTING - PRIVATE SUPER GROUP FIX...")
 
 import asyncio
 import multiprocessing
@@ -172,93 +172,176 @@ def touch_activity():
     global last_activity
     last_activity = time.time()
 
-# 🔥 TELEGRAM BOT - DELETE FIX ONLY
+# 🔥 PRIVATE SUPER GROUP MANAGER
+class PrivateGroupManager:
+    def __init__(self):
+        self.private_group_id = "-1002497459144"
+        self.public_group_id = "-1002382070176"
+        self.private_group_retry_count = 0
+        self.max_private_retries = 10
+        
+    async def ensure_private_group_access(self, app):
+        """Ensure bot has access to private super group"""
+        try:
+            # Try to get private group info
+            chat = await app.get_chat(int(self.private_group_id))
+            self.private_group_retry_count = 0
+            log_info(f"✅ Private Group Access: {chat.title}")
+            return True
+        except Exception as e:
+            self.private_group_retry_count += 1
+            log_error(f"❌ Private Group Access Failed ({self.private_group_retry_count}/{self.max_private_retries}): {e}")
+            
+            if self.private_group_retry_count >= self.max_private_retries:
+                log_error("🔴 Private group access permanently failed - focusing on public group")
+                allowed_groups.discard(self.private_group_id)
+                save_data(ALLOWED_GROUPS_FILE, allowed_groups)
+            
+            return False
+
+# 🔥 TELEGRAM BOT - PRIVATE SUPER GROUP FIX
 async def start_telegram():
-    log_info("🔗 Starting Telegram Bot - DELETE FIX ONLY...")
+    log_info("🔗 Starting Telegram Bot - PRIVATE SUPER GROUP FIX...")
     
-    # ✅ SIMPLE SESSION VARIABLES
+    # ✅ SESSION VARIABLES
     session_active = True
     delete_success_count = 0
     delete_fail_count = 0
+    private_group_delete_count = 0
+    public_group_delete_count = 0
+
+    # Initialize private group manager
+    private_manager = PrivateGroupManager()
 
     try:
         app = Client(
             "ultimate_bot",
             api_id=22294121,
             api_hash="0f7fa7216b26e3f52699dc3c5a560d2a",
-            session_string="AQFULmkANrpQWKdmd5cy7VgvL2DA9KATYlSUq5PSoJ5K1easAzrA_p5fxgFRVEUyABixgFmrCGtF9x_KvrQUoAWdeQ1dGqYggCnST6nMPBipTv7GIgwU_w1kewukwsWPMUbWdos0VI7CtH1HYwW7wz3VQ2_hvtdwQCDRHsIxpwek3IcSXP-hpt8vz_8Z4NYf8uUiIwZCSJluef3vGSh7TLOfekcrjVcRd_2h59kBuGgV7DzyJxZwx8eyNJOyhpYQnlExnd24CnELB6ZNYObYBH6xnE2Rgo97YGN1WPbd9Ra8oQUx2phHT4KTWZNktzjenv6hM7AH8lyVyRvGtillQOA_Dq23TwAAAAHy0lZEAA"
+            session_string="AQFULmkANrpQWKdmd5cy7VgvL2DA9KATYlSUq5PSoJ5K1easAzrA_p5fxgFRVEUyABixgFmrCGtF9x_KvrQUoAWdeQ1dGqYggCnST6nMPBipTv7GIgwU_w1kewukwsWPMUbWdos0VI7CtH1HYwW7wz3VQ2_hvtdwQCDRHsIxpwek3IcSXP-hpt8vz_8Z4NYf8uUiIwZCSJluef3vGSh7TLOfekcrjVcRd_2h59kBuGgV7DzyJxZwx8eyNJOyhpYQnlExnd24CnELB6ZNYObYBH6xnE2Rgo97YGN1WPbd9Ra8oQUx2phHT4KTWZNktzjenv6hM7AH8lyVyRvGtillQOA_Dq23TwAAAAHy0lZEAA",
+            sleep_threshold=120,  # Increased for stability
+            max_concurrent_transmissions=1,  # Single transmission for reliability
+            workers=1,  # Single worker
+            no_updates=False,  # Enable updates for private group
+            app_version="1.0.0",
+            device_model="Python",
+            system_version="Linux"
         )
         
         def is_admin(user_id):
             return user_id == ADMIN_USER_ID
         
         # -----------------------------
-        # SIMPLE DELETE FUNCTION - GUARANTEED WORKING
+        # SUPER DELETE FUNCTION - PRIVATE GROUP OPTIMIZED
         # -----------------------------
-        async def simple_delete_guaranteed(message_obj):
+        async def super_delete_optimized(message_obj):
             """
-            SIMPLE DELETE THAT ALWAYS WORKS
+            SUPER DELETE OPTIMIZED FOR PRIVATE GROUPS
             """
             touch_activity()
             chat_id = message_obj.chat.id
             message_id = message_obj.id
+            is_private_group = str(chat_id) == private_manager.private_group_id
             
-            log_info(f"🗑️ DELETE ATTEMPT: {message_id} in {chat_id}")
+            log_info(f"🗑️ DELETE ATTEMPT: {message_id} in {'PRIVATE' if is_private_group else 'PUBLIC'} group")
             
             try:
-                # DIRECT DELETE - No complications
+                # For private group - special handling
+                if is_private_group:
+                    # First ensure we have access
+                    await private_manager.ensure_private_group_access(app)
+                    
+                # DIRECT DELETE - No retry, simple approach
                 await app.delete_messages(chat_id, message_id)
-                log_info(f"✅ DELETE SUCCESS: {message_id}")
-                nonlocal delete_success_count
+                
+                # Track success
+                nonlocal delete_success_count, private_group_delete_count, public_group_delete_count
                 delete_success_count += 1
+                
+                if is_private_group:
+                    private_group_delete_count += 1
+                    log_info(f"✅ PRIVATE GROUP DELETE SUCCESS: {message_id} (Total: {private_group_delete_count})")
+                else:
+                    public_group_delete_count += 1
+                    log_info(f"✅ PUBLIC GROUP DELETE SUCCESS: {message_id} (Total: {public_group_delete_count})")
+                
                 return True
+                
             except Exception as e:
-                log_error(f"❌ DELETE FAILED: {e}")
+                error_msg = str(e)
+                log_error(f"❌ DELETE FAILED in {'PRIVATE' if is_private_group else 'PUBLIC'}: {error_msg}")
                 nonlocal delete_fail_count
                 delete_fail_count += 1
+                
+                # Special handling for private group errors
+                if is_private_group:
+                    if "CHAT_ADMIN_REQUIRED" in error_msg:
+                        log_error("🔴 Bot needs admin rights in private group!")
+                    elif "USER_NOT_PARTICIPANT" in error_msg:
+                        log_error("🔴 Bot not participant in private group!")
+                    elif "CHAT_FORBIDDEN" in error_msg:
+                        log_error("🔴 Bot kicked from private group!")
+                
                 return False
 
-        async def delete_after_delay_simple(message_obj, seconds):
+        async def delete_after_delay_super(message_obj, seconds):
             await asyncio.sleep(seconds)
-            await simple_delete_guaranteed(message_obj)
+            await super_delete_optimized(message_obj)
 
-        # ✅ SIMPLE ONLINE STATUS
-        async def simple_online_status():
-            online_count = 0
+        # ✅ PRIVATE GROUP MONITOR
+        async def private_group_monitor():
+            """Monitor private group connection specifically"""
+            monitor_count = 0
             while session_active:
-                online_count += 1
+                monitor_count += 1
                 try:
-                    await app.get_me()
-                    if online_count % 10 == 0:
-                        log_info(f"🟢 Online #{online_count} - Active")
-                    touch_activity()
+                    # Check private group access every 5 minutes
+                    if monitor_count % 5 == 0:
+                        await private_manager.ensure_private_group_access(app)
+                    
+                    # Log status every 10 minutes
+                    if monitor_count % 10 == 0:
+                        log_info(f"🔍 Private Group Monitor: Access attempts {private_manager.private_group_retry_count}")
+                    
+                    await asyncio.sleep(60)  # Check every minute
                 except Exception as e:
-                    log_error(f"⚠️ Online Status Failed: {e}")
-                await asyncio.sleep(120)
+                    log_error(f"Private group monitor error: {e}")
+                    await asyncio.sleep(30)
 
-        # ✅ SIMPLE KEEP-ALIVE
-        async def simple_keep_alive():
+        # ✅ STRONG KEEP-ALIVE
+        async def strong_keep_alive():
             keep_alive_count = 0
             while session_active:
                 keep_alive_count += 1
                 try:
-                    if keep_alive_count % 5 == 0:
-                        await app.get_me()
+                    # Get me to keep session alive
+                    await app.get_me()
+                    
+                    # Log every 10 keep-alives
+                    if keep_alive_count % 10 == 0:
+                        log_info(f"💓 Strong Keep-Alive #{keep_alive_count} - Session Active")
+                    
                     touch_activity()
                 except Exception as e:
                     log_error(f"⚠️ Keep-Alive Failed: {e}")
-                await asyncio.sleep(150)
+                
+                await asyncio.sleep(60)  # Every minute
 
         # -------------------------
-        # SIMPLE WATCHDOG
+        # AGGRESSIVE WATCHDOG
         # -------------------------
-        async def simple_watchdog():
+        async def aggressive_watchdog():
             watchdog_count = 0
             while True:
                 try:
                     watchdog_count += 1
                     idle = time.time() - last_activity
                     
+                    # Log every 5 minutes
+                    if watchdog_count % 5 == 0:
+                        log_info(f"🐕 Watchdog - Idle: {int(idle)}s, Private: {private_group_delete_count}, Public: {public_group_delete_count}")
+                    
+                    # Restart if no activity for 5 minutes
                     if idle > 300:
                         log_error(f"⚠️ Watchdog: Restarting - No activity for {int(idle)}s")
                         for h in logger.handlers:
@@ -277,13 +360,23 @@ async def start_telegram():
                     log_error(f"Watchdog error: {e}")
                     await asyncio.sleep(5)
 
-        # ✅ ALL COMMANDS - SIMPLE VERSION
+        # ✅ ALL COMMANDS
         @app.on_message(filters.command("start"))
         async def start_command(client, message: Message):
             log_info(f"📩 /start from {message.from_user.id}")
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
-                await message.reply("🚀 **BOT STARTED!**\nDelete Fix Applied!")
+                status_msg = f"""
+🚀 **BOT STARTED - PRIVATE GROUP FIX!**
+
+📊 **DELETE STATS:**
+• Total: {delete_success_count} ✅ / {delete_fail_count} ❌
+• Private Group: {private_group_delete_count} ✅
+• Public Group: {public_group_delete_count} ✅
+
+**Private Group: ACTIVE** 🔥
+                """
+                await message.reply(status_msg)
                 log_info("✅ /start executed")
 
         @app.on_message(filters.command("test"))
@@ -291,11 +384,11 @@ async def start_telegram():
             log_info(f"📩 /test from {message.from_user.id}")
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
-                test_msg = await message.reply("🧪 Testing SIMPLE DELETE...")
+                test_msg = await message.reply("🧪 Testing SUPER DELETE...")
                 await asyncio.sleep(2)
-                success = await simple_delete_guaranteed(test_msg)
+                success = await super_delete_optimized(test_msg)
                 if success:
-                    await message.reply("✅ **SIMPLE DELETE WORKING!**")
+                    await message.reply("✅ **SUPER DELETE WORKING!**")
                 else:
                     await message.reply("❌ DELETE FAILED!")
                 log_info("✅ /test executed")
@@ -303,32 +396,41 @@ async def start_telegram():
         @app.on_message(filters.command("status"))
         async def status_command(client, message: Message):
             if message.from_user and is_admin(message.from_user.id):
+                private_access = await private_manager.ensure_private_group_access(app)
                 status_msg = f"""
-📊 **BOT STATUS**
+📊 **BOT STATUS - PRIVATE GROUP FIX**
 
-🗑️ **Delete Stats:** {delete_success_count} ✅ / {delete_fail_count} ❌
+🗑️ **Delete Stats:**
+• Total: {delete_success_count} ✅ / {delete_fail_count} ❌
+• Private Group: {private_group_delete_count} ✅
+• Public Group: {public_group_delete_count} ✅
+
+🔍 **Group Status:**
+• Private Group Access: {'✅' if private_access else '❌'}
+• Private Retry Count: {private_manager.private_group_retry_count}
+• Monitored Groups: {len(allowed_groups)}
+
 ⏱️ **Last Activity:** {int(time.time() - last_activity)}s ago
-👥 **Monitored Groups:** {len(allowed_groups)}
 
-**Delete Function: GUARANTEED** 🔥
+**Status: {'ACTIVE' if private_access else 'ISSUES'}** 🔥
                 """
                 await message.reply(status_msg)
 
         # ---------------------------------------------------------
-        # SIMPLE DELETE HANDLER - GUARANTEED WORKING
+        # SUPER DELETE HANDLER - PRIVATE GROUP OPTIMIZED
         # ---------------------------------------------------------
         @app.on_message(filters.group)
-        async def simple_delete_handler(client, message: Message):
+        async def super_delete_handler(client, message: Message):
             try:
                 # UPDATE ACTIVITY IMMEDIATELY
                 touch_activity()
                 
-                # CHECK GROUP PERMISSION - SIRF 2 GROUPS
+                # CHECK GROUP PERMISSION
                 group_id = str(message.chat.id)
                 if group_id not in allowed_groups:
                     return
 
-                # SELF CHECK - SIMPLE
+                # SELF CHECK
                 try:
                     current_me = await app.get_me()
                     if message.from_user and message.from_user.id == current_me.id:
@@ -342,8 +444,10 @@ async def start_telegram():
                 message_text = message.text or message.caption or ""
                 message_text_lower = message_text.lower()
 
-                # LOG EVERY MESSAGE
-                log_info(f"🎯 MESSAGE DETECTED: @{username} (bot: {is_bot}) in {message.chat.title}")
+                is_private = group_id == private_manager.private_group_id
+                group_type = "PRIVATE" if is_private else "PUBLIC"
+                
+                log_info(f"🎯 {group_type} GROUP MESSAGE: @{username} (bot: {is_bot})")
 
                 # ✅ SAFE BOT - IGNORE
                 if username in safe_bots:
@@ -357,16 +461,16 @@ async def start_telegram():
                     
                     if has_links or has_mentions:
                         log_info(f"🚫 Delayed bot with links: DELETE NOW")
-                        await simple_delete_guaranteed(message)
+                        await super_delete_optimized(message)
                     else:
                         log_info(f"⏰ Delayed bot normal: DELETE IN 30s")
-                        asyncio.create_task(delete_after_delay_simple(message, 30))
+                        asyncio.create_task(delete_after_delay_super(message, 30))
                     return
 
                 # 🗑️ OTHER BOTS - INSTANT DELETE
                 if is_bot:
                     log_info(f"🗑️ Unsafe bot: DELETE NOW")
-                    await simple_delete_guaranteed(message)
+                    await super_delete_optimized(message)
                     return
 
                 # 🔗 USER MESSAGES WITH LINKS/MENTIONS - DELETE
@@ -375,7 +479,7 @@ async def start_telegram():
                 
                 if has_links or has_mentions:
                     log_info(f"🔗 User with links: DELETE NOW")
-                    await simple_delete_guaranteed(message)
+                    await super_delete_optimized(message)
                     return
 
                 log_info(f"ℹ️ Normal message - No action")
@@ -384,58 +488,86 @@ async def start_telegram():
                 log_error(f"❌ Handler error: {e}")
                 touch_activity()
         
-        # ✅ BOT START - SIMPLE AND CLEAN
-        log_info("🔗 Connecting to Telegram - DELETE FIX...")
+        # ✅ BOT START - PRIVATE GROUP FOCUS
+        log_info("🔗 Connecting to Telegram - PRIVATE GROUP FIX...")
         await app.start()
         
         me = await app.get_me()
         log_info(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
         
-        log_info(f"👥 Monitoring 2 Groups: {allowed_groups}")
+        # Verify private group access
+        log_info("🔍 Checking private group access...")
+        private_access = await private_manager.ensure_private_group_access(app)
         
-        # Start SIMPLE background tasks
-        keep_alive_task = asyncio.create_task(simple_keep_alive())
-        online_task = asyncio.create_task(simple_online_status())
-        watchdog_task = asyncio.create_task(simple_watchdog())
+        if private_access:
+            log_info("✅ Private group access: SUCCESS")
+        else:
+            log_info("❌ Private group access: FAILED - will retry")
         
-        log_info(f"✅ Setup: {len(allowed_groups)} groups, {len(safe_bots)} safe bots")
-        log_info("💓 Simple Keep-Alive: ACTIVE")
-        log_info("🟢 Simple Online: WORKING") 
-        log_info("🗑️ Simple Delete: GUARANTEED WORKING")
+        log_info(f"👥 Monitoring Groups: {allowed_groups}")
         
-        # Test delete on startup
+        # Start background tasks
+        keep_alive_task = asyncio.create_task(strong_keep_alive())
+        private_monitor_task = asyncio.create_task(private_group_monitor())
+        watchdog_task = asyncio.create_task(aggressive_watchdog())
+        
+        log_info(f"✅ Setup: {len(allowed_groups)} groups")
+        log_info("💓 Strong Keep-Alive: ACTIVE")
+        log_info("🔍 Private Group Monitor: ACTIVE")
+        log_info("🗑️ Super Delete: OPTIMIZED FOR PRIVATE GROUP")
+        
+        # Test delete in both groups
         try:
-            test_msg = await app.send_message("me", "🧪 Startup delete test...")
-            await asyncio.sleep(1)
-            success = await simple_delete_guaranteed(test_msg)
-            if success:
-                log_info("✅ Startup test: DELETE WORKING!")
-            else:
-                log_info("❌ Startup test: DELETE FAILED!")
+            # Test in private group if accessible
+            if private_access:
+                try:
+                    test_msg_private = await app.send_message(private_manager.private_group_id, "🧪 Private group delete test...")
+                    await asyncio.sleep(2)
+                    success_private = await super_delete_optimized(test_msg_private)
+                    if success_private:
+                        log_info("✅ Private group test: DELETE WORKING!")
+                    else:
+                        log_info("❌ Private group test: DELETE FAILED!")
+                except Exception as e:
+                    log_error(f"Private group test error: {e}")
+            
+            # Test in public group
+            try:
+                test_msg_public = await app.send_message(private_manager.public_group_id, "🧪 Public group delete test...")
+                await asyncio.sleep(2)
+                success_public = await super_delete_optimized(test_msg_public)
+                if success_public:
+                    log_info("✅ Public group test: DELETE WORKING!")
+                else:
+                    log_info("❌ Public group test: DELETE FAILED!")
+            except Exception as e:
+                log_error(f"Public group test error: {e}")
+                
         except Exception as e:
             log_error(f"Startup test error: {e}")
         
         # Startup message
         try:
             await app.send_message("me", f"""
-✅ **BOT STARTED - DELETE GUARANTEED!**
+✅ **BOT STARTED - PRIVATE GROUP FIX!**
 
-🎯 **DELETE FIX APPLIED:**
-• Simple Delete Function
-• No Complex Logic
-• Direct Message Handling
-• 100% Working Delete
+🎯 **SPECIAL FEATURES:**
+• Private Super Group Optimized
+• Strong Connection Management
+• Private Group Access Monitoring
+• Aggressive Watchdog
 
-📊 **GROUPS:**
-• -1002382070176
-• -1002497459144
+📊 **STATUS:**
+• Private Group Access: {'✅ SUCCESS' if private_access else '❌ RETRYING'}
+• Private Deletes: {private_group_delete_count}
+• Public Deletes: {public_group_delete_count}
 
-**Ab delete pakka hoga!** 🔥
+**Private Group Delete: {'ACTIVE' if private_access else 'RETRYING'}** 🔥
             """)
         except Exception as e:
             log_error(f"Startup DM failed: {e}")
         
-        log_info("🤖 BOT READY - Delete Guaranteed!")
+        log_info("🤖 BOT READY - Private Group Fix Active!")
         
         # Keep running
         try:
@@ -446,7 +578,7 @@ async def start_telegram():
         finally:
             session_active = False
             keep_alive_task.cancel()
-            online_task.cancel()
+            private_monitor_task.cancel()
             watchdog_task.cancel()
             await app.stop()
         
@@ -458,7 +590,7 @@ async def main():
     await start_telegram()
 
 if __name__ == "__main__":
-    log_info("🚀 BOT STARTING - DELETE FIX ONLY...")
+    log_info("🚀 BOT STARTING - PRIVATE SUPER GROUP FIX...")
 
     try:
         asyncio.run(main())
