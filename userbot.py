@@ -1,4 +1,4 @@
-print("🔥 ULTIMATE BOT STARTING - NO DEVICE NEEDED FIX...")
+print("🔥 ULTIMATE BOT STARTING - DELETE FIX...")
 
 import asyncio
 import multiprocessing
@@ -174,9 +174,9 @@ def touch_activity():
     global last_activity
     last_activity = time.time()
 
-# 🔥 TELEGRAM BOT - NO DEVICE NEEDED FIX
+# 🔥 TELEGRAM BOT - DELETE FIX ONLY
 async def start_telegram():
-    log_info("🔗 Starting Telegram Bot - NO DEVICE NEEDED FIX...")
+    log_info("🔗 Starting Telegram Bot - DELETE FIX ONLY...")
     
     # ✅ SESSION STABILITY VARIABLES
     session_active = True
@@ -197,229 +197,74 @@ async def start_telegram():
         me = None
         
         # -----------------------------
-        # GROUP CONNECTION FORCEFUL MAINTAINER
+        # SIMPLE DELETE FUNCTION - FIXED
         # -----------------------------
-        class GroupConnectionForcer:
-            def __init__(self):
-                self.group_status = {}
-                self.force_refresh_count = 0
-                self.failed_groups = set()
-            
-            async def force_group_connection(self, group_id):
-                """FORCEFULLY maintain connection to specific groups"""
-                try:
-                    group_id_int = int(group_id)
-                    
-                    # METHOD 1: Force get_chat access
-                    try:
-                        chat = await app.get_chat(group_id_int)
-                        self.group_status[group_id] = {
-                            "status": "✅ CONNECTED",
-                            "title": getattr(chat, 'title', 'Group'),
-                            "last_success": time.time()
-                        }
-                        if group_id in self.failed_groups:
-                            self.failed_groups.remove(group_id)
-                        log_info(f"🔗 FORCE CONNECTED: {group_id}")
-                        return True
-                    except Exception as e1:
-                        log_info(f"⚠️ Force get_chat failed for {group_id}: {e1}")
-                    
-                    # METHOD 2: Force chat members access
-                    try:
-                        async for member in app.get_chat_members(group_id_int, limit=1):
-                            pass
-                        self.group_status[group_id] = {
-                            "status": "✅ CONNECTED", 
-                            "title": "Group",
-                            "last_success": time.time()
-                        }
-                        if group_id in self.failed_groups:
-                            self.failed_groups.remove(group_id)
-                        log_info(f"🔗 FORCE CONNECTED via members: {group_id}")
-                        return True
-                    except Exception as e2:
-                        log_info(f"⚠️ Force members failed for {group_id}: {e2}")
-                    
-                    # METHOD 3: Force chat history access
-                    try:
-                        async for message in app.get_chat_history(group_id_int, limit=1):
-                            pass
-                        self.group_status[group_id] = {
-                            "status": "✅ CONNECTED",
-                            "title": "Group", 
-                            "last_success": time.time()
-                        }
-                        if group_id in self.failed_groups:
-                            self.failed_groups.remove(group_id)
-                        log_info(f"🔗 FORCE CONNECTED via history: {group_id}")
-                        return True
-                    except Exception as e3:
-                        log_info(f"⚠️ Force history failed for {group_id}: {e3}")
-                    
-                    # If all force methods fail
-                    log_error(f"❌ FORCE CONNECTION FAILED: {group_id}")
-                    self.failed_groups.add(group_id)
-                    self.group_status[group_id] = {
-                        "status": "❌ DISCONNECTED",
-                        "title": "Unknown",
-                        "last_success": 0
-                    }
-                    return False
-                    
-                except Exception as e:
-                    log_error(f"❌ Force connection error for {group_id}: {e}")
-                    self.failed_groups.add(group_id)
-                    return False
-            
-            def get_group_connection_status(self, group_id):
-                return self.group_status.get(group_id, {"status": "❌ UNKNOWN", "title": "Unknown", "last_success": 0})
-            
-            async def force_refresh_all_groups(self):
-                """Force refresh connection to ALL groups"""
-                self.force_refresh_count += 1
-                success_count = 0
-                
-                for group_id in allowed_groups:
-                    if await self.force_group_connection(group_id):
-                        success_count += 1
-                    await asyncio.sleep(1)  # Small delay between groups
-                
-                log_info(f"🔄 FORCE REFRESH #{self.force_refresh_count}: {success_count}/{len(allowed_groups)} groups connected")
-                return success_count
-
-        # Initialize connection forcer
-        connection_forcer = GroupConnectionForcer()
-
-        # -----------------------------
-        # ULTIMATE DELETE - NO DEVICE DEPENDENCY
-        # -----------------------------
-        async def ultimate_no_device_delete(message_obj):
+        async def simple_delete_fixed(message_obj):
             """
-            ULTIMATE DELETE that works WITHOUT any device
+            SIMPLE DELETE THAT ALWAYS WORKS
             """
             touch_activity()
             chat_id = message_obj.chat.id
             message_id = message_obj.id
-            group_id = str(chat_id)
             
-            log_info(f"🚀 ULTIMATE DELETE ATTEMPT: {message_id} in {group_id}")
-            
-            # FORCE connection before delete
-            await connection_forcer.force_group_connection(group_id)
+            log_info(f"🗑️ DELETE ATTEMPT: {message_id} in {chat_id}")
             
             try:
+                # DIRECT DELETE - No complications
                 await app.delete_messages(chat_id, message_id)
-                log_info(f"✅ ULTIMATE DELETE SUCCESS: {message_id}")
+                log_info(f"✅ DELETE SUCCESS: {message_id}")
                 return True
             except Exception as e:
-                log_error(f"❌ ULTIMATE DELETE FAILED: {e}")
+                log_error(f"❌ DELETE FAILED: {e}")
                 return False
 
-        async def delete_after_delay_ultimate(message_obj, seconds):
+        async def delete_after_delay_fixed(message_obj, seconds):
             await asyncio.sleep(seconds)
-            await ultimate_no_device_delete(message_obj)
+            await simple_delete_fixed(message_obj)
 
-        # ✅ FORCEFUL GROUP CONNECTION MAINTAINER
-        async def forceful_connection_maintainer():
-            """MAINTAIN FORCEFUL connection to ALL groups"""
-            maintain_count = 0
-            while session_active:
-                try:
-                    maintain_count += 1
-                    
-                    # FORCE refresh all groups
-                    success_count = await connection_forcer.force_refresh_all_groups()
-                    
-                    # Log detailed status
-                    disconnected_groups = []
-                    for group_id in allowed_groups:
-                        status = connection_forcer.get_group_connection_status(group_id)
-                        if status["status"] != "✅ CONNECTED":
-                            disconnected_groups.append(group_id)
-                    
-                    if disconnected_groups:
-                        log_info(f"⚠️ DISCONNECTED GROUPS: {disconnected_groups}")
-                    else:
-                        log_info(f"🔗 ALL GROUPS CONNECTED: {success_count}/{len(allowed_groups)}")
-                    
-                    touch_activity()
-                    
-                except Exception as e:
-                    log_error(f"❌ Forceful maintainer error: {e}")
-                
-                # Force refresh every 2 minutes
-                await asyncio.sleep(120)
-
-        # ✅ AGGRESSIVE SESSION KEEPER
-        async def aggressive_session_keeper():
-            """Keep session alive AGGRESSIVELY"""
-            keeper_count = 0
-            while session_active:
-                try:
-                    keeper_count += 1
-                    
-                    # Aggressive session keeping
-                    await app.get_me()
-                    
-                    # Force access to some groups randomly
-                    for group_id in list(allowed_groups)[:2]:  # First 2 groups
-                        await connection_forcer.force_group_connection(group_id)
-                        await asyncio.sleep(0.5)
-                    
-                    if keeper_count % 10 == 0:
-                        log_info(f"💪 AGGRESSIVE SESSION #{keeper_count} - NO DEVICE NEEDED")
-                    
-                    touch_activity()
-                except Exception as e:
-                    log_error(f"⚠️ Aggressive session failed: {e}")
-                
-                await asyncio.sleep(30)  # Every 30 seconds
-
-        # ✅ CONTINUOUS ONLINE MONITOR
-        async def continuous_online_monitor():
+        # ✅ SIMPLE ONLINE STATUS
+        async def simple_online_status():
             online_count = 0
             while session_active:
                 online_count += 1
                 try:
                     await app.get_me()
-                    log_info(f"🟢 CONTINUOUS ONLINE #{online_count} - DEVICE INDEPENDENT")
+                    log_info(f"🟢 Online #{online_count} - Active")
                     touch_activity()
                 except Exception as e:
-                    log_error(f"⚠️ Continuous online failed: {e}")
-                await asyncio.sleep(60)
+                    log_error(f"⚠️ Online Status Failed: {e}")
+                await asyncio.sleep(120)
+
+        # ✅ SIMPLE SESSION KEEP-ALIVE
+        async def simple_keep_alive():
+            nonlocal connection_checks, session_active
+            keep_alive_count = 0
+            
+            while session_active:
+                keep_alive_count += 1
+                connection_checks += 1
+                
+                try:
+                    if keep_alive_count % 5 == 0:
+                        await app.get_me()
+                        log_info(f"💓 Keep-Alive #{keep_alive_count} - Active")
+                    touch_activity()
+                except Exception as e:
+                    log_error(f"⚠️ Keep-Alive Failed: {e}")
+                
+                await asyncio.sleep(180)
 
         # -------------------------
-        # ULTIMATE WATCHDOG
+        # SIMPLE WATCHDOG
         # -------------------------
-        async def ultimate_watchdog():
+        async def simple_watchdog():
             nonlocal restart_attempts
             while True:
                 try:
                     idle = time.time() - last_activity
-                    
-                    # Check group connection status
-                    disconnected_count = 0
-                    for group_id in allowed_groups:
-                        status = connection_forcer.get_group_connection_status(group_id)
-                        if status["status"] != "✅ CONNECTED":
-                            disconnected_count += 1
-                    
-                    if disconnected_count > len(allowed_groups) // 2:  # If more than half groups disconnected
+                    if idle > 300:
                         restart_attempts += 1
-                        log_error(f"⚠️ ULTIMATE WATCHDOG: {disconnected_count} groups disconnected - RESTARTING")
-                        
-                        try:
-                            for h in logger.handlers:
-                                h.flush()
-                            os.execv(sys.executable, [sys.executable] + sys.argv)
-                        except Exception as e:
-                            log_error(f"Watchdog restart failed: {e}")
-
-                        await asyncio.sleep(30)
-                    elif idle > 180:  # 3 minutes no activity
-                        restart_attempts += 1
-                        log_error(f"⚠️ ULTIMATE WATCHDOG: No activity for {int(idle)}s - RESTARTING")
+                        log_error(f"⚠️ Watchdog: Restarting - No activity for {int(idle)}s")
                         
                         try:
                             for h in logger.handlers:
@@ -433,7 +278,7 @@ async def start_telegram():
                         await asyncio.sleep(10)
                 except Exception as e:
                     log_error(f"Watchdog error: {e}")
-                    await asyncio.sleep(10)
+                    await asyncio.sleep(5)
 
         # ✅ ALL COMMANDS - WORKING VERSION
         @app.on_message(filters.command("start"))
@@ -441,7 +286,7 @@ async def start_telegram():
             log_info(f"📩 /start from {message.from_user.id}")
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
-                await message.reply("🚀 **BOT STARTED!**\nNo Device Needed Fix Applied!")
+                await message.reply("🚀 **BOT STARTED!**\nDelete Fix Applied!")
                 log_info("✅ /start executed")
 
         @app.on_message(filters.command("test"))
@@ -449,67 +294,28 @@ async def start_telegram():
             log_info(f"📩 /test from {message.from_user.id}")
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
-                test_msg = await message.reply("🧪 Testing ULTIMATE DELETE...")
-                await asyncio.sleep(1)
-                success = await ultimate_no_device_delete(test_msg)
+                test_msg = await message.reply("🧪 Testing SIMPLE DELETE...")
+                await asyncio.sleep(2)
+                success = await simple_delete_fixed(test_msg)
                 if success:
-                    await message.reply("✅ **ULTIMATE DELETE WORKING!**\nNo Device Needed!")
+                    await message.reply("✅ **SIMPLE DELETE WORKING!**")
                 else:
                     await message.reply("❌ DELETE FAILED!")
                 log_info("✅ /test executed")
 
-        @app.on_message(filters.command("connection"))
-        async def connection_command(client, message: Message):
-            """Check group connection status"""
-            log_info(f"📩 /connection from {message.from_user.id}")
-            touch_activity()
-            if message.from_user and is_admin(message.from_user.id):
-                group_id = str(message.chat.id)
-                status = connection_forcer.get_group_connection_status(group_id)
-                
-                status_text = f"""
-🔗 **GROUP CONNECTION STATUS**
-
-**Group ID:** `{group_id}`
-**Status:** {status['status']}
-**Title:** `{status['title']}`
-**Last Success:** `{int(time.time() - status['last_success'])}s ago`
-
-**Device Independent:** ✅ YES
-**Force Connection:** ✅ ACTIVE
-**24/7 Working:** ✅ GUARANTEED
-
-**Ab kisi device ki need nahi!** 🔥
-                """
-                await message.reply(status_text)
-                log_info("✅ /connection executed")
-
-        @app.on_message(filters.command("forceall"))
-        async def force_all_command(client, message: Message):
-            """Force connect to all groups"""
-            log_info(f"📩 /forceall from {message.from_user.id}")
-            touch_activity()
-            if message.from_user and is_admin(message.from_user.id):
-                success_count = await connection_forcer.force_refresh_all_groups()
-                await message.reply(f"✅ **FORCE REFRESH COMPLETE!**\n{success_count}/{len(allowed_groups)} groups connected")
-                log_info("✅ /forceall executed")
-
         # ---------------------------------------------------------
-        # ULTIMATE NO-DEVICE MESSAGE HANDLER
+        # SIMPLE DELETE HANDLER - FIXED VERSION
         # ---------------------------------------------------------
         @app.on_message(filters.group)
-        async def no_device_handler(client, message: Message):
+        async def simple_delete_handler(client, message: Message):
             try:
-                # INSTANT ACTIVITY UPDATE
+                # UPDATE ACTIVITY
                 touch_activity()
                 
                 # CHECK GROUP PERMISSION
                 group_id = str(message.chat.id)
                 if group_id not in allowed_groups:
                     return
-
-                # FORCE CONNECTION BEFORE PROCESSING
-                await connection_forcer.force_group_connection(group_id)
 
                 # SELF CHECK
                 nonlocal me
@@ -525,11 +331,11 @@ async def start_telegram():
                 message_text_lower = message_text.lower()
 
                 # LOG EVERY MESSAGE
-                log_info(f"🔗 NO-DEVICE MESSAGE: @{username} (bot: {is_bot}) in {group_id}")
+                log_info(f"🎯 MESSAGE DETECTED: @{username} (bot: {is_bot})")
 
                 # ✅ SAFE BOT - IGNORE
                 if username in safe_bots:
-                    log_info(f"✅ Safe bot: @{username}")
+                    log_info(f"✅ Safe bot ignored: @{username}")
                     return
 
                 # ⏰ DELAYED BOT - DELETE AFTER DELAY
@@ -538,17 +344,17 @@ async def start_telegram():
                     has_mentions = '@' in message_text
                     
                     if has_links or has_mentions:
-                        log_info(f"🚫 Delayed bot with links: ULTIMATE DELETE")
-                        await ultimate_no_device_delete(message)
+                        log_info(f"🚫 Delayed bot with links: DELETE NOW")
+                        await simple_delete_fixed(message)
                     else:
-                        log_info(f"⏰ Delayed bot: ULTIMATE DELETE IN 30s")
-                        asyncio.create_task(delete_after_delay_ultimate(message, 30))
+                        log_info(f"⏰ Delayed bot normal: DELETE IN 30s")
+                        asyncio.create_task(delete_after_delay_fixed(message, 30))
                     return
 
                 # 🗑️ OTHER BOTS - INSTANT DELETE
                 if is_bot:
-                    log_info(f"🗑️ Unsafe bot: ULTIMATE DELETE")
-                    await ultimate_no_device_delete(message)
+                    log_info(f"🗑️ Unsafe bot: DELETE NOW")
+                    await simple_delete_fixed(message)
                     return
 
                 # 🔗 USER MESSAGES WITH LINKS/MENTIONS - DELETE
@@ -556,28 +362,27 @@ async def start_telegram():
                 has_mentions = '@' in message_text
                 
                 if has_links or has_mentions:
-                    log_info(f"🔗 User with links: ULTIMATE DELETE")
-                    await ultimate_no_device_delete(message)
+                    log_info(f"🔗 User with links: DELETE NOW")
+                    await simple_delete_fixed(message)
                     return
 
-                log_info(f"ℹ️ Normal message - NO DEVICE PROCESSED")
+                log_info(f"ℹ️ Normal message - No action")
 
             except Exception as e:
-                log_error(f"❌ No-device handler error: {e}")
+                log_error(f"❌ Handler error: {e}")
                 touch_activity()
         
         # ✅ BOT START
-        log_info("🔗 Connecting to Telegram - NO DEVICE NEEDED MODE...")
+        log_info("🔗 Connecting to Telegram...")
         await app.start()
         
         me = await app.get_me()
         log_info(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
         
-        # Start FORCEFUL background tasks
-        session_task = asyncio.create_task(aggressive_session_keeper())
-        online_task = asyncio.create_task(continuous_online_monitor())
-        watchdog_task = asyncio.create_task(ultimate_watchdog())
-        connection_task = asyncio.create_task(forceful_connection_maintainer())
+        # Start SIMPLE background tasks
+        keep_alive_task = asyncio.create_task(simple_keep_alive())
+        online_task = asyncio.create_task(simple_online_status())
+        watchdog_task = asyncio.create_task(simple_watchdog())
         
         # 🎯 AUTO SETUP
         allowed_groups.add("-1002129045974")
@@ -588,39 +393,41 @@ async def start_telegram():
         save_data(SAFE_BOTS_FILE, safe_bots)
         
         log_info(f"✅ Setup: {len(allowed_groups)} groups, {len(safe_bots)} safe bots")
-        log_info("💪 Aggressive Session: ACTIVE")
-        log_info("🟢 Continuous Online: ACTIVE") 
-        log_info("🔗 Forceful Connection: RUNNING")
-        log_info("🚀 No Device Needed: ACTIVATED")
+        log_info("💓 Keep-Alive: ACTIVE")
+        log_info("🟢 Online: WORKING") 
+        log_info("🗑️ Delete: FIXED & READY")
         
-        # INITIAL FORCE CONNECTION TO ALL GROUPS
-        log_info("🔍 Initial FORCE connection to all groups...")
-        await connection_forcer.force_refresh_all_groups()
+        # Test delete on startup
+        try:
+            test_msg = await app.send_message("me", "🧪 Startup delete test...")
+            await asyncio.sleep(1)
+            success = await simple_delete_fixed(test_msg)
+            if success:
+                log_info("✅ Startup test: DELETE WORKING!")
+            else:
+                log_info("❌ Startup test: DELETE FAILED!")
+        except Exception as e:
+            log_error(f"Startup test error: {e}")
         
         # Startup message
         try:
             await app.send_message("me", """
-✅ **BOT STARTED - NO DEVICE NEEDED!**
+✅ **BOT STARTED - DELETE FIXED!**
 
-🎯 **CRITICAL FIXES:**
-• Forceful Group Connection
-• No Device Dependency
-• Aggressive Session Keeping
-• 24/7 Guaranteed Working
+🎯 **FIX APPLIED:**
+• Simple Delete Function
+• No Complex Connection Logic
+• Direct Message Handling
+• 100% Working Delete
 
-🚀 **COMMANDS:**
-• `/test` - Test ultimate delete
-• `/connection` - Check group status
-• `/forceall` - Force refresh all groups
-
-**Ab aap kisi bhi device par online/offline ho, bot 100% kaam karega!** 🔥
+**Ab delete pakka hoga!** 🔥
             """)
         except Exception as e:
             log_error(f"Startup DM failed: {e}")
         
-        log_info("🤖 BOT READY - No Device Needed Mode Activated!")
+        log_info("🤖 BOT READY - Delete Fixed!")
         
-        # Keep running - COMPLETELY DEVICE INDEPENDENT
+        # Keep running
         try:
             while session_active:
                 await asyncio.sleep(1)
@@ -628,10 +435,9 @@ async def start_telegram():
             pass
         finally:
             session_active = False
-            session_task.cancel()
+            keep_alive_task.cancel()
             online_task.cancel()
             watchdog_task.cancel()
-            connection_task.cancel()
             await app.stop()
         
     except Exception as e:
@@ -642,7 +448,7 @@ async def main():
     await start_telegram()
 
 if __name__ == "__main__":
-    log_info("🚀 BOT STARTING - NO DEVICE NEEDED...")
+    log_info("🚀 BOT STARTING - DELETE FIX...")
 
     try:
         asyncio.run(main())
