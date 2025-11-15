@@ -240,8 +240,6 @@ async def start_telegram():
         def is_admin(user_id):
             return user_id == ADMIN_USER_ID
         
-        me = None
-        
         # -----------------------------
         # ENHANCED DELETE FUNCTION WITH RETRY
         # -----------------------------
@@ -293,11 +291,6 @@ async def start_telegram():
                 try:
                     # Verify connection is actually working
                     current_me = await app.get_me()
-                    if me and current_me.id != me.id:
-                        log_error("⚠️ Session changed! Reinitializing...")
-                        nonlocal me
-                        me = current_me
-                    
                     connection_status = await conn_manager.ensure_connection(app)
                     status_icon = "🟢" if connection_status else "🔴"
                     log_info(f"{status_icon} Online #{online_count} - Connection: {connection_status}")
@@ -308,11 +301,11 @@ async def start_telegram():
 
         # ✅ ENHANCED SESSION KEEP-ALIVE
         async def enhanced_keep_alive():
-            nonlocal connection_checks, session_active
             keep_alive_count = 0
             
             while session_active:
                 keep_alive_count += 1
+                nonlocal connection_checks
                 connection_checks += 1
                 
                 try:
@@ -334,7 +327,6 @@ async def start_telegram():
         # ENHANCED WATCHDOG
         # -------------------------
         async def enhanced_watchdog():
-            nonlocal restart_attempts
             watchdog_count = 0
             
             while True:
@@ -347,6 +339,7 @@ async def start_telegram():
                         log_info(f"🐕 Watchdog Active - Idle: {int(idle)}s, Success: {delete_success_count}, Fail: {delete_fail_count}")
                     
                     if idle > 240:  # Reduced from 300 to 240 seconds
+                        nonlocal restart_attempts
                         restart_attempts += 1
                         log_error(f"⚠️ Watchdog: Restarting - No activity for {int(idle)}s")
                         
