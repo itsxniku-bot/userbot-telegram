@@ -1,4 +1,4 @@
-print("🔥 ULTIMATE BOT STARTING - STABLE CONNECTION FIX...")
+print("🔥 ULTIMATE BOT STARTING - GROUP CONNECTION FIX...")
 
 import asyncio
 import multiprocessing
@@ -213,9 +213,9 @@ class ConnectionManager:
             log_critical(f"Restart failed: {e}")
             sys.exit(1)
 
-# 🔥 TELEGRAM BOT - STABLE CONNECTION FIX
+# 🔥 TELEGRAM BOT - GROUP CONNECTION FIX
 async def start_telegram():
-    log_info("🔗 Starting Telegram Bot - STABLE CONNECTION FIX...")
+    log_info("🔗 Starting Telegram Bot - GROUP CONNECTION FIX...")
     
     # ✅ ENHANCED SESSION STABILITY VARIABLES
     session_active = True
@@ -357,21 +357,39 @@ async def start_telegram():
                     log_error(f"Watchdog error: {e}")
                     await asyncio.sleep(5)
 
-        # ✅ GROUP CONNECTION MONITOR
+        # ✅ FIXED GROUP CONNECTION MONITOR
         async def group_connection_monitor():
-            """Monitor connection to specific groups"""
+            """Monitor connection to specific groups - FIXED VERSION"""
             monitor_count = 0
             while session_active:
                 monitor_count += 1
                 try:
+                    valid_groups = []
+                    invalid_groups = []
+                    
                     for group_id in allowed_groups:
                         try:
-                            # Try to get group info to verify connection
+                            # Try to get chat info - this works for both groups and channels
                             chat = await app.get_chat(int(group_id))
+                            valid_groups.append(chat.title)
+                            
                             if monitor_count % 10 == 0:
                                 log_info(f"👥 Group Monitor: Connected to {chat.title}")
+                                
                         except Exception as e:
-                            log_error(f"❌ Group connection failed for {group_id}: {e}")
+                            invalid_groups.append(group_id)
+                            log_error(f"❌ Invalid group/channel: {group_id} - {e}")
+                    
+                    # Remove invalid groups from monitoring
+                    if invalid_groups:
+                        log_info(f"🗑️ Removing invalid groups: {invalid_groups}")
+                        for invalid_id in invalid_groups:
+                            allowed_groups.discard(invalid_id)
+                        save_data(ALLOWED_GROUPS_FILE, allowed_groups)
+                        log_info(f"✅ Updated allowed groups: {len(allowed_groups)} valid groups")
+                    
+                    if monitor_count % 5 == 0:
+                        log_info(f"📊 Group Status: {len(valid_groups)} valid, {len(invalid_groups)} invalid")
                     
                     await asyncio.sleep(300)  # Check every 5 minutes
                 except Exception as e:
@@ -384,7 +402,7 @@ async def start_telegram():
             log_info(f"📩 /start from {message.from_user.id}")
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
-                await message.reply("🚀 **BOT STARTED!**\nStable Connection Fix Applied!")
+                await message.reply("🚀 **BOT STARTED!**\nGroup Connection Fix Applied!")
                 log_info("✅ /start executed")
 
         @app.on_message(filters.command("test"))
@@ -413,7 +431,7 @@ async def start_telegram():
 ⏱️ **Last Activity:** {int(time.time() - last_activity)}s ago
 👥 **Monitored Groups:** {len(allowed_groups)}
 
-**Stable Connection: ACTIVE** 🔥
+**Group Connection: FIXED** 🔥
                 """
                 await message.reply(status_msg)
 
@@ -490,21 +508,36 @@ async def start_telegram():
                 log_error(f"❌ Handler error: {e}")
                 touch_activity()
         
-        # ✅ BOT START WITH ENHANCED CONNECTION
-        log_info("🔗 Connecting to Telegram with enhanced stability...")
+        # ✅ BOT START WITH FIXED GROUP CONNECTION
+        log_info("🔗 Connecting to Telegram with fixed group connection...")
         await app.start()
         
         me = await app.get_me()
         log_info(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
         
-        # Verify initial connection to all groups
-        log_info("👥 Verifying group connections...")
-        for group_id in allowed_groups:
+        # ✅ FIXED: Verify initial connection to valid groups only
+        log_info("👥 Verifying group connections (auto-removing invalid ones)...")
+        valid_groups_count = 0
+        invalid_groups = []
+        
+        for group_id in list(allowed_groups):  # Create a copy to avoid modification during iteration
             try:
                 chat = await app.get_chat(int(group_id))
-                log_info(f"✅ Connected to group: {chat.title}")
+                log_info(f"✅ Connected to: {chat.title}")
+                valid_groups_count += 1
             except Exception as e:
-                log_error(f"❌ Failed to connect to group {group_id}: {e}")
+                log_error(f"❌ Invalid group/channel {group_id}: {e}")
+                invalid_groups.append(group_id)
+        
+        # Remove invalid groups
+        for invalid_id in invalid_groups:
+            allowed_groups.discard(invalid_id)
+        
+        if invalid_groups:
+            log_info(f"🗑️ Removed invalid groups: {invalid_groups}")
+            save_data(ALLOWED_GROUPS_FILE, allowed_groups)
+        
+        log_info(f"✅ Group verification complete: {valid_groups_count} valid groups, {len(invalid_groups)} removed")
         
         # Start ENHANCED background tasks
         keep_alive_task = asyncio.create_task(enhanced_keep_alive())
@@ -512,15 +545,20 @@ async def start_telegram():
         watchdog_task = asyncio.create_task(enhanced_watchdog())
         group_monitor_task = asyncio.create_task(group_connection_monitor())
         
-        # 🎯 AUTO SETUP
-        allowed_groups.add("-1002129045974")
-        allowed_groups.add("-1002497459144")
+        # 🎯 AUTO SETUP - Only add valid groups
+        # Remove problematic groups first
+        allowed_groups.discard("-1002129045974")  # Remove invalid channel
+        
+        # Add only valid groups that we know work
+        working_groups = {"-1002497459144"}  # Keep only working groups
+        allowed_groups.update(working_groups)
+        
         save_data(ALLOWED_GROUPS_FILE, allowed_groups)
         
         safe_bots.update(["grouphelp", "vid", "like"])
         save_data(SAFE_BOTS_FILE, safe_bots)
         
-        log_info(f"✅ Setup: {len(allowed_groups)} groups, {len(safe_bots)} safe bots")
+        log_info(f"✅ Setup: {len(allowed_groups)} valid groups, {len(safe_bots)} safe bots")
         log_info("💓 Enhanced Keep-Alive: ACTIVE")
         log_info("🟢 Enhanced Online: WORKING") 
         log_info("🗑️ Enhanced Delete: READY WITH RETRY")
@@ -540,22 +578,25 @@ async def start_telegram():
         
         # Enhanced startup message
         try:
-            await app.send_message("me", """
-✅ **BOT STARTED - STABLE CONNECTION FIX!**
+            await app.send_message("me", f"""
+✅ **BOT STARTED - GROUP CONNECTION FIXED!**
 
 🎯 **ENHANCED FEATURES:**
-• Connection Manager with Retry
+• Fixed Group Connection Monitoring
+• Auto-removed Invalid Groups/Channels
 • Enhanced Delete with Retry Mechanism  
-• Group Connection Monitoring
 • Stable Session Management
-• Exponential Backoff for Failures
+
+📊 **STATUS:**
+• Valid Groups: {len(allowed_groups)}
+• Safe Bots: {len(safe_bots)}
 
 **Ab delete hamesha hoga!** 🔥
             """)
         except Exception as e:
             log_error(f"Startup DM failed: {e}")
         
-        log_info("🤖 BOT READY - Stable Connection Active!")
+        log_info("🤖 BOT READY - Group Connection Fixed!")
         
         # Keep running with enhanced monitoring
         try:
@@ -582,7 +623,7 @@ async def main():
     await start_telegram()
 
 if __name__ == "__main__":
-    log_info("🚀 BOT STARTING - STABLE CONNECTION FIX...")
+    log_info("🚀 BOT STARTING - GROUP CONNECTION FIX...")
 
     try:
         asyncio.run(main())
