@@ -267,7 +267,7 @@ async def start_telegram():
 
                 # STEP 1: Force fetch chat info (creates permanent peer)
                 chat = await app.get_chat(private_group_id)
-                log_info(f"✅ Chat fetched: {chat.title}")
+                log_info(f"✅ Chat fetched: {getattr(chat,'title', 'unknown')}")
 
                 # STEP 2: Multiple deep connection methods (SILENT)
                 connection_methods = [
@@ -312,7 +312,7 @@ async def start_telegram():
             INSTANT DELETE - No delays, immediate action
             """
             chat_id = message_obj.chat.id
-            message_id = message_obj.message_id
+            message_id = message_obj.id
             is_private = str(chat_id) == manager.private_group_id
 
             try:
