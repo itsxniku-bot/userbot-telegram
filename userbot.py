@@ -1,4 +1,4 @@
-print("🔥 ULTIMATE BOT STARTING - INSTANT DELETE + PERMANENT PEER FIX...")
+print("🔥 ULTIMATE BOT STARTING - COMPLETE MESSAGE CAPTURE FIX...")
 
 import asyncio
 import multiprocessing
@@ -191,8 +191,8 @@ def touch_activity():
     global last_activity
     last_activity = time.time()
 
-# 🔥 INSTANT DELETE + PERMANENT PEER MANAGER
-class InstantDeleteManager:
+# 🔥 COMPLETE MESSAGE CAPTURE MANAGER
+class CompleteCaptureManager:
     def __init__(self):
         self.private_group_id = "-1002497459144"
         self.public_group_id = "-1002382070176"
@@ -200,10 +200,16 @@ class InstantDeleteManager:
         self.public_delete_count = 0
         self.users_ignored_count = 0
         self.private_delete_failures = 0
+        self.public_delete_failures = 0
         self.private_access_checked = False
         self.private_has_admin = False
         self.peer_activated = peer_status.get("private_peer_activated", False)
         self.peer_activation_time = peer_status.get("last_activation", None)
+        
+        # MESSAGE TRACKING
+        self.total_messages_received = 0
+        self.last_message_time = 0
+        self.message_tracking = {}
         
         # INSTANT DELETE SETTINGS
         self.last_peer_maintenance = 0
@@ -229,9 +235,9 @@ class InstantDeleteManager:
                 return True
         return False
 
-# 🔥 TELEGRAM BOT - INSTANT DELETE + PERMANENT PEER FIX
+# 🔥 TELEGRAM BOT - COMPLETE MESSAGE CAPTURE FIX
 async def start_telegram():
-    log_info("🔗 Starting Telegram Bot - INSTANT DELETE + PERMANENT PEER FIX...")
+    log_info("🔗 Starting Telegram Bot - COMPLETE MESSAGE CAPTURE FIX...")
     
     # ✅ SESSION DATA
     session_data = {
@@ -239,7 +245,7 @@ async def start_telegram():
     }
 
     # Initialize manager
-    manager = InstantDeleteManager()
+    manager = CompleteCaptureManager()
 
     try:
         app = Client(
@@ -341,8 +347,10 @@ async def start_telegram():
                     
                     if is_private:
                         manager.private_delete_failures += 1
-                        # Trigger peer reactivation on failure
-                        manager.force_reconnect = True
+                    else:
+                        manager.public_delete_failures += 1
+                    # Trigger peer reactivation on failure
+                    manager.force_reconnect = True
                     return False
 
         async def delete_after_delay_instant(message_obj, seconds):
@@ -430,9 +438,9 @@ async def start_telegram():
                 await asyncio.sleep(30)
 
         # -------------------------
-        # INSTANT DELETE WATCHDOG
+        # COMPLETE CAPTURE WATCHDOG
         # -------------------------
-        async def instant_delete_watchdog():
+        async def complete_capture_watchdog():
             watchdog_count = 0
             while True:
                 try:
@@ -440,7 +448,7 @@ async def start_telegram():
                     idle = time.time() - last_activity
                     
                     if watchdog_count % 10 == 0:
-                        log_info(f"🐕 Instant Watchdog - Idle: {int(idle)}s, Private: {manager.private_delete_count}, Public: {manager.public_delete_count}, Private Fails: {manager.private_delete_failures}, Peer Active: {manager.peer_activated}")
+                        log_info(f"🐕 Complete Capture Watchdog - Idle: {int(idle)}s, Total Msgs: {manager.total_messages_received}, Private: {manager.private_delete_count}, Public: {manager.public_delete_count}, Private Fails: {manager.private_delete_failures}, Peer Active: {manager.peer_activated}")
                     
                     # Silent peer maintenance every 30 watchdog cycles
                     if manager.peer_activated and watchdog_count % 30 == 0:
@@ -521,11 +529,12 @@ async def start_telegram():
                 access = await check_group_access()
                 
                 status_msg = f"""
-🚀 **BOT STARTED - INSTANT DELETE + PERMANENT PEER!**
+🚀 **BOT STARTED - COMPLETE MESSAGE CAPTURE!**
 
-📊 **DELETE STATS:**
-• Private Group: {manager.private_delete_count} ✅
-• Public Group: {manager.public_delete_count} ✅
+📊 **MESSAGE STATS:**
+• Total Messages: {manager.total_messages_received}
+• Private Deletes: {manager.private_delete_count} ✅
+• Public Deletes: {manager.public_delete_count} ✅
 • Private Failures: {manager.private_delete_failures} ❌
 • Users Ignored: {manager.users_ignored_count} 👥
 
@@ -534,141 +543,88 @@ async def start_telegram():
 • Private Admin: {'✅ DELETE RIGHTS' if access['private_admin'] else '❌ NO DELETE RIGHTS'}
 • Public Group: {'✅ ACCESS' if access['public'] else '❌ NO ACCESS'}
 • Peer Activated: {'✅ PERMANENT' if manager.peer_activated else '❌ INACTIVE'}
-• Last Activation: {manager.peer_activation_time or 'Never'}
 
-🔧 **INSTANT FEATURES:**
+🔧 **COMPLETE CAPTURE:**
+• Every Message Logged
 • Instant Delete (No Delay)
 • Permanent Peer Connection
-• Silent Maintenance (No Messages)
-• No Heartbeat Messages
-• Always Connected
+• No Messages Skipped
 
-**Status: {'INSTANT + PERMANENT' if manager.peer_activated else 'NEEDS ACTIVATION'}** 🔥
+**Status: {'COMPLETE CAPTURE ACTIVE' if manager.peer_activated else 'NEEDS ACTIVATION'}** 🔥
                 """
                 await message.reply(status_msg)
                 log_info("✅ /start executed")
 
-        @app.on_message(filters.command("test_bot"))
-        async def test_bot_command(client, message: Message):
-            log_info(f"📩 /test_bot from {message.from_user.id}")
+        @app.on_message(filters.command("msg_stats"))
+        async def msg_stats_command(client, message: Message):
+            log_info(f"📩 /msg_stats from {message.from_user.id}")
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
-                try:
-                    # First check group access
-                    access = await check_group_access()
-                    
-                    if not access['public'] and not access['private']:
-                        await message.reply("❌ **NO GROUP ACCESS** - Add bot to both groups first!")
-                        return
-                    
-                    test_results = {
-                        'private': 'NOT TESTED',
-                        'public': 'NOT TESTED'
-                    }
-                    
-                    # Test public group if accessible
-                    if access['public']:
-                        try:
-                            test_msg_public = await app.send_message(manager.public_group_id, "🧪 Public test - instant delete...")
-                            await asyncio.sleep(0.5)  # Shorter delay
-                            public_success = await instant_delete(test_msg_public)
-                            test_results['public'] = '✅ INSTANT SUCCESS' if public_success else '❌ FAILED'
-                        except Exception as e:
-                            test_results['public'] = f'❌ ERROR: {str(e)}'
-                    
-                    # Test private group if accessible
-                    if access['private']:
-                        try:
-                            test_msg_private = await app.send_message(manager.private_group_id, "🧪 Private test - instant delete...")
-                            await asyncio.sleep(0.5)  # Shorter delay
-                            private_success = await instant_delete(test_msg_private)
-                            test_results['private'] = '✅ INSTANT SUCCESS' if private_success else '❌ FAILED'
-                        except Exception as e:
-                            test_results['private'] = f'❌ ERROR: {str(e)}'
-                    
-                    # Send results
-                    result_msg = f"""
-🧪 **INSTANT TEST RESULTS:**
+                stats_msg = f"""
+📊 **COMPLETE MESSAGE STATISTICS:**
 
-**Public Group ({manager.public_group_id}):**
-{test_results['public']}
+• Total Messages Received: {manager.total_messages_received}
+• Private Group Deletes: {manager.private_delete_count}
+• Public Group Deletes: {manager.public_delete_count}
+• Private Delete Failures: {manager.private_delete_failures}
+• Public Delete Failures: {manager.public_delete_failures}
+• Users Ignored: {manager.users_ignored_count}
+• Last Message Time: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(manager.last_message_time)) if manager.last_message_time > 0 else 'Never'}
 
-**Private Group ({manager.private_group_id}):**  
-{test_results['private']}
-
-🔧 **INSTANT FEATURES:**
-• Delete Method: 🚀 INSTANT
-• Permanent Peer: {'✅ ACTIVE' if manager.peer_activated else '❌ INACTIVE'}
-• Maintenance: 🔇 SILENT
-• Messages: 🚫 NO HEARTBEAT
-
-📊 **Admin Status:** {'✅ HAS DELETE RIGHTS' if access['private_admin'] else '❌ MISSING DELETE RIGHTS'}
-                    """
-                    await message.reply(result_msg)
-                        
-                except Exception as e:
-                    await message.reply(f"❌ Test failed: {e}")
-
-        @app.on_message(filters.command("activate_permanent_peer"))
-        async def activate_permanent_peer_command(client, message: Message):
-            log_info(f"📩 /activate_permanent_peer from {message.from_user.id}")
-            touch_activity()
-            if message.from_user and is_admin(message.from_user.id):
-                try:
-                    await message.reply("🔄 Activating PERMANENT private group peer (SILENT)...")
-                    success = await activate_permanent_private_group_peer(app, manager.private_group_id)
-                    if success:
-                        await message.reply("✅ PERMANENT private group peer ACTIVATED! Silent connection established.")
-                    else:
-                        await message.reply("❌ Permanent peer activation FAILED. Check logs.")
-                except Exception as e:
-                    await message.reply(f"❌ Activation failed: {e}")
+💡 **Capture Status:** {'✅ ACTIVE - No messages skipped' if manager.total_messages_received > 0 else '🔄 WAITING FOR MESSAGES'}
+                """
+                await message.reply(stats_msg)
 
         # ---------------------------------------------------------
-        # INSTANT BOTS DELETE HANDLER
+        # COMPLETE MESSAGE CAPTURE HANDLER (NO MESSAGES SKIPPED)
         # ---------------------------------------------------------
         @app.on_message(filters.group)
-        async def instant_bots_handler(client, message: Message):
+        async def complete_capture_handler(client, message: Message):
             try:
                 # UPDATE ACTIVITY IMMEDIATELY
                 touch_activity()
                 
+                # TRACK EVERY MESSAGE
+                manager.total_messages_received += 1
+                manager.last_message_time = time.time()
+                
                 # CHECK GROUP PERMISSION
                 group_id = str(message.chat.id)
-                if group_id not in allowed_groups:
-                    return
+                
+                # LOG EVERY MESSAGE (BEFORE GROUP CHECK)
+                is_private = group_id == manager.private_group_id
+                username = (message.from_user.username or "no_username").lower() if message.from_user else "unknown"
+                message_text = message.text or message.caption or "no_text"
+                
+                if group_id in allowed_groups:
+                    log_info(f"📩 {'PRIVATE' if is_private else 'PUBLIC'} GROUP MESSAGE #{manager.total_messages_received}: @{username} - {message_text[:80]}...")
+                else:
+                    log_info(f"🚫 IGNORED GROUP MESSAGE #{manager.total_messages_received}: {group_id} - @{username}")
+                    return  # Skip non-allowed groups
 
                 # SELF CHECK
                 try:
                     current_me = await app.get_me()
                     if message.from_user and message.from_user.id == current_me.id:
+                        log_info(f"🔁 SELF MESSAGE IGNORED: #{manager.total_messages_received}")
                         return
-                except:
-                    return
+                except Exception as e:
+                    log_error(f"❌ Self check failed: {e}")
 
                 # GET BASIC INFO
                 is_bot = message.from_user.is_bot if message.from_user else False
-                username = (message.from_user.username or "").lower() if message.from_user else ""
-                message_text = message.text or message.caption or ""
-                is_private = group_id == manager.private_group_id
-
-                # 🎯 LOG MESSAGE DETAILS (ESPECIALLY FOR PRIVATE GROUP)
-                if is_private:
-                    log_info(f"📩 PRIVATE GROUP MESSAGE: @{username} - {message_text[:50]}...")
-                else:
-                    if manager.public_delete_count % 10 == 0:  # Less public logging
-                        log_info(f"📩 PUBLIC GROUP MESSAGE: @{username} - {message_text[:50]}...")
-
+                
                 # 🎯 LOGIC: SIRF BOTS KE MESSAGES DELETE KARO
                 
-                # ✅ USER MESSAGES - COMPLETELY IGNORE
+                # ✅ USER MESSAGES - COMPLETELY IGNORE (BUT LOG)
                 if not is_bot:
                     manager.users_ignored_count += 1
+                    log_info(f"👥 USER IGNORED #{manager.total_messages_received}: @{username} in {'PRIVATE' if is_private else 'PUBLIC'}")
                     return
 
-                # ✅ SAFE BOTS - IGNORE
+                # ✅ SAFE BOTS - IGNORE (BUT LOG)
                 if username in safe_bots:
-                    log_info(f"✅ SAFE BOT IGNORED: @{username} in {'PRIVATE' if is_private else 'PUBLIC'}")
+                    log_info(f"✅ SAFE BOT IGNORED #{manager.total_messages_received}: @{username} in {'PRIVATE' if is_private else 'PUBLIC'}")
                     return
 
                 # ✅ CHECK FOR ANY LINKS OR MENTIONS
@@ -677,23 +633,23 @@ async def start_telegram():
                 # ⏰ DELAYED BOTS - INSTANT DELETE BASED ON LINKS
                 if username in delayed_bots:
                     if has_links_or_mentions:
-                        log_info(f"🚫 DELAYED BOT WITH LINKS: INSTANT DELETE - @{username}")
+                        log_info(f"🚫 DELAYED BOT WITH LINKS #{manager.total_messages_received}: INSTANT DELETE - @{username}")
                         await instant_delete(message)
                     else:
-                        log_info(f"⏰ DELAYED BOT NORMAL: DELETE IN 5s - @{username}")
-                        asyncio.create_task(delete_after_delay_instant(message, 5))  # Reduced from 30s to 5s
+                        log_info(f"⏰ DELAYED BOT NORMAL #{manager.total_messages_received}: DELETE IN 5s - @{username}")
+                        asyncio.create_task(delete_after_delay_instant(message, 5))
                     return
 
                 # 🗑️ OTHER BOTS (UNSAFE BOTS) - INSTANT DELETE
-                log_info(f"🗑️ UNSAFE BOT: INSTANT DELETE - @{username}")
+                log_info(f"🗑️ UNSAFE BOT #{manager.total_messages_received}: INSTANT DELETE - @{username}")
                 await instant_delete(message)
 
             except Exception as e:
-                log_error(f"❌ Instant Handler error: {e}")
+                log_error(f"❌ Complete Capture Handler error: {e}")
                 touch_activity()
         
-        # ✅ BOT START - INSTANT DELETE + PERMANENT PEER
-        log_info("🔗 Connecting to Telegram - INSTANT DELETE + PERMANENT PEER...")
+        # ✅ BOT START - COMPLETE MESSAGE CAPTURE
+        log_info("🔗 Connecting to Telegram - COMPLETE MESSAGE CAPTURE...")
         await app.start()
         
         me = await app.get_me()
@@ -710,43 +666,44 @@ async def start_telegram():
         # Check group access immediately with admin check
         access = await check_group_access()
         
-        log_info(f"🎯 INSTANT DELETE + PERMANENT PEER ACTIVATED")
+        log_info(f"🎯 COMPLETE MESSAGE CAPTURE ACTIVATED")
         log_info(f"🔗 Link Patterns: {len(manager.all_link_patterns)} types")
         log_info(f"🛡️ Safe Bots: {len(safe_bots)}")
         log_info(f"📊 Group Access - Private: {access['private']}, Private Admin: {access['private_admin']}, Public: {access['public']}, Peer Activated: {manager.peer_activated}")
         
         # Start background tasks
         keep_alive_task = asyncio.create_task(instant_keep_alive())
-        watchdog_task = asyncio.create_task(instant_delete_watchdog())
+        watchdog_task = asyncio.create_task(complete_capture_watchdog())
         
         log_info("💓 Instant Keep-Alive: ACTIVE")
-        log_info("🚀 Instant Delete: READY")
+        log_info("🚀 Complete Message Capture: READY")
         log_info("🔇 Silent Peer Maintenance: ACTIVE")
         
         # Startup message
         try:
             await app.send_message("me", f"""
-✅ **BOT STARTED - INSTANT DELETE + PERMANENT PEER!**
+✅ **BOT STARTED - COMPLETE MESSAGE CAPTURE!**
 
-🎯 **INSTANT FEATURES:**
-• Delete Speed: 🚀 INSTANT
-• Peer Connection: 🔗 PERMANENT  
-• Maintenance: 🔇 SILENT
-• Heartbeat: 🚫 NONE
+🎯 **COMPLETE CAPTURE FEATURES:**
+• Every Message Logged ✅
+• No Messages Skipped ✅  
+• Instant Delete 🚀
+• Permanent Peer 🔗
+• Silent Maintenance 🔇
 
-📊 **STATUS:**
+📊 **INITIAL STATUS:**
 • Private Group: {'✅ ACCESSIBLE' if access['private'] else '❌ NOT ACCESSIBLE'}
 • Private Admin: {'✅ DELETE RIGHTS' if access['private_admin'] else '❌ NO RIGHTS'}
 • Peer Activated: {'✅ PERMANENT' if manager.peer_activated else '❌ TEMPORARY'}
 
-💡 **Key Feature:** Instant deletion + Permanent peer connection!
+💡 **Use /msg_stats to check message statistics**
 
-**Status: {'OPTIMAL' if manager.peer_activated else 'NEEDS ACTIVATION'}** 🔥
+**Status: {'COMPLETE CAPTURE ACTIVE' if manager.peer_activated else 'NEEDS ACTIVATION'}** 🔥
             """)
         except Exception as e:
             log_error(f"Startup DM failed: {e}")
         
-        log_info("🤖 BOT READY - Instant Delete + Permanent Peer Active!")
+        log_info("🤖 BOT READY - Complete Message Capture Active!")
         
         # Keep running
         try:
@@ -768,7 +725,7 @@ async def main():
     await start_telegram()
 
 if __name__ == "__main__":
-    log_info("🚀 BOT STARTING - INSTANT DELETE + PERMANENT PEER...")
+    log_info("🚀 BOT STARTING - COMPLETE MESSAGE CAPTURE...")
 
     try:
         asyncio.run(main())
@@ -776,7 +733,7 @@ if __name__ == "__main__":
         log_critical(f"CRASH: {e}")
         for h in logger.handlers:
             try:
-                h.flush()
+                h.flueh()
             except:
                 pass
         try:
