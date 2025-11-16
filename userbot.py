@@ -292,7 +292,7 @@ async def start_telegram():
                 peer_status.update({
                     "private_peer_activated": True,
                     "last_activation": manager.peer_activation_time,
-                    "group_title": chat.title,
+                    "group_title": getattr(chat, "title", None),
                     "group_id": private_group_id
                 })
                 save_peer_status(peer_status)
@@ -312,7 +312,7 @@ async def start_telegram():
             INSTANT DELETE - No delays, immediate action
             """
             chat_id = message_obj.chat.id
-            message_id = message_obj.id
+            message_id = message_obj.message_id
             is_private = str(chat_id) == manager.private_group_id
 
             try:
@@ -376,7 +376,7 @@ async def start_telegram():
                 
                 # Silent check - just get chat info, no messages
                 chat = await app.get_chat(manager.private_group_id)
-                log_info(f"✅ Silent maintenance: {chat.title} connected")
+                log_info(f"✅ Silent maintenance: {getattr(chat,'title', 'unknown')} connected")
                 
                 # Silent connection refresh
                 try:
@@ -400,9 +400,14 @@ async def start_telegram():
             """Check if bot has admin rights in private group"""
             try:
                 chat = await app.get_chat(manager.private_group_id)
-                member = await app.get_chat_member(manager.private_group_id, "me")
+                me = await app.get_me()
+                member = await app.get_chat_member(manager.private_group_id, me.id)
                 
-                if member.privileges and member.privileges.can_delete_messages:
+                can_delete = False
+                if hasattr(member, "privileges") and member.privileges:
+                    can_delete = getattr(member.privileges, "can_delete_messages", False)
+                
+                if can_delete:
                     manager.private_has_admin = True
                     log_info("✅ PRIVATE GROUP: Bot has DELETE permissions")
                 else:
@@ -506,7 +511,7 @@ async def start_telegram():
                 try:
                     private_chat = await app.get_chat(manager.private_group_id)
                     results['private'] = True
-                    log_info(f"✅ Private Group Access: {private_chat.title}")
+                    log_info(f"✅ Private Group Access: {getattr(private_chat,'title', 'unknown')}")
                     
                     # Check admin rights in private group
                     results['private_admin'] = await check_private_group_admin()
@@ -733,7 +738,7 @@ if __name__ == "__main__":
         log_critical(f"CRASH: {e}")
         for h in logger.handlers:
             try:
-                h.flueh()
+                h.flush()
             except:
                 pass
         try:
