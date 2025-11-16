@@ -1,4 +1,4 @@
-print("🔥 ULTIMATE BOT STARTING - PERMANENT PEER + LOGGING FIX...")
+print("🔥 ULTIMATE BOT STARTING - INSTANT DELETE + PERMANENT PEER FIX...")
 
 import asyncio
 import multiprocessing
@@ -191,8 +191,8 @@ def touch_activity():
     global last_activity
     last_activity = time.time()
 
-# 🔥 PERMANENT PEER MANAGER
-class PermanentPeerManager:
+# 🔥 INSTANT DELETE + PERMANENT PEER MANAGER
+class InstantDeleteManager:
     def __init__(self):
         self.private_group_id = "-1002497459144"
         self.public_group_id = "-1002382070176"
@@ -205,11 +205,10 @@ class PermanentPeerManager:
         self.peer_activated = peer_status.get("private_peer_activated", False)
         self.peer_activation_time = peer_status.get("last_activation", None)
         
-        # PERMANENT PEER MAINTENANCE
-        self.last_peer_check = 0
-        self.peer_check_interval = 180  # 3 minutes
+        # INSTANT DELETE SETTINGS
+        self.last_peer_maintenance = 0
+        self.peer_maintenance_interval = 300  # 5 minutes
         self.force_reconnect = False
-        self.heartbeat_messages = []  # Store heartbeat messages for deletion
         
         # SAB TARAH KE LINKS PATTERNS
         self.all_link_patterns = [
@@ -230,9 +229,9 @@ class PermanentPeerManager:
                 return True
         return False
 
-# 🔥 TELEGRAM BOT - PERMANENT PEER + LOGGING FIX
+# 🔥 TELEGRAM BOT - INSTANT DELETE + PERMANENT PEER FIX
 async def start_telegram():
-    log_info("🔗 Starting Telegram Bot - PERMANENT PEER + LOGGING FIX...")
+    log_info("🔗 Starting Telegram Bot - INSTANT DELETE + PERMANENT PEER FIX...")
     
     # ✅ SESSION DATA
     session_data = {
@@ -240,7 +239,7 @@ async def start_telegram():
     }
 
     # Initialize manager
-    manager = PermanentPeerManager()
+    manager = InstantDeleteManager()
 
     try:
         app = Client(
@@ -254,7 +253,7 @@ async def start_telegram():
             return user_id == ADMIN_USER_ID
         
         # -----------------------------
-        # ✅ PERMANENT PEER ACTIVATION (NO DISCONNECT)
+        # ✅ PERMANENT PEER ACTIVATION (SILENT - NO MESSAGES)
         # -----------------------------
         async def activate_permanent_private_group_peer(app, private_group_id):
             try:
@@ -264,11 +263,10 @@ async def start_telegram():
                 chat = await app.get_chat(private_group_id)
                 log_info(f"✅ Chat fetched: {chat.title}")
 
-                # STEP 2: Multiple deep connection methods
+                # STEP 2: Multiple deep connection methods (SILENT)
                 connection_methods = [
                     ("Chat Members", lambda: app.get_chat_members(private_group_id, limit=1)),
                     ("Chat History", lambda: app.get_chat_history(private_group_id, limit=1)),
-                    ("Chat Admins", lambda: app.get_chat_members(private_group_id, filter="administrators"))
                 ]
                 
                 for method_name, method_func in connection_methods:
@@ -276,24 +274,11 @@ async def start_telegram():
                         async for _ in method_func():
                             break
                         log_info(f"✅ {method_name} connection established")
-                        await asyncio.sleep(0.5)
+                        await asyncio.sleep(0.3)
                     except Exception as e:
                         log_info(f"⚠️ {method_name} connection skipped: {e}")
 
-                # STEP 3: Send silent heartbeat (will be auto-deleted)
-                try:
-                    heartbeat_msg = await app.send_message(private_group_id, "💓 Peer Connected")
-                    # Store for auto-deletion
-                    manager.heartbeat_messages.append(heartbeat_msg.id)
-                    log_info("✅ Heartbeat sent (will auto-delete)")
-                    
-                    # Auto-delete heartbeat after 2 seconds
-                    asyncio.create_task(delete_after_delay_smart(heartbeat_msg, 2))
-                    
-                except Exception as e:
-                    log_info(f"⚠️ Heartbeat failed: {e}")
-
-                # STEP 4: Save permanent peer status
+                # STEP 3: Save permanent peer status
                 manager.peer_activated = True
                 manager.peer_activation_time = time.time()
                 
@@ -314,41 +299,45 @@ async def start_telegram():
                 return False
 
         # -----------------------------
-        # ✅ SMART DELETE WITH PERMANENT PEER SUPPORT
+        # ✅ INSTANT DELETE FUNCTION (NO DELAY)
         # -----------------------------
-        async def smart_delete(message_obj):
+        async def instant_delete(message_obj):
+            """
+            INSTANT DELETE - No delays, immediate action
+            """
             chat_id = message_obj.chat.id
             message_id = message_obj.id
             is_private = str(chat_id) == manager.private_group_id
 
             try:
-                # PRIVATE FIX: Always resolve chat using permanent peer
-                chat = await app.get_chat(chat_id)
-                await app.delete_messages(chat.id, message_id)
+                # METHOD 1: Direct delete (fastest)
+                await message_obj.delete()
                 
                 if is_private:
                     manager.private_delete_count += 1
-                    log_info(f"✅ PRIVATE DELETE SUCCESS: {message_id}")
+                    log_info(f"🚀 INSTANT PRIVATE DELETE: {message_id}")
                 else:
                     manager.public_delete_count += 1
-                    log_info(f"✅ PUBLIC DELETE SUCCESS: {message_id}")
+                    log_info(f"🚀 INSTANT PUBLIC DELETE: {message_id}")
                 return True
 
             except Exception as e:
-                log_error(f"❌ Normal delete failed: {e}")
+                log_error(f"❌ Instant delete failed: {e}")
 
-                # Hard fallback — works even if peer is broken
+                # METHOD 2: Resolve chat and delete
                 try:
-                    await message_obj.delete()
-                    log_info("🟢 HARD FIX DELETE WORKED")
+                    chat = await app.get_chat(chat_id)
+                    await app.delete_messages(chat.id, message_id)
                     
                     if is_private:
                         manager.private_delete_count += 1
+                        log_info(f"✅ RESOLVE DELETE PRIVATE: {message_id}")
                     else:
                         manager.public_delete_count += 1
+                        log_info(f"✅ RESOLVE DELETE PUBLIC: {message_id}")
                     return True
                 except Exception as e2:
-                    log_error(f"❌ HARD FIX FAILED: {e2}")
+                    log_error(f"❌ Resolve delete failed: {e2}")
                     
                     if is_private:
                         manager.private_delete_failures += 1
@@ -356,50 +345,45 @@ async def start_telegram():
                         manager.force_reconnect = True
                     return False
 
-        async def delete_after_delay_smart(message_obj, seconds):
+        async def delete_after_delay_instant(message_obj, seconds):
             await asyncio.sleep(seconds)
-            await smart_delete(message_obj)
+            await instant_delete(message_obj)
 
         # -----------------------------
-        # ✅ PEER MAINTENANCE SYSTEM (NO DISCONNECT)
+        # ✅ SILENT PEER MAINTENANCE (NO MESSAGES)
         # -----------------------------
         async def maintain_permanent_peer():
-            """Maintain permanent peer connection without disconnecting"""
+            """Maintain permanent peer connection without sending messages"""
             current_time = time.time()
             
             # Check if we need to maintain peer
             if not manager.peer_activated:
                 return False
                 
-            if current_time - manager.last_peer_check < manager.peer_check_interval and not manager.force_reconnect:
+            if current_time - manager.last_peer_maintenance < manager.peer_maintenance_interval and not manager.force_reconnect:
                 return True
                 
             try:
-                log_info("🔧 PEER MAINTENANCE: Checking private group connection...")
+                log_info("🔧 SILENT PEER MAINTENANCE: Checking private group connection...")
                 
-                # Quick silent check - don't send messages unless necessary
+                # Silent check - just get chat info, no messages
                 chat = await app.get_chat(manager.private_group_id)
-                log_info(f"✅ Peer maintenance: {chat.title} still connected")
+                log_info(f"✅ Silent maintenance: {chat.title} connected")
                 
-                # Only send heartbeat if force reconnect is needed
-                if manager.force_reconnect:
-                    try:
-                        heartbeat_msg = await app.send_message(manager.private_group_id, "💓 Peer Reconnected")
-                        manager.heartbeat_messages.append(heartbeat_msg.id)
-                        log_info("✅ Reconnection heartbeat sent")
-                        
-                        # Auto-delete heartbeat
-                        asyncio.create_task(delete_after_delay_smart(heartbeat_msg, 2))
-                        
-                        manager.force_reconnect = False
-                    except Exception as e:
-                        log_info(f"⚠️ Reconnection heartbeat failed: {e}")
+                # Silent connection refresh
+                try:
+                    async for _ in app.get_chat_history(manager.private_group_id, limit=1):
+                        break
+                    log_info("✅ Silent connection refreshed")
+                except Exception as e:
+                    log_info(f"⚠️ Silent refresh failed: {e}")
                 
-                manager.last_peer_check = current_time
+                manager.last_peer_maintenance = current_time
+                manager.force_reconnect = False
                 return True
                 
             except Exception as e:
-                log_error(f"❌ Peer maintenance failed: {e}")
+                log_error(f"❌ Silent peer maintenance failed: {e}")
                 manager.force_reconnect = True
                 return False
 
@@ -425,19 +409,19 @@ async def start_telegram():
                 manager.private_access_checked = True
                 return False
 
-        # ✅ PERMANENT KEEP-ALIVE WITH PEER MAINTENANCE
-        async def permanent_keep_alive():
+        # ✅ INSTANT KEEP-ALIVE WITH SILENT MAINTENANCE
+        async def instant_keep_alive():
             keep_alive_count = 0
             while session_data['active']:
                 keep_alive_count += 1
                 try:
                     await app.get_me()
                     
-                    # Every 15th keep-alive, maintain peer connection
-                    if keep_alive_count % 15 == 0:
+                    # Every 20th keep-alive, do silent maintenance
+                    if keep_alive_count % 20 == 0:
                         await maintain_permanent_peer()
-                        log_info(f"💓 Permanent Keep-Alive #{keep_alive_count} - Peer Maintained")
-                    elif keep_alive_count % 30 == 0:
+                        log_info(f"💓 Instant Keep-Alive #{keep_alive_count} - Silent Maintenance")
+                    elif keep_alive_count % 50 == 0:
                         log_info(f"💓 Keep-Alive #{keep_alive_count}")
                     
                     touch_activity()
@@ -446,9 +430,9 @@ async def start_telegram():
                 await asyncio.sleep(30)
 
         # -------------------------
-        # PERMANENT PEER WATCHDOG
+        # INSTANT DELETE WATCHDOG
         # -------------------------
-        async def permanent_peer_watchdog():
+        async def instant_delete_watchdog():
             watchdog_count = 0
             while True:
                 try:
@@ -456,14 +440,14 @@ async def start_telegram():
                     idle = time.time() - last_activity
                     
                     if watchdog_count % 10 == 0:
-                        log_info(f"🐕 Permanent Watchdog - Idle: {int(idle)}s, Private: {manager.private_delete_count}, Public: {manager.public_delete_count}, Private Fails: {manager.private_delete_failures}, Peer Active: {manager.peer_activated}")
+                        log_info(f"🐕 Instant Watchdog - Idle: {int(idle)}s, Private: {manager.private_delete_count}, Public: {manager.public_delete_count}, Private Fails: {manager.private_delete_failures}, Peer Active: {manager.peer_activated}")
                     
-                    # Maintain peer connection regularly but less frequently
-                    if manager.peer_activated and watchdog_count % 20 == 0:
+                    # Silent peer maintenance every 30 watchdog cycles
+                    if manager.peer_activated and watchdog_count % 30 == 0:
                         await maintain_permanent_peer()
                     
                     # Agar private group mein failures zyada hai to admin check karo
-                    if manager.private_delete_failures >= 3 and not manager.private_access_checked:
+                    if manager.private_delete_failures >= 2 and not manager.private_access_checked:
                         log_info("🔄 Watchdog: Checking private group admin rights...")
                         await check_private_group_admin()
                     
@@ -537,7 +521,7 @@ async def start_telegram():
                 access = await check_group_access()
                 
                 status_msg = f"""
-🚀 **BOT STARTED - PERMANENT PEER CONNECTION!**
+🚀 **BOT STARTED - INSTANT DELETE + PERMANENT PEER!**
 
 📊 **DELETE STATS:**
 • Private Group: {manager.private_delete_count} ✅
@@ -552,14 +536,14 @@ async def start_telegram():
 • Peer Activated: {'✅ PERMANENT' if manager.peer_activated else '❌ INACTIVE'}
 • Last Activation: {manager.peer_activation_time or 'Never'}
 
-🔧 **PERMANENT FEATURES:**
-• Double Delete Method
+🔧 **INSTANT FEATURES:**
+• Instant Delete (No Delay)
 • Permanent Peer Connection
-• Auto Heartbeat (Auto-delete)
-• Message Logging
-• No Disconnect Guarantee
+• Silent Maintenance (No Messages)
+• No Heartbeat Messages
+• Always Connected
 
-**Status: {'PERMANENTLY CONNECTED' if manager.peer_activated else 'NEEDS ACTIVATION'}** 🔥
+**Status: {'INSTANT + PERMANENT' if manager.peer_activated else 'NEEDS ACTIVATION'}** 🔥
                 """
                 await message.reply(status_msg)
                 log_info("✅ /start executed")
@@ -585,26 +569,26 @@ async def start_telegram():
                     # Test public group if accessible
                     if access['public']:
                         try:
-                            test_msg_public = await app.send_message(manager.public_group_id, "🧪 Public test message - will delete in 2 sec...")
-                            await asyncio.sleep(2)
-                            public_success = await smart_delete(test_msg_public)
-                            test_results['public'] = '✅ SUCCESS' if public_success else '❌ FAILED'
+                            test_msg_public = await app.send_message(manager.public_group_id, "🧪 Public test - instant delete...")
+                            await asyncio.sleep(0.5)  # Shorter delay
+                            public_success = await instant_delete(test_msg_public)
+                            test_results['public'] = '✅ INSTANT SUCCESS' if public_success else '❌ FAILED'
                         except Exception as e:
                             test_results['public'] = f'❌ ERROR: {str(e)}'
                     
                     # Test private group if accessible
                     if access['private']:
                         try:
-                            test_msg_private = await app.send_message(manager.private_group_id, "🧪 Private test message - will delete in 2 sec...")
-                            await asyncio.sleep(2)
-                            private_success = await smart_delete(test_msg_private)
-                            test_results['private'] = '✅ SUCCESS' if private_success else '❌ FAILED'
+                            test_msg_private = await app.send_message(manager.private_group_id, "🧪 Private test - instant delete...")
+                            await asyncio.sleep(0.5)  # Shorter delay
+                            private_success = await instant_delete(test_msg_private)
+                            test_results['private'] = '✅ INSTANT SUCCESS' if private_success else '❌ FAILED'
                         except Exception as e:
                             test_results['private'] = f'❌ ERROR: {str(e)}'
                     
-                    # Send results with permanent peer status
+                    # Send results
                     result_msg = f"""
-🧪 **TEST RESULTS:**
+🧪 **INSTANT TEST RESULTS:**
 
 **Public Group ({manager.public_group_id}):**
 {test_results['public']}
@@ -612,15 +596,13 @@ async def start_telegram():
 **Private Group ({manager.private_group_id}):**  
 {test_results['private']}
 
-🔧 **PERMANENT PEER STATUS:**
-• Double Method: ✅ ACTIVE
+🔧 **INSTANT FEATURES:**
+• Delete Method: 🚀 INSTANT
 • Permanent Peer: {'✅ ACTIVE' if manager.peer_activated else '❌ INACTIVE'}
-• Heartbeat System: ✅ ACTIVE (Auto-delete)
-• Message Logging: ✅ ACTIVE
+• Maintenance: 🔇 SILENT
+• Messages: 🚫 NO HEARTBEAT
 
 📊 **Admin Status:** {'✅ HAS DELETE RIGHTS' if access['private_admin'] else '❌ MISSING DELETE RIGHTS'}
-
-💡 **Permanent Connection:** Once activated, peer stays connected permanently!
                     """
                     await message.reply(result_msg)
                         
@@ -633,39 +615,20 @@ async def start_telegram():
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
                 try:
-                    await message.reply("🔄 Activating PERMANENT private group peer...")
+                    await message.reply("🔄 Activating PERMANENT private group peer (SILENT)...")
                     success = await activate_permanent_private_group_peer(app, manager.private_group_id)
                     if success:
-                        await message.reply("✅ PERMANENT private group peer ACTIVATED! Will stay connected permanently.")
+                        await message.reply("✅ PERMANENT private group peer ACTIVATED! Silent connection established.")
                     else:
                         await message.reply("❌ Permanent peer activation FAILED. Check logs.")
                 except Exception as e:
                     await message.reply(f"❌ Activation failed: {e}")
 
-        @app.on_message(filters.command("peer_status"))
-        async def peer_status_command(client, message: Message):
-            log_info(f"📩 /peer_status from {message.from_user.id}")
-            touch_activity()
-            if message.from_user and is_admin(message.from_user.id):
-                status_msg = f"""
-📡 **PERMANENT PEER STATUS:**
-
-• Peer Activated: {'✅ YES' if manager.peer_activated else '❌ NO'}
-• Last Activation: {manager.peer_activation_time or 'Never'}
-• Private Group: {manager.private_group_id}
-• Delete Count: {manager.private_delete_count}
-• Failures: {manager.private_delete_failures}
-• Force Reconnect: {'✅ NEEDED' if manager.force_reconnect else '❌ NOT NEEDED'}
-
-**Connection:** {'🔗 PERMANENT' if manager.peer_activated else '🔌 TEMPORARY'}
-                """
-                await message.reply(status_msg)
-
         # ---------------------------------------------------------
-        # PERMANENT BOTS DELETE HANDLER WITH MESSAGE LOGGING
+        # INSTANT BOTS DELETE HANDLER
         # ---------------------------------------------------------
         @app.on_message(filters.group)
-        async def permanent_bots_handler(client, message: Message):
+        async def instant_bots_handler(client, message: Message):
             try:
                 # UPDATE ACTIVITY IMMEDIATELY
                 touch_activity()
@@ -691,17 +654,16 @@ async def start_telegram():
 
                 # 🎯 LOG MESSAGE DETAILS (ESPECIALLY FOR PRIVATE GROUP)
                 if is_private:
-                    log_info(f"📩 PRIVATE GROUP MESSAGE: @{username} - {message_text[:100]}...")
+                    log_info(f"📩 PRIVATE GROUP MESSAGE: @{username} - {message_text[:50]}...")
                 else:
-                    log_info(f"📩 PUBLIC GROUP MESSAGE: @{username} - {message_text[:100]}...")
+                    if manager.public_delete_count % 10 == 0:  # Less public logging
+                        log_info(f"📩 PUBLIC GROUP MESSAGE: @{username} - {message_text[:50]}...")
 
                 # 🎯 LOGIC: SIRF BOTS KE MESSAGES DELETE KARO
                 
                 # ✅ USER MESSAGES - COMPLETELY IGNORE
                 if not is_bot:
                     manager.users_ignored_count += 1
-                    if manager.users_ignored_count % 20 == 0:  # Less frequent logging
-                        log_info(f"👥 USERS IGNORED: {manager.users_ignored_count} total")
                     return
 
                 # ✅ SAFE BOTS - IGNORE
@@ -712,26 +674,26 @@ async def start_telegram():
                 # ✅ CHECK FOR ANY LINKS OR MENTIONS
                 has_links_or_mentions = manager.contains_any_links_or_mentions(message_text)
                 
-                # ⏰ DELAYED BOTS - DELETE BASED ON LINKS
+                # ⏰ DELAYED BOTS - INSTANT DELETE BASED ON LINKS
                 if username in delayed_bots:
                     if has_links_or_mentions:
-                        log_info(f"🚫 DELAYED BOT WITH LINKS: DELETE NOW - @{username} in {'PRIVATE' if is_private else 'PUBLIC'}")
-                        await smart_delete(message)
+                        log_info(f"🚫 DELAYED BOT WITH LINKS: INSTANT DELETE - @{username}")
+                        await instant_delete(message)
                     else:
-                        log_info(f"⏰ DELAYED BOT NORMAL: DELETE IN 30s - @{username} in {'PRIVATE' if is_private else 'PUBLIC'}")
-                        asyncio.create_task(delete_after_delay_smart(message, 30))
+                        log_info(f"⏰ DELAYED BOT NORMAL: DELETE IN 5s - @{username}")
+                        asyncio.create_task(delete_after_delay_instant(message, 5))  # Reduced from 30s to 5s
                     return
 
                 # 🗑️ OTHER BOTS (UNSAFE BOTS) - INSTANT DELETE
-                log_info(f"🗑️ UNSAFE BOT: DELETE NOW - @{username} in {'PRIVATE' if is_private else 'PUBLIC'}")
-                await smart_delete(message)
+                log_info(f"🗑️ UNSAFE BOT: INSTANT DELETE - @{username}")
+                await instant_delete(message)
 
             except Exception as e:
-                log_error(f"❌ Permanent Handler error: {e}")
+                log_error(f"❌ Instant Handler error: {e}")
                 touch_activity()
         
-        # ✅ BOT START - PERMANENT PEER CONNECTION
-        log_info("🔗 Connecting to Telegram - PERMANENT PEER CONNECTION...")
+        # ✅ BOT START - INSTANT DELETE + PERMANENT PEER
+        log_info("🔗 Connecting to Telegram - INSTANT DELETE + PERMANENT PEER...")
         await app.start()
         
         me = await app.get_me()
@@ -742,57 +704,49 @@ async def start_telegram():
             log_info("🚀 STARTUP: Auto-activating permanent private group peer...")
             await activate_permanent_private_group_peer(app, manager.private_group_id)
         else:
-            log_info("🔗 STARTUP: Permanent peer already activated, maintaining connection...")
+            log_info("🔗 STARTUP: Permanent peer already activated, doing silent maintenance...")
             await maintain_permanent_peer()
         
         # Check group access immediately with admin check
         access = await check_group_access()
         
-        log_info(f"🎯 PERMANENT PEER CONNECTION ACTIVATED")
+        log_info(f"🎯 INSTANT DELETE + PERMANENT PEER ACTIVATED")
         log_info(f"🔗 Link Patterns: {len(manager.all_link_patterns)} types")
         log_info(f"🛡️ Safe Bots: {len(safe_bots)}")
         log_info(f"📊 Group Access - Private: {access['private']}, Private Admin: {access['private_admin']}, Public: {access['public']}, Peer Activated: {manager.peer_activated}")
         
         # Start background tasks
-        keep_alive_task = asyncio.create_task(permanent_keep_alive())
-        watchdog_task = asyncio.create_task(permanent_peer_watchdog())
+        keep_alive_task = asyncio.create_task(instant_keep_alive())
+        watchdog_task = asyncio.create_task(instant_delete_watchdog())
         
-        log_info("💓 Permanent Keep-Alive: ACTIVE")
-        log_info("🗑️ Smart Delete: READY")
-        log_info("🔧 Peer Maintenance: ACTIVE")
-        log_info("📝 Message Logging: ACTIVE")
+        log_info("💓 Instant Keep-Alive: ACTIVE")
+        log_info("🚀 Instant Delete: READY")
+        log_info("🔇 Silent Peer Maintenance: ACTIVE")
         
-        # Startup message with permanent peer info
+        # Startup message
         try:
             await app.send_message("me", f"""
-✅ **BOT STARTED - PERMANENT PEER CONNECTION!**
+✅ **BOT STARTED - INSTANT DELETE + PERMANENT PEER!**
 
-🎯 **PERMANENT PEER STATUS:**
+🎯 **INSTANT FEATURES:**
+• Delete Speed: 🚀 INSTANT
+• Peer Connection: 🔗 PERMANENT  
+• Maintenance: 🔇 SILENT
+• Heartbeat: 🚫 NONE
+
+📊 **STATUS:**
 • Private Group: {'✅ ACCESSIBLE' if access['private'] else '❌ NOT ACCESSIBLE'}
-• Private Admin: {'✅ DELETE RIGHTS' if access['private_admin'] else '❌ NO DELETE RIGHTS'}
-• Public Group: {'✅ ACCESSIBLE' if access['public'] else '❌ NOT ACCESSIBLE'}
+• Private Admin: {'✅ DELETE RIGHTS' if access['private_admin'] else '❌ NO RIGHTS'}
 • Peer Activated: {'✅ PERMANENT' if manager.peer_activated else '❌ TEMPORARY'}
 
-🔧 **PERMANENT FEATURES:**
-• Double Delete Method
-• Permanent Peer Connection
-• Auto Heartbeat (Auto-delete)
-• Message Logging Active
-• No Disconnect Guarantee
+💡 **Key Feature:** Instant deletion + Permanent peer connection!
 
-📊 **INITIAL CONFIG:**
-• Safe Bots: {len(safe_bots)}
-• Delayed Bots: {len(delayed_bots)}
-• Link Patterns: {len(manager.all_link_patterns)}
-
-💡 **Key Feature:** Once activated, private group peer stays connected PERMANENTLY!
-
-**Status: {'PERMANENTLY CONNECTED' if manager.peer_activated else 'NEEDS ACTIVATION'}** 🔥
+**Status: {'OPTIMAL' if manager.peer_activated else 'NEEDS ACTIVATION'}** 🔥
             """)
         except Exception as e:
             log_error(f"Startup DM failed: {e}")
         
-        log_info("🤖 BOT READY - Permanent Peer Connection Active!")
+        log_info("🤖 BOT READY - Instant Delete + Permanent Peer Active!")
         
         # Keep running
         try:
@@ -814,7 +768,7 @@ async def main():
     await start_telegram()
 
 if __name__ == "__main__":
-    log_info("🚀 BOT STARTING - PERMANENT PEER CONNECTION...")
+    log_info("🚀 BOT STARTING - INSTANT DELETE + PERMANENT PEER...")
 
     try:
         asyncio.run(main())
