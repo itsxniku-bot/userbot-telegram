@@ -1,10 +1,10 @@
-print("🔥 ULTIMATE BOT STARTING - SMART DELETE FIX...")
+print("🔥 ULTIMATE BOT STARTING - ALL SUPER FIXES ACTIVATED...")
 
 import asyncio
 import multiprocessing
 import re
 from flask import Flask
-from pyrogram import Client, filters
+from pyrogram import Client, filters, idle
 from pyrogram.types import Message
 import threading
 import requests
@@ -172,8 +172,8 @@ def touch_activity():
     global last_activity
     last_activity = time.time()
 
-# 🔥 SMART DELETE MANAGER
-class SmartDeleteManager:
+# 🔥 SUPER FIX MANAGER
+class SuperFixManager:
     def __init__(self):
         self.private_group_id = "-1002497459144"
         self.public_group_id = "-1002382070176"
@@ -183,6 +183,7 @@ class SmartDeleteManager:
         self.private_delete_failures = 0
         self.private_access_checked = False
         self.private_has_admin = False
+        self.peer_activated = False
         
         # SAB TARAH KE LINKS PATTERNS
         self.all_link_patterns = [
@@ -203,9 +204,9 @@ class SmartDeleteManager:
                 return True
         return False
 
-# 🔥 TELEGRAM BOT - SMART DELETE FIX
+# 🔥 TELEGRAM BOT - ALL SUPER FIXES ACTIVATED
 async def start_telegram():
-    log_info("🔗 Starting Telegram Bot - SMART DELETE FIX...")
+    log_info("🔗 Starting Telegram Bot - ALL SUPER FIXES ACTIVATED...")
     
     # ✅ SESSION DATA
     session_data = {
@@ -213,7 +214,7 @@ async def start_telegram():
     }
 
     # Initialize manager
-    manager = SmartDeleteManager()
+    manager = SuperFixManager()
 
     try:
         app = Client(
@@ -227,21 +228,50 @@ async def start_telegram():
             return user_id == ADMIN_USER_ID
         
         # -----------------------------
-        # ✅ YOUR SMART DELETE FUNCTION - PEER_ID_INVALID FIX
+        # ✅ SUPER FIX 1: PRIVATE GROUP PEER ACTIVATION
+        # -----------------------------
+        async def activate_private_group_peer(app, private_group_id):
+            try:
+                log_info("🔄 SUPER FIX: Activating private group peer...")
+
+                # STEP 1: Force fetch chat info
+                chat = await app.get_chat(private_group_id)
+                log_info(f"✅ Chat fetched: {chat.title}")
+
+                # STEP 2: Force deep peer creation
+                try:
+                    async for _ in app.get_chat_members(private_group_id):
+                        break
+                    log_info("✅ Members list fetched (peer created)")
+                except:
+                    log_info("⚠️ Member fetch skipped (not required)")
+
+                # STEP 3: Silent activation message
+                try:
+                    await app.send_message(private_group_id, "🔧 Bot peer activated.")
+                    log_info("✅ Peer activation message sent")
+                except Exception as e:
+                    log_info(f"⚠️ Cannot send activation message: {e}")
+
+                log_info("🟢 SUPER FIX COMPLETED — Private group peer saved permanently")
+                manager.peer_activated = True
+                return True
+
+            except Exception as e:
+                log_error(f"❌ SUPER FIX FAILED: {e}")
+                return False
+
+        # -----------------------------
+        # ✅ SUPER FIX 2: SMART DELETE FUNCTION
         # -----------------------------
         async def smart_delete(message_obj):
-            """
-            SMART DELETE - PEER_ID_INVALID FIX WITH HARD FALLBACK
-            """
-            touch_activity()
             chat_id = message_obj.chat.id
             message_id = message_obj.id
             is_private = str(chat_id) == manager.private_group_id
 
             try:
-                # ⭐ FIX 100%: Resolve chat before delete
+                # PRIVATE FIX: Always resolve chat
                 chat = await app.get_chat(chat_id)
-
                 await app.delete_messages(chat.id, message_id)
                 
                 if is_private:
@@ -253,12 +283,12 @@ async def start_telegram():
                 return True
 
             except Exception as e:
-                log_error(f"❌ Delete failed normally: {e}")
+                log_error(f"❌ Normal delete failed: {e}")
 
-                # ⭐ HARD FIX fallback — message_obj.delete()
+                # Hard fallback — works even if peer is broken
                 try:
                     await message_obj.delete()
-                    log_info("✅ Hard fix delete success")
+                    log_info("🟢 HARD FIX DELETE WORKED")
                     
                     if is_private:
                         manager.private_delete_count += 1
@@ -266,7 +296,7 @@ async def start_telegram():
                         manager.public_delete_count += 1
                     return True
                 except Exception as e2:
-                    log_error(f"❌ Hard fix failed: {e2}")
+                    log_error(f"❌ HARD FIX FAILED: {e2}")
                     
                     if is_private:
                         manager.private_delete_failures += 1
@@ -275,6 +305,16 @@ async def start_telegram():
         async def delete_after_delay_smart(message_obj, seconds):
             await asyncio.sleep(seconds)
             await smart_delete(message_obj)
+
+        # -----------------------------
+        # ✅ SUPER FIX 3: STARTUP PEER ACTIVATION
+        # -----------------------------
+        @app.on_message(filters.command("start"))
+        async def startup_super_fix(client, message: Message):
+            """Auto-activate private group peer on startup"""
+            PRIVATE_GROUP_ID = "-1002497459144"
+            log_info("🚀 STARTUP: Activating private group peer...")
+            await activate_private_group_peer(app, PRIVATE_GROUP_ID)
 
         # ✅ PRIVATE GROUP ADMIN CHECK
         async def check_private_group_admin():
@@ -313,9 +353,9 @@ async def start_telegram():
                 await asyncio.sleep(30)
 
         # -------------------------
-        # SMART WATCHDOG
+        # SUPER WATCHDOG
         # -------------------------
-        async def smart_watchdog():
+        async def super_watchdog():
             watchdog_count = 0
             while True:
                 try:
@@ -329,6 +369,11 @@ async def start_telegram():
                     if manager.private_delete_failures >= 5 and not manager.private_access_checked:
                         log_info("🔄 Watchdog: Checking private group admin rights...")
                         await check_private_group_admin()
+                    
+                    # Agar peer activate nahi hua hai to try karo
+                    if not manager.peer_activated and manager.private_delete_failures >= 2:
+                        log_info("🔄 Watchdog: Activating private group peer...")
+                        await activate_private_group_peer(app, manager.private_group_id)
                     
                     if idle > 300:
                         log_error(f"⚠️ Watchdog: Restarting - No activity for {int(idle)}s")
@@ -393,7 +438,7 @@ async def start_telegram():
                 access = await check_group_access()
                 
                 status_msg = f"""
-🚀 **BOT STARTED - SMART DELETE FIX!**
+🚀 **BOT STARTED - ALL SUPER FIXES ACTIVATED!**
 
 📊 **DELETE STATS:**
 • Private Group: {manager.private_delete_count} ✅
@@ -405,14 +450,17 @@ async def start_telegram():
 • Private Group: {'✅ ACCESS' if access['private'] else '❌ NO ACCESS'}
 • Private Admin: {'✅ DELETE RIGHTS' if access['private_admin'] else '❌ NO DELETE RIGHTS'}
 • Public Group: {'✅ ACCESS' if access['public'] else '❌ NO ACCESS'}
+• Peer Activated: {'✅ YES' if manager.peer_activated else '❌ NO'}
 
-🔧 **SMART DELETE FEATURES:**
+🔧 **SUPER FIXES ACTIVE:**
 • Double Delete Method
 • Chat Resolution Fix
 • Hard Fallback
 • PEER_ID_INVALID Fixed
+• Private Group Peer Activation
+• Auto Startup Activation
 
-**Status: {'OPTIMAL' if access['private'] and access['public'] and access['private_admin'] else 'NEEDS ATTENTION'}** 🔥
+**Status: {'OPTIMAL' if access['private'] and access['public'] and access['private_admin'] and manager.peer_activated else 'NEEDS ATTENTION'}** 🔥
                 """
                 await message.reply(status_msg)
                 log_info("✅ /start executed")
@@ -465,11 +513,12 @@ async def start_telegram():
 **Private Group ({manager.private_group_id}):**  
 {test_results['private']}
 
-🔧 **SMART DELETE STATUS:**
+🔧 **SUPER FIX STATUS:**
 • Double Method: ✅ ACTIVE
 • Chat Resolution: ✅ ACTIVE  
 • Hard Fallback: ✅ ACTIVE
 • PEER_ID_INVALID: ✅ FIXED
+• Peer Activation: {'✅ ACTIVE' if manager.peer_activated else '❌ INACTIVE'}
 
 📊 **Admin Status:** {'✅ HAS DELETE RIGHTS' if access['private_admin'] else '❌ MISSING DELETE RIGHTS'}
                     """
@@ -478,11 +527,26 @@ async def start_telegram():
                 except Exception as e:
                     await message.reply(f"❌ Test failed: {e}")
 
+        @app.on_message(filters.command("activate_peer"))
+        async def activate_peer_command(client, message: Message):
+            log_info(f"📩 /activate_peer from {message.from_user.id}")
+            touch_activity()
+            if message.from_user and is_admin(message.from_user.id):
+                try:
+                    await message.reply("🔄 Activating private group peer...")
+                    success = await activate_private_group_peer(app, manager.private_group_id)
+                    if success:
+                        await message.reply("✅ Private group peer ACTIVATED! Bot should now work in private group.")
+                    else:
+                        await message.reply("❌ Private group peer activation FAILED. Check logs.")
+                except Exception as e:
+                    await message.reply(f"❌ Activation failed: {e}")
+
         # ---------------------------------------------------------
-        # SMART BOTS DELETE HANDLER - WITH FIXED DELETE
+        # SUPER BOTS DELETE HANDLER - WITH ALL FIXES
         # ---------------------------------------------------------
         @app.on_message(filters.group)
-        async def smart_bots_handler(client, message: Message):
+        async def super_bots_handler(client, message: Message):
             try:
                 # UPDATE ACTIVITY IMMEDIATELY
                 touch_activity()
@@ -538,27 +602,31 @@ async def start_telegram():
                 await smart_delete(message)
 
             except Exception as e:
-                log_error(f"❌ Smart Handler error: {e}")
+                log_error(f"❌ Super Handler error: {e}")
                 touch_activity()
         
-        # ✅ BOT START - SMART DELETE FIX
-        log_info("🔗 Connecting to Telegram - SMART DELETE FIX...")
+        # ✅ BOT START - ALL SUPER FIXES
+        log_info("🔗 Connecting to Telegram - ALL SUPER FIXES...")
         await app.start()
         
         me = await app.get_me()
         log_info(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
         
+        # Auto-activate private group peer on startup
+        log_info("🚀 STARTUP: Auto-activating private group peer...")
+        await activate_private_group_peer(app, manager.private_group_id)
+        
         # Check group access immediately with admin check
         access = await check_group_access()
         
-        log_info(f"🎯 SMART DELETE FIX ACTIVATED")
+        log_info(f"🎯 ALL SUPER FIXES ACTIVATED")
         log_info(f"🔗 Link Patterns: {len(manager.all_link_patterns)} types")
         log_info(f"🛡️ Safe Bots: {len(safe_bots)}")
-        log_info(f"📊 Group Access - Private: {access['private']}, Private Admin: {access['private_admin']}, Public: {access['public']}")
+        log_info(f"📊 Group Access - Private: {access['private']}, Private Admin: {access['private_admin']}, Public: {access['public']}, Peer Activated: {manager.peer_activated}")
         
         # Start background tasks
         keep_alive_task = asyncio.create_task(simple_keep_alive())
-        watchdog_task = asyncio.create_task(smart_watchdog())
+        watchdog_task = asyncio.create_task(super_watchdog())
         
         log_info("💓 Keep-Alive: ACTIVE")
         log_info("🗑️ Smart Delete: READY")
@@ -566,30 +634,33 @@ async def start_telegram():
         # Startup message with access info
         try:
             await app.send_message("me", f"""
-✅ **BOT STARTED - SMART DELETE FIX!**
+✅ **BOT STARTED - ALL SUPER FIXES ACTIVATED!**
 
 🎯 **GROUP ACCESS STATUS:**
 • Private Group: {'✅ ACCESSIBLE' if access['private'] else '❌ NOT ACCESSIBLE'}
 • Private Admin: {'✅ DELETE RIGHTS' if access['private_admin'] else '❌ NO DELETE RIGHTS'}
 • Public Group: {'✅ ACCESSIBLE' if access['public'] else '❌ NOT ACCESSIBLE'}
+• Peer Activated: {'✅ YES' if manager.peer_activated else '❌ NO'}
 
-🔧 **SMART DELETE FEATURES:**
+🔧 **SUPER FIXES ACTIVE:**
 • Double Delete Method
-• Chat Resolution Fix  
+• Chat Resolution Fix
 • Hard Fallback
 • PEER_ID_INVALID Fixed
+• Private Group Peer Activation
+• Auto Startup Activation
 
 📊 **INITIAL CONFIG:**
 • Safe Bots: {len(safe_bots)}
 • Delayed Bots: {len(delayed_bots)}
 • Link Patterns: {len(manager.all_link_patterns)}
 
-**Status: {'OPTIMAL' if access['private'] and access['public'] and access['private_admin'] else 'NEEDS ATTENTION'}** 🔥
+**Status: {'OPTIMAL' if access['private'] and access['public'] and access['private_admin'] and manager.peer_activated else 'NEEDS ATTENTION'}** 🔥
             """)
         except Exception as e:
             log_error(f"Startup DM failed: {e}")
         
-        log_info("🤖 BOT READY - Smart Delete Fix Active!")
+        log_info("🤖 BOT READY - All Super Fixes Active!")
         
         # Keep running
         try:
@@ -611,7 +682,7 @@ async def main():
     await start_telegram()
 
 if __name__ == "__main__":
-    log_info("🚀 BOT STARTING - SMART DELETE FIX...")
+    log_info("🚀 BOT STARTING - ALL SUPER FIXES...")
 
     try:
         asyncio.run(main())
