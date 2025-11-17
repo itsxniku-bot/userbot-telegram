@@ -3,6 +3,7 @@ print("🔥 ULTIMATE BOT STARTING - COMPLETE MESSAGE CAPTURE FIX...")
 import asyncio
 import multiprocessing
 import re
+import traceback  # Added for better error logging
 from flask import Flask
 from pyrogram import Client, filters
 from pyrogram.types import Message
@@ -258,23 +259,6 @@ async def start_telegram():
         def is_admin(user_id):
             return user_id == ADMIN_USER_ID
         
-        # ⭐ CLEAN AUTO-ONLINE MODULE (100% SAFEST)
-        async def stay_online():
-            online_count = 0
-            while True:
-                try:
-                    await client.send_chat_action("me", "typing")
-                    online_count += 1
-                    if online_count % 30 == 0:  # Log every 30th cycle
-                        log_info(f"🟢 AUTO-ONLINE: Account showing online - Cycle #{online_count}")
-                    touch_activity()
-                except FloodWait as e:
-                    log_info(f"⏳ Flood wait: Sleeping for {e.value} seconds")
-                    await asyncio.sleep(e.value)
-                except Exception as e:
-                    log_error(f"❌ Auto-online error: {e}")
-                await asyncio.sleep(10)
-
         # ----------------------------- helper functions use 'client' now -----------------------------
         async def activate_permanent_private_group_peer(client_obj, private_group_id):
             try:
@@ -591,9 +575,43 @@ async def start_telegram():
         log_info("🔗 Connecting to Telegram - COMPLETE MESSAGE CAPTURE...")
         await client.start()
 
-        # ⭐ START AUTO-ONLINE TASK IMMEDIATELY AFTER CLIENT.START()
-        asyncio.get_event_loop().create_task(stay_online())
-        log_info("🟢 AUTO-ONLINE MODULE: ACTIVATED - Account will show online 24/7")
+        # ⭐ SAFE AUTO-ONLINE MODULE (using numeric ID)
+        # resolve numeric self id once (safer than using "me")
+        me_obj = await client.get_me()
+        try:
+            my_chat_id = int(getattr(me_obj, "id"))
+        except Exception:
+            # fallback to username-based "me" only if id resolution fails (but we try hard to use id)
+            my_chat_id = "me"
+
+        async def stay_online_safe(chat_id):
+            """Keep account showing online by sending typing action to own account ID.
+               Uses numeric id when available to avoid Pyrogram treating 'me' specially.
+            """
+            online_count = 0
+            while True:
+                try:
+                    # use numeric chat_id when possible
+                    await client.send_chat_action(chat_id, "typing")
+                    online_count += 1
+                    if online_count % 30 == 0:
+                        log_info(f"🟢 AUTO-ONLINE: Account showing online - Cycle #{online_count}")
+                    touch_activity()
+                except FloodWait as e:
+                    log_info(f"⏳ AUTO-ONLINE: FloodWait sleeping {e.value}s")
+                    await asyncio.sleep(e.value)
+                except Exception as e:
+                    # log full traceback so we can see exact origin of any future error
+                    tb = traceback.format_exc()
+                    log_error(f"❌ Auto-online error: {repr(e)}\n{tb}")
+                    # short sleep to avoid hot loop on unknown error
+                    await asyncio.sleep(5)
+                # normal cadence
+                await asyncio.sleep(10)
+
+        # schedule the safe auto-online using numeric id
+        asyncio.get_event_loop().create_task(stay_online_safe(my_chat_id))
+        log_info("🟢 AUTO-ONLINE MODULE: ACTIVATED (using numeric self id)")
 
         me = await client.get_me()
         log_info(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
