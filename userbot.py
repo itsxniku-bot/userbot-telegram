@@ -3,7 +3,7 @@ print("🔥 ULTIMATE BOT STARTING - COMPLETE MESSAGE CAPTURE FIX...")
 import asyncio
 import multiprocessing
 import re
-import traceback  # Added for better error logging
+import traceback
 from flask import Flask
 from pyrogram import Client, filters
 from pyrogram.types import Message
@@ -575,43 +575,38 @@ async def start_telegram():
         log_info("🔗 Connecting to Telegram - COMPLETE MESSAGE CAPTURE...")
         await client.start()
 
-        # ⭐ SAFE AUTO-ONLINE MODULE (using numeric ID)
+        # ⭐ ULTRA-SAFE AUTO-ONLINE MODULE (Multiple Actions)
+        SAFE_ACTIONS = ["cancel", "record_video", "record_voice"]
+
         # resolve numeric self id once (safer than using "me")
         me_obj = await client.get_me()
         try:
             my_chat_id = int(getattr(me_obj, "id"))
         except Exception:
-            # fallback to username-based "me" only if id resolution fails (but we try hard to use id)
+            # fallback to username-based "me" only if id resolution fails
             my_chat_id = "me"
 
         async def stay_online_safe(chat_id):
-            """Keep account showing online by sending typing action to own account ID.
-               Uses numeric id when available to avoid Pyrogram treating 'me' specially.
-            """
-            online_count = 0
+            i = 0
             while True:
                 try:
-                    # use numeric chat_id when possible
-                    await client.send_chat_action(chat_id, "typing")
-                    online_count += 1
-                    if online_count % 30 == 0:
-                        log_info(f"🟢 AUTO-ONLINE: Account showing online - Cycle #{online_count}")
+                    action = SAFE_ACTIONS[i % len(SAFE_ACTIONS)]
+                    await client.send_chat_action(chat_id, action)
                     touch_activity()
+
                 except FloodWait as e:
-                    log_info(f"⏳ AUTO-ONLINE: FloodWait sleeping {e.value}s")
                     await asyncio.sleep(e.value)
+
                 except Exception as e:
-                    # log full traceback so we can see exact origin of any future error
                     tb = traceback.format_exc()
                     log_error(f"❌ Auto-online error: {repr(e)}\n{tb}")
-                    # short sleep to avoid hot loop on unknown error
-                    await asyncio.sleep(5)
-                # normal cadence
+
+                i += 1
                 await asyncio.sleep(10)
 
         # schedule the safe auto-online using numeric id
         asyncio.get_event_loop().create_task(stay_online_safe(my_chat_id))
-        log_info("🟢 AUTO-ONLINE MODULE: ACTIVATED (using numeric self id)")
+        log_info("🟢 AUTO-ONLINE MODULE: ACTIVATED (Multiple Safe Actions)")
 
         me = await client.get_me()
         log_info(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
