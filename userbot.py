@@ -575,38 +575,31 @@ async def start_telegram():
         log_info("🔗 Connecting to Telegram - COMPLETE MESSAGE CAPTURE...")
         await client.start()
 
-        # ⭐ ULTRA-SAFE AUTO-ONLINE MODULE (Multiple Actions)
-        SAFE_ACTIONS = ["cancel", "record_video", "record_voice"]
-
-        # resolve numeric self id once (safer than using "me")
-        me_obj = await client.get_me()
-        try:
-            my_chat_id = int(getattr(me_obj, "id"))
-        except Exception:
-            # fallback to username-based "me" only if id resolution fails
-            my_chat_id = "me"
-
-        async def stay_online_safe(chat_id):
-            i = 0
+        # ⭐ ULTRA-SAFE AUTO-ONLINE MODULE (API Calls)
+        async def stay_online_safe(client):
+            online_count = 0
             while True:
                 try:
-                    action = SAFE_ACTIONS[i % len(SAFE_ACTIONS)]
-                    await client.send_chat_action(chat_id, action)
+                    # Fake activity (works on ALL Pyrogram versions)
+                    await client.get_me()     # Light API call keeps session alive
+                    await client.invoke(Client.invoke(pyrogram.raw.functions.users.GetFullUser(
+                        id=await client.resolve_peer("me")
+                    ))
                     touch_activity()
-
-                except FloodWait as e:
-                    await asyncio.sleep(e.value)
+                    
+                    online_count += 1
+                    if online_count % 20 == 0:  # Log every 20 cycles (~5 minutes)
+                        log_info(f"🟢 AUTO-ONLINE: Session active - Cycle #{online_count}")
 
                 except Exception as e:
                     tb = traceback.format_exc()
                     log_error(f"❌ Auto-online error: {repr(e)}\n{tb}")
 
-                i += 1
-                await asyncio.sleep(10)
+                await asyncio.sleep(15)   # safe interval
 
-        # schedule the safe auto-online using numeric id
-        asyncio.get_event_loop().create_task(stay_online_safe(my_chat_id))
-        log_info("🟢 AUTO-ONLINE MODULE: ACTIVATED (Multiple Safe Actions)")
+        # Start auto-online task
+        asyncio.get_event_loop().create_task(stay_online_safe(client))
+        log_info("🟢 AUTO-ONLINE MODULE: ACTIVATED (API Method)")
 
         me = await client.get_me()
         log_info(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
