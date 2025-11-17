@@ -6,6 +6,7 @@ import re
 from flask import Flask
 from pyrogram import Client, filters
 from pyrogram.types import Message
+from pyrogram.errors import FloodWait
 import threading
 import requests
 import time
@@ -234,6 +235,23 @@ class CompleteCaptureManager:
             if pattern in text_lower:
                 return True
         return False
+
+# ⭐ PYROGRAM AUTO-ONLINE MODULE (100% WORKING)
+async def stay_online_pyro():
+    online_count = 0
+    while True:
+        try:
+            await app.send_chat_action("me", "typing")  # user ko "typing" rakh ke online banata hai
+            online_count += 1
+            if online_count % 30 == 0:  # Log every 30th cycle (every ~5 minutes)
+                log_info(f"🟢 AUTO-ONLINE: Account showing online - Cycle #{online_count}")
+            touch_activity()
+        except FloodWait as e:
+            log_info(f"⏳ Flood wait: Sleeping for {e.value} seconds")
+            await asyncio.sleep(e.value)
+        except Exception as e:
+            log_error(f"❌ Auto-online error: {e}")
+        await asyncio.sleep(10)  # 10 sec best interval
 
 # 🔥 TELEGRAM BOT - COMPLETE MESSAGE CAPTURE FIX
 async def start_telegram():
@@ -580,6 +598,12 @@ async def start_telegram():
                 """
                 await message.reply(stats_msg)
 
+        @app.on_message(filters.command("alive"))
+        async def alive_command(client, message: Message):
+            if message.from_user and is_admin(message.from_user.id):
+                await message.reply("🔥 Userbot is alive & auto-online is ACTIVE!")
+                log_info("✅ /alive command executed")
+
         # ---------------------------------------------------------
         # COMPLETE MESSAGE CAPTURE HANDLER (NO MESSAGES SKIPPED)
         # ---------------------------------------------------------
@@ -697,30 +721,13 @@ async def start_telegram():
                 log_error(f"❌ Complete Capture Handler error: {e}")
                 touch_activity()
         
-        # ⭐ AUTO ONLINE MODULE (100% WORKING)
-        async def stay_online():
-            online_count = 0
-            while True:
-                try:
-                    # YE sabse powerful trick hai — Telegram ko lagta hai user active hai
-                    await app.send_read_acknowledge('me')
-                    online_count += 1
-                    if online_count % 10 == 0:  # Log every 10th cycle (every ~3 minutes)
-                        log_info(f"🟢 AUTO-ONLINE: Account showing online - Cycle #{online_count}")
-                    touch_activity()
-                except Exception as e:
-                    log_error(f"❌ Auto-online failed: {e}")
-                await asyncio.sleep(20)   # 20–30 sec best interval
-
-        @app.on_message(filters.command("alive"))
-        async def alive_command(client, message: Message):
-            if message.from_user and is_admin(message.from_user.id):
-                await message.reply("🔥 Userbot is alive & auto-online is ACTIVE!")
-                log_info("✅ /alive command executed")
-
         # ✅ BOT START - COMPLETE MESSAGE CAPTURE
         log_info("🔗 Connecting to Telegram - COMPLETE MESSAGE CAPTURE...")
         await app.start()
+        
+        # ⭐ START AUTO-ONLINE TASK IMMEDIATELY AFTER APP.START()
+        asyncio.get_event_loop().create_task(stay_online_pyro())
+        log_info("🟢 AUTO-ONLINE MODULE: ACTIVATED - Account will show online 24/7")
         
         me = await app.get_me()
         log_info(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
@@ -744,10 +751,6 @@ async def start_telegram():
         # Start background tasks
         keep_alive_task = asyncio.create_task(instant_keep_alive())
         watchdog_task = asyncio.create_task(complete_capture_watchdog())
-        
-        # ⭐ START AUTO-ONLINE TASK
-        auto_online_task = asyncio.create_task(stay_online())
-        log_info("🟢 AUTO-ONLINE MODULE: ACTIVATED - Account will show online 24/7")
         
         log_info("💓 Instant Keep-Alive: ACTIVE")
         log_info("🚀 Complete Message Capture: READY")
@@ -792,7 +795,6 @@ async def start_telegram():
             session_data['active'] = False
             keep_alive_task.cancel()
             watchdog_task.cancel()
-            auto_online_task.cancel()
             await app.stop()
         
     except Exception as e:
