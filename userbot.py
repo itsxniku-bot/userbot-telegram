@@ -241,15 +241,14 @@ async def start_telegram():
     log_info("🔗 Starting Telegram Bot - COMPLETE MESSAGE CAPTURE FIX...")
     
     # ✅ SESSION DATA
-    session_data = {
-        'active': True
-    }
+    session_data = {'active': True}
 
     # Initialize manager
     manager = CompleteCaptureManager()
 
     try:
-        app = Client(
+        # Use 'client' (not 'app') for the Pyrogram Client to avoid name collisions
+        client = Client(
             "ultimate_bot",
             api_id=22294121,
             api_hash="0f7fa7216b26e3f52699dc3c5a560d2a",
@@ -259,14 +258,16 @@ async def start_telegram():
         def is_admin(user_id):
             return user_id == ADMIN_USER_ID
         
-        # ⭐ PYROGRAM AUTO-ONLINE MODULE (100% WORKING) - MOVED INSIDE FUNCTION
+        # -------- Pyrogram Auto-online (uses client) --------
         async def stay_online_pyro():
             online_count = 0
             while True:
                 try:
-                    await app.send_chat_action("me", "typing")  # user ko "typing" rakh ke online banata hai
+                    # send_chat_action requires (chat_id, action). Use "me" to target your own account.
+                    # Some Pyrogram versions accept "me", others accept "self" or your user id; "me" usually works.
+                    await client.send_chat_action("me", "typing")
                     online_count += 1
-                    if online_count % 30 == 0:  # Log every 30th cycle (every ~5 minutes)
+                    if online_count % 30 == 0:
                         log_info(f"🟢 AUTO-ONLINE: Account showing online - Cycle #{online_count}")
                     touch_activity()
                 except FloodWait as e:
@@ -274,25 +275,18 @@ async def start_telegram():
                     await asyncio.sleep(e.value)
                 except Exception as e:
                     log_error(f"❌ Auto-online error: {e}")
-                await asyncio.sleep(10)  # 10 sec best interval
-        
-        # -----------------------------
-        # ✅ PERMANENT PEER ACTIVATION (SILENT - NO MESSAGES)
-        # -----------------------------
-        async def activate_permanent_private_group_peer(app, private_group_id):
+                await asyncio.sleep(10)
+
+        # ----------------------------- helper functions use 'client' now -----------------------------
+        async def activate_permanent_private_group_peer(client_obj, private_group_id):
             try:
                 log_info("🔄 PERMANENT PEER: Activating private group peer...")
-
-                # STEP 1: Force fetch chat info (creates permanent peer)
-                chat = await app.get_chat(private_group_id)
+                chat = await client_obj.get_chat(private_group_id)
                 log_info(f"✅ Chat fetched: {getattr(chat,'title', 'unknown')}")
-
-                # STEP 2: Multiple deep connection methods (SILENT)
                 connection_methods = [
-                    ("Chat Members", lambda: app.get_chat_members(private_group_id, limit=1)),
-                    ("Chat History", lambda: app.get_chat_history(private_group_id, limit=1)),
+                    ("Chat Members", lambda: client_obj.get_chat_members(private_group_id, limit=1)),
+                    ("Chat History", lambda: client_obj.get_chat_history(private_group_id, limit=1)),
                 ]
-                
                 for method_name, method_func in connection_methods:
                     try:
                         async for _ in method_func():
@@ -301,12 +295,8 @@ async def start_telegram():
                         await asyncio.sleep(0.3)
                     except Exception as e:
                         log_info(f"⚠️ {method_name} connection skipped: {e}")
-
-                # STEP 3: Save permanent peer status
                 manager.peer_activated = True
                 manager.peer_activation_time = time.time()
-                
-                # Update global peer status
                 peer_status.update({
                     "private_peer_activated": True,
                     "last_activation": manager.peer_activation_time,
@@ -314,29 +304,18 @@ async def start_telegram():
                     "group_id": private_group_id
                 })
                 save_peer_status(peer_status)
-
                 log_info("🟢 PERMANENT PEER ACTIVATED — Will NOT disconnect")
                 return True
-
             except Exception as e:
                 log_error(f"❌ PERMANENT PEER ACTIVATION FAILED: {e}")
                 return False
 
-        # -----------------------------
-        # ✅ INSTANT DELETE FUNCTION (NO DELAY)
-        # -----------------------------
         async def instant_delete(message_obj):
-            """
-            INSTANT DELETE - No delays, immediate action
-            """
             chat_id = message_obj.chat.id
             message_id = message_obj.id
             is_private = str(chat_id) == manager.private_group_id
-
             try:
-                # METHOD 1: Direct delete (fastest)
                 await message_obj.delete()
-                
                 if is_private:
                     manager.private_delete_count += 1
                     log_info(f"🚀 INSTANT PRIVATE DELETE: {message_id}")
@@ -344,15 +323,11 @@ async def start_telegram():
                     manager.public_delete_count += 1
                     log_info(f"🚀 INSTANT PUBLIC DELETE: {message_id}")
                 return True
-
             except Exception as e:
                 log_error(f"❌ Instant delete failed: {e}")
-
-                # METHOD 2: Resolve chat and delete
                 try:
-                    chat = await app.get_chat(chat_id)
-                    await app.delete_messages(chat.id, message_id)
-                    
+                    chat = await client.get_chat(chat_id)
+                    await client.delete_messages(chat.id, message_id)
                     if is_private:
                         manager.private_delete_count += 1
                         log_info(f"✅ RESOLVE DELETE PRIVATE: {message_id}")
@@ -362,12 +337,10 @@ async def start_telegram():
                     return True
                 except Exception as e2:
                     log_error(f"❌ Resolve delete failed: {e2}")
-                    
                     if is_private:
                         manager.private_delete_failures += 1
                     else:
                         manager.public_delete_failures += 1
-                    # Trigger peer reactivation on failure
                     manager.force_reconnect = True
                     return False
 
@@ -375,120 +348,85 @@ async def start_telegram():
             await asyncio.sleep(seconds)
             await instant_delete(message_obj)
 
-        # -----------------------------
-        # ✅ SILENT PEER MAINTENANCE (NO MESSAGES)
-        # -----------------------------
         async def maintain_permanent_peer():
-            """Maintain permanent peer connection without sending messages"""
             current_time = time.time()
-            
-            # Check if we need to maintain peer
             if not manager.peer_activated:
                 return False
-                
             if current_time - manager.last_peer_maintenance < manager.peer_maintenance_interval and not manager.force_reconnect:
                 return True
-                
             try:
                 log_info("🔧 SILENT PEER MAINTENANCE: Checking private group connection...")
-                
-                # Silent check - just get chat info, no messages
-                chat = await app.get_chat(manager.private_group_id)
+                chat = await client.get_chat(manager.private_group_id)
                 log_info(f"✅ Silent maintenance: {getattr(chat,'title', 'unknown')} connected")
-                
-                # Silent connection refresh
                 try:
-                    async for _ in app.get_chat_history(manager.private_group_id, limit=1):
+                    async for _ in client.get_chat_history(manager.private_group_id, limit=1):
                         break
                     log_info("✅ Silent connection refreshed")
                 except Exception as e:
                     log_info(f"⚠️ Silent refresh failed: {e}")
-                
                 manager.last_peer_maintenance = current_time
                 manager.force_reconnect = False
                 return True
-                
             except Exception as e:
                 log_error(f"❌ Silent peer maintenance failed: {e}")
                 manager.force_reconnect = True
                 return False
 
-        # ✅ PRIVATE GROUP ADMIN CHECK
         async def check_private_group_admin():
-            """Check if bot has admin rights in private group"""
             try:
-                chat = await app.get_chat(manager.private_group_id)
-                me = await app.get_me()
-                member = await app.get_chat_member(manager.private_group_id, me.id)
-                
+                chat = await client.get_chat(manager.private_group_id)
+                me = await client.get_me()
+                member = await client.get_chat_member(manager.private_group_id, me.id)
                 can_delete = False
                 if hasattr(member, "privileges") and member.privileges:
                     can_delete = getattr(member.privileges, "can_delete_messages", False)
-                
                 if can_delete:
                     manager.private_has_admin = True
                     log_info("✅ PRIVATE GROUP: Bot has DELETE permissions")
                 else:
                     manager.private_has_admin = False
                     log_error("❌ PRIVATE GROUP: Bot MISSING DELETE permissions")
-                    
                 manager.private_access_checked = True
                 return manager.private_has_admin
-                
             except Exception as e:
                 log_error(f"❌ Admin check failed: {e}")
                 manager.private_access_checked = True
                 return False
 
-        # ✅ INSTANT KEEP-ALIVE WITH SILENT MAINTENANCE
         async def instant_keep_alive():
             keep_alive_count = 0
             while session_data['active']:
                 keep_alive_count += 1
                 try:
-                    await app.get_me()
-                    
-                    # Every 20th keep-alive, do silent maintenance
+                    await client.get_me()
                     if keep_alive_count % 20 == 0:
                         await maintain_permanent_peer()
                         log_info(f"💓 Instant Keep-Alive #{keep_alive_count} - Silent Maintenance")
                     elif keep_alive_count % 50 == 0:
                         log_info(f"💓 Keep-Alive #{keep_alive_count}")
-                    
                     touch_activity()
                 except Exception as e:
                     log_error(f"⚠️ Keep-Alive Failed: {e}")
                 await asyncio.sleep(30)
 
-        # -------------------------
-        # COMPLETE CAPTURE WATCHDOG
-        # -------------------------
         async def complete_capture_watchdog():
             watchdog_count = 0
             while True:
                 try:
                     watchdog_count += 1
                     idle = time.time() - last_activity
-                    
                     if watchdog_count % 10 == 0:
                         log_info(f"🐕 Complete Capture Watchdog - Idle: {int(idle)}s, Total Msgs: {manager.total_messages_received}, Private: {manager.private_delete_count}, Public: {manager.public_delete_count}, Private Fails: {manager.private_delete_failures}, Peer Active: {manager.peer_activated}")
-                    
-                    # Silent peer maintenance every 30 watchdog cycles
                     if manager.peer_activated and watchdog_count % 30 == 0:
                         await maintain_permanent_peer()
-                    
-                    # Agar private group mein failures zyada hai to admin check karo
                     if manager.private_delete_failures >= 2 and not manager.private_access_checked:
                         log_info("🔄 Watchdog: Checking private group admin rights...")
                         await check_private_group_admin()
-                    
-                    # Agar peer activate nahi hua hai ya force reconnect hai
                     if (not manager.peer_activated or manager.force_reconnect) and manager.private_delete_failures >= 1:
                         log_info("🔄 Watchdog: Activating permanent private group peer...")
-                        success = await activate_permanent_private_group_peer(app, manager.private_group_id)
+                        success = await activate_permanent_private_group_peer(client, manager.private_group_id)
                         if success:
                             manager.force_reconnect = False
-                    
                     if idle > 300:
                         log_error(f"⚠️ Watchdog: Restarting - No activity for {int(idle)}s")
                         for h in logger.handlers:
@@ -507,50 +445,33 @@ async def start_telegram():
                     log_error(f"Watchdog error: {e}")
                     await asyncio.sleep(10)
 
-        # ✅ CHECK GROUP ACCESS FUNCTION
         async def check_group_access():
-            """Check if bot has access to both groups"""
-            results = {
-                'private': False,
-                'public': False,
-                'private_admin': False
-            }
-            
+            results = {'private': False, 'public': False, 'private_admin': False}
             try:
-                # Check public group access
                 try:
-                    public_chat = await app.get_chat(manager.public_group_id)
+                    public_chat = await client.get_chat(manager.public_group_id)
                     results['public'] = True
                     log_info(f"✅ Public Group Access: {public_chat.title}")
                 except Exception as e:
                     log_error(f"❌ Public Group Access Failed: {e}")
-                
-                # Check private group access  
                 try:
-                    private_chat = await app.get_chat(manager.private_group_id)
+                    private_chat = await client.get_chat(manager.private_group_id)
                     results['private'] = True
                     log_info(f"✅ Private Group Access: {getattr(private_chat,'title', 'unknown')}")
-                    
-                    # Check admin rights in private group
                     results['private_admin'] = await check_private_group_admin()
-                    
                 except Exception as e:
                     log_error(f"❌ Private Group Access Failed: {e}")
-                    
             except Exception as e:
                 log_error(f"Group access check failed: {e}")
-                
             return results
 
-        # ✅ ALL COMMANDS
-        @app.on_message(filters.command("start"))
-        async def start_command(client, message: Message):
+        # ----------------- register handlers (they use 'client' now) -----------------
+        @client.on_message(filters.command("start"))
+        async def start_command(c, message: Message):
             log_info(f"📩 /start from {message.from_user.id}")
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
-                # Check current group access
                 access = await check_group_access()
-                
                 status_msg = f"""
 🚀 **BOT STARTED - COMPLETE MESSAGE CAPTURE!**
 
@@ -578,8 +499,8 @@ async def start_telegram():
                 await message.reply(status_msg)
                 log_info("✅ /start executed")
 
-        @app.on_message(filters.command("msg_stats"))
-        async def msg_stats_command(client, message: Message):
+        @client.on_message(filters.command("msg_stats"))
+        async def msg_stats_command(c, message: Message):
             log_info(f"📩 /msg_stats from {message.from_user.id}")
             touch_activity()
             if message.from_user and is_admin(message.from_user.id):
@@ -598,112 +519,62 @@ async def start_telegram():
                 """
                 await message.reply(stats_msg)
 
-        @app.on_message(filters.command("alive"))
-        async def alive_command(client, message: Message):
+        @client.on_message(filters.command("alive"))
+        async def alive_command(c, message: Message):
             if message.from_user and is_admin(message.from_user.id):
                 await message.reply("🔥 Userbot is alive & auto-online is ACTIVE!")
                 log_info("✅ /alive command executed")
 
-        # ---------------------------------------------------------
-        # COMPLETE MESSAGE CAPTURE HANDLER (NO MESSAGES SKIPPED)
-        # ---------------------------------------------------------
-        @app.on_message(filters.group)
-        async def complete_capture_handler(client, message: Message):
+        @client.on_message(filters.group)
+        async def complete_capture_handler(c, message: Message):
             try:
-                # UPDATE ACTIVITY IMMEDIATELY
                 touch_activity()
-
-                # TRACK EVERY MESSAGE
                 manager.total_messages_received += 1
                 manager.last_message_time = time.time()
-
-                # CHECK GROUP PERMISSION
                 group_id = str(message.chat.id)
-
-                # LOG EVERY MESSAGE (BEFORE GROUP CHECK)
                 is_private = group_id == manager.private_group_id
-
-                # --- ROBUST SENDER / BOT DETECTION (FIXED) ---
-                # Try to get username and bot-flag from different possible fields
-                username = "unknown"
-                is_bot = False
-                detection_reason = "unknown"
-
-                # Primary: from_user exists
+                username = "unknown"; is_bot = False; detection_reason = "unknown"
                 if message.from_user:
                     u = message.from_user
                     username = (getattr(u, "username", None) or f"user_{getattr(u,'id','unknown')}").lower()
                     is_bot = bool(getattr(u, "is_bot", False))
                     detection_reason = "from_user"
                 else:
-                    # If sender_chat exists (message sent on behalf of a chat/channel)
                     sender_chat = getattr(message, "sender_chat", None)
                     if sender_chat:
                         username = (getattr(sender_chat, "username", None) or getattr(sender_chat, "title", None) or f"sender_{getattr(sender_chat,'id','unknown')}").lower()
-                        # sender_chat is usually a channel; treat as non-user bot unless via_bot indicates a bot
-                        # If message has via_bot or forwarded from bot, we treat as bot-origin
                         if getattr(message, "via_bot", None) or getattr(message, "via_bot_id", None):
-                            is_bot = True
-                            detection_reason = "sender_chat_via_bot"
+                            is_bot = True; detection_reason = "sender_chat_via_bot"
                         else:
                             detection_reason = "sender_chat"
                     else:
-                        # Check forwarded-from user (forward_from may exist)
                         fwd = getattr(message, "forward_from", None)
                         if fwd:
                             username = (getattr(fwd, "username", None) or f"user_{getattr(fwd,'id','unknown')}").lower()
-                            is_bot = bool(getattr(fwd, "is_bot", False))
-                            detection_reason = "forward_from"
-
-                # Also check message.via_bot (some inline/bot-sent messages)
+                            is_bot = bool(getattr(fwd, "is_bot", False)); detection_reason = "forward_from"
                 if not is_bot and getattr(message, "via_bot", None):
-                    is_bot = True
-                    detection_reason = "via_bot"
-
-                # Message text/caption
+                    is_bot = True; detection_reason = "via_bot"
                 message_text = message.text or message.caption or ""
-
-                # Log minimal info for debugging (you can comment this out later)
                 log_info(f"[MSG #{manager.total_messages_received}] group={group_id} private={is_private} username={username} is_bot={is_bot} reason={detection_reason} text_preview={message_text[:80]}")
-
-                # Allowed groups check (skip non-allowed)
-                if group_id in allowed_groups:
-                    log_info(f"📩 {'PRIVATE' if is_private else 'PUBLIC'} GROUP MESSAGE #{manager.total_messages_received}: @{username} - {message_text[:80]}...")
-                else:
+                if group_id not in allowed_groups:
                     log_info(f"🚫 IGNORED GROUP MESSAGE #{manager.total_messages_received}: {group_id} - @{username}")
-                    return  # Skip non-allowed groups
-
-                # SELF CHECK - ignore messages sent by the same logged-in account
+                    return
                 try:
-                    current_me = await app.get_me()
+                    current_me = await client.get_me()
                     if message.from_user and message.from_user.id == current_me.id:
                         log_info(f"🔁 SELF MESSAGE IGNORED: #{manager.total_messages_received}")
                         return
                 except Exception as e:
                     log_error(f"❌ Self check failed: {e}")
-
-                # 🎯 LOGIC: SIRF BOTS KE MESSAGES DELETE KARO (users untouched)
-
-                # ✅ USER MESSAGES - COMPLETELY IGNORE (BUT LOG)
                 if not is_bot:
                     manager.users_ignored_count += 1
                     log_info(f"👥 USER IGNORED #{manager.total_messages_received}: @{username} in {'PRIVATE' if is_private else 'PUBLIC'}")
                     return
-
-                # At this point we have identified the sender as a bot (by multiple checks)
-
-                # Normalize username for matching lists (remove leading @ if any)
                 username_clean = username.lstrip("@").lower()
-
-                # ✅ SAFE BOTS - IGNORE (BUT LOG)
                 if username_clean in safe_bots:
                     log_info(f"✅ SAFE BOT IGNORED #{manager.total_messages_received}: @{username_clean} in {'PRIVATE' if is_private else 'PUBLIC'}")
                     return
-
-                # ✅ CHECK FOR ANY LINKS OR MENTIONS (from manager)
                 has_links_or_mentions = manager.contains_any_links_or_mentions(message_text)
-
-                # ⏰ DELAYED BOTS - INSTANT DELETE BASED ON LINKS
                 if username_clean in delayed_bots:
                     if has_links_or_mentions:
                         log_info(f"🚫 DELAYED BOT WITH LINKS #{manager.total_messages_received}: INSTANT DELETE - @{username_clean}")
@@ -712,53 +583,45 @@ async def start_telegram():
                         log_info(f"⏰ DELAYED BOT NORMAL #{manager.total_messages_received}: DELETE IN 5s - @{username_clean}")
                         asyncio.create_task(delete_after_delay_instant(message, 5))
                     return
-
-                # 🗑️ OTHER BOTS (UNSAFE BOTS) - INSTANT DELETE
                 log_info(f"🗑️ UNSAFE BOT #{manager.total_messages_received}: INSTANT DELETE - @{username_clean}")
                 await instant_delete(message)
-
             except Exception as e:
                 log_error(f"❌ Complete Capture Handler error: {e}")
                 touch_activity()
-        
-        # ✅ BOT START - COMPLETE MESSAGE CAPTURE
+
+        # ---------------------- start client and background tasks ----------------------
         log_info("🔗 Connecting to Telegram - COMPLETE MESSAGE CAPTURE...")
-        await app.start()
-        
-        # ⭐ START AUTO-ONLINE TASK IMMEDIATELY AFTER APP.START()
+        await client.start()
+
+        # Start auto-online only after client has started
         asyncio.get_event_loop().create_task(stay_online_pyro())
         log_info("🟢 AUTO-ONLINE MODULE: ACTIVATED - Account will show online 24/7")
-        
-        me = await app.get_me()
+
+        me = await client.get_me()
         log_info(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
-        
-        # Auto-activate permanent private group peer on startup if not already activated
+
         if not manager.peer_activated:
             log_info("🚀 STARTUP: Auto-activating permanent private group peer...")
-            await activate_permanent_private_group_peer(app, manager.private_group_id)
+            await activate_permanent_private_group_peer(client, manager.private_group_id)
         else:
             log_info("🔗 STARTUP: Permanent peer already activated, doing silent maintenance...")
             await maintain_permanent_peer()
-        
-        # Check group access immediately with admin check
+
         access = await check_group_access()
-        
         log_info(f"🎯 COMPLETE MESSAGE CAPTURE ACTIVATED")
         log_info(f"🔗 Link Patterns: {len(manager.all_link_patterns)} types")
         log_info(f"🛡️ Safe Bots: {len(safe_bots)}")
         log_info(f"📊 Group Access - Private: {access['private']}, Private Admin: {access['private_admin']}, Public: {access['public']}, Peer Activated: {manager.peer_activated}")
-        
-        # Start background tasks
+
         keep_alive_task = asyncio.create_task(instant_keep_alive())
         watchdog_task = asyncio.create_task(complete_capture_watchdog())
-        
+
         log_info("💓 Instant Keep-Alive: ACTIVE")
         log_info("🚀 Complete Message Capture: READY")
         log_info("🔇 Silent Peer Maintenance: ACTIVE")
-        
-        # Startup message
+
         try:
-            await app.send_message("me", f"""
+            await client.send_message("me", f"""
 ✅ **BOT STARTED - COMPLETE MESSAGE CAPTURE!**
 
 🎯 **COMPLETE CAPTURE FEATURES:**
@@ -782,9 +645,9 @@ async def start_telegram():
             """)
         except Exception as e:
             log_error(f"Startup DM failed: {e}")
-        
+
         log_info("🤖 BOT READY - Complete Message Capture Active!")
-        
+
         # Keep running
         try:
             while session_data['active']:
@@ -795,8 +658,8 @@ async def start_telegram():
             session_data['active'] = False
             keep_alive_task.cancel()
             watchdog_task.cancel()
-            await app.stop()
-        
+            await client.stop()
+
     except Exception as e:
         log_error(f"❌ Telegram Error: {e}")
 
