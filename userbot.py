@@ -236,23 +236,6 @@ class CompleteCaptureManager:
                 return True
         return False
 
-# ⭐ PYROGRAM AUTO-ONLINE MODULE (100% WORKING)
-async def stay_online_pyro():
-    online_count = 0
-    while True:
-        try:
-            await app.send_chat_action("me", "typing")  # user ko "typing" rakh ke online banata hai
-            online_count += 1
-            if online_count % 30 == 0:  # Log every 30th cycle (every ~5 minutes)
-                log_info(f"🟢 AUTO-ONLINE: Account showing online - Cycle #{online_count}")
-            touch_activity()
-        except FloodWait as e:
-            log_info(f"⏳ Flood wait: Sleeping for {e.value} seconds")
-            await asyncio.sleep(e.value)
-        except Exception as e:
-            log_error(f"❌ Auto-online error: {e}")
-        await asyncio.sleep(10)  # 10 sec best interval
-
 # 🔥 TELEGRAM BOT - COMPLETE MESSAGE CAPTURE FIX
 async def start_telegram():
     log_info("🔗 Starting Telegram Bot - COMPLETE MESSAGE CAPTURE FIX...")
@@ -275,6 +258,23 @@ async def start_telegram():
         
         def is_admin(user_id):
             return user_id == ADMIN_USER_ID
+        
+        # ⭐ PYROGRAM AUTO-ONLINE MODULE (100% WORKING) - MOVED INSIDE FUNCTION
+        async def stay_online_pyro():
+            online_count = 0
+            while True:
+                try:
+                    await app.send_chat_action("me", "typing")  # user ko "typing" rakh ke online banata hai
+                    online_count += 1
+                    if online_count % 30 == 0:  # Log every 30th cycle (every ~5 minutes)
+                        log_info(f"🟢 AUTO-ONLINE: Account showing online - Cycle #{online_count}")
+                    touch_activity()
+                except FloodWait as e:
+                    log_info(f"⏳ Flood wait: Sleeping for {e.value} seconds")
+                    await asyncio.sleep(e.value)
+                except Exception as e:
+                    log_error(f"❌ Auto-online error: {e}")
+                await asyncio.sleep(10)  # 10 sec best interval
         
         # -----------------------------
         # ✅ PERMANENT PEER ACTIVATION (SILENT - NO MESSAGES)
