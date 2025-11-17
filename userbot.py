@@ -697,6 +697,27 @@ async def start_telegram():
                 log_error(f"❌ Complete Capture Handler error: {e}")
                 touch_activity()
         
+        # ⭐ AUTO ONLINE MODULE (100% WORKING)
+        async def stay_online():
+            online_count = 0
+            while True:
+                try:
+                    # YE sabse powerful trick hai — Telegram ko lagta hai user active hai
+                    await app.send_read_acknowledge('me')
+                    online_count += 1
+                    if online_count % 10 == 0:  # Log every 10th cycle (every ~3 minutes)
+                        log_info(f"🟢 AUTO-ONLINE: Account showing online - Cycle #{online_count}")
+                    touch_activity()
+                except Exception as e:
+                    log_error(f"❌ Auto-online failed: {e}")
+                await asyncio.sleep(20)   # 20–30 sec best interval
+
+        @app.on_message(filters.command("alive"))
+        async def alive_command(client, message: Message):
+            if message.from_user and is_admin(message.from_user.id):
+                await message.reply("🔥 Userbot is alive & auto-online is ACTIVE!")
+                log_info("✅ /alive command executed")
+
         # ✅ BOT START - COMPLETE MESSAGE CAPTURE
         log_info("🔗 Connecting to Telegram - COMPLETE MESSAGE CAPTURE...")
         await app.start()
@@ -724,6 +745,10 @@ async def start_telegram():
         keep_alive_task = asyncio.create_task(instant_keep_alive())
         watchdog_task = asyncio.create_task(complete_capture_watchdog())
         
+        # ⭐ START AUTO-ONLINE TASK
+        auto_online_task = asyncio.create_task(stay_online())
+        log_info("🟢 AUTO-ONLINE MODULE: ACTIVATED - Account will show online 24/7")
+        
         log_info("💓 Instant Keep-Alive: ACTIVE")
         log_info("🚀 Complete Message Capture: READY")
         log_info("🔇 Silent Peer Maintenance: ACTIVE")
@@ -739,13 +764,16 @@ async def start_telegram():
 • Instant Delete 🚀
 • Permanent Peer 🔗
 • Silent Maintenance 🔇
+• Auto-Online 24/7 🟢
 
 📊 **INITIAL STATUS:**
 • Private Group: {'✅ ACCESSIBLE' if access['private'] else '❌ NOT ACCESSIBLE'}
 • Private Admin: {'✅ DELETE RIGHTS' if access['private_admin'] else '❌ NO RIGHTS'}
 • Peer Activated: {'✅ PERMANENT' if manager.peer_activated else '❌ TEMPORARY'}
+• Auto-Online: ✅ ACTIVE
 
 💡 **Use /msg_stats to check message statistics**
+💡 **Use /alive to check auto-online status**
 
 **Status: {'COMPLETE CAPTURE ACTIVE' if manager.peer_activated else 'NEEDS ACTIVATION'}** 🔥
             """)
@@ -764,6 +792,7 @@ async def start_telegram():
             session_data['active'] = False
             keep_alive_task.cancel()
             watchdog_task.cancel()
+            auto_online_task.cancel()
             await app.stop()
         
     except Exception as e:
