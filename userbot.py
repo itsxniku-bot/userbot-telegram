@@ -582,9 +582,8 @@ async def start_telegram():
                 try:
                     # Fake activity (works on ALL Pyrogram versions)
                     await client.get_me()     # Light API call keeps session alive
-                    await client.invoke(Client.invoke(pyrogram.raw.functions.users.GetFullUser(
-                        id=await client.resolve_peer("me")
-                    ))
+                    # Simple API call to keep session active
+                    await client.get_users("me")
                     touch_activity()
                     
                     online_count += 1
