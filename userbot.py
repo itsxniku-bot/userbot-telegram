@@ -6,7 +6,7 @@ import re
 import traceback
 from flask import Flask
 from pyrogram import Client, filters
-from pyrogram.types import Message, UserStatus
+from pyrogram.types import Message
 from pyrogram.errors import FloodWait, ChannelPrivate, PeerIdInvalid, UserNotParticipant
 import threading
 import requests
