@@ -1,4 +1,4 @@
-print("🔥 ULTIMATE BOT STARTING - MAXIMUM ONLINE STRENGTH...")
+print("🔥 ULTIMATE BOT STARTING - PERMANENT ONLINE STATUS...")
 
 import asyncio
 import multiprocessing
@@ -6,7 +6,7 @@ import re
 import traceback
 from flask import Flask
 from pyrogram import Client, filters
-from pyrogram.types import Message
+from pyrogram.types import Message, UserStatus
 from pyrogram.errors import FloodWait, ChannelPrivate, PeerIdInvalid, UserNotParticipant
 import threading
 import requests
@@ -193,6 +193,80 @@ def touch_activity():
     global last_activity
     last_activity = time.time()
 
+# 🔥 PERMANENT ONLINE STATUS MANAGER
+class PermanentOnlineManager:
+    def __init__(self):
+        self.online_status_count = 0
+        self.last_status_update = 0
+        self.typing_actions_count = 0
+        self.typing_groups = {}
+        
+    async def update_online_status(self, client):
+        """Update bot's online status - makes bot show as 'online'"""
+        try:
+            self.online_status_count += 1
+            
+            # Multiple methods to show online status
+            methods = [
+                self._method_get_me,
+                self._method_get_users,
+                self._method_send_chat_action,
+                self._method_update_status
+            ]
+            
+            success_count = 0
+            for method in methods:
+                try:
+                    await method(client)
+                    success_count += 1
+                    await asyncio.sleep(0.5)
+                except Exception as e:
+                    log_info(f"⚠️ Online status method failed: {e}")
+            
+            if self.online_status_count % 10 == 0:
+                log_info(f"🟢 PERMANENT ONLINE: Cycle #{self.online_status_count} - {success_count}/{len(methods)} methods")
+                
+            self.last_status_update = time.time()
+            return True
+            
+        except Exception as e:
+            log_error(f"❌ Online status update failed: {e}")
+            return False
+    
+    async def _method_get_me(self, client):
+        """Basic API call - shows activity"""
+        await client.get_me()
+    
+    async def _method_get_users(self, client):
+        """Another API call for activity"""
+        await client.get_users("me")
+    
+    async def _method_send_chat_action(self, client):
+        """Send typing action to groups - shows real-time activity"""
+        for group_id in allowed_groups:
+            try:
+                await client.send_chat_action(group_id, "typing")
+                self.typing_actions_count += 1
+                
+                # Track typing per group
+                if group_id not in self.typing_groups:
+                    self.typing_groups[group_id] = 0
+                self.typing_groups[group_id] += 1
+                
+                # Small delay between groups
+                await asyncio.sleep(0.3)
+            except Exception as e:
+                log_info(f"⚠️ Typing action failed for {group_id}: {e}")
+    
+    async def _method_update_status(self, client):
+        """Update profile status (if possible)"""
+        try:
+            # This method tries to update last seen time
+            await client.invoke("account.updateStatus", offline=False)
+        except:
+            # Fallback to simple API call
+            await client.get_me()
+
 # 🔥 COMPLETE MESSAGE CAPTURE MANAGER
 class CompleteCaptureManager:
     def __init__(self):
@@ -241,15 +315,16 @@ class CompleteCaptureManager:
                 return True
         return False
 
-# 🔥 TELEGRAM BOT - MAXIMUM ONLINE STRENGTH
+# 🔥 TELEGRAM BOT - PERMANENT ONLINE STATUS
 async def start_telegram():
-    log_info("🔗 Starting Telegram Bot - MAXIMUM ONLINE STRENGTH...")
+    log_info("🔗 Starting Telegram Bot - PERMANENT ONLINE STATUS...")
     
     # ✅ SESSION DATA
     session_data = {'active': True}
 
-    # Initialize manager
+    # Initialize managers
     manager = CompleteCaptureManager()
+    online_manager = PermanentOnlineManager()
 
     try:
         # Use 'client' (not 'app') for the Pyrogram Client to avoid name collisions
@@ -263,14 +338,37 @@ async def start_telegram():
         def is_admin(user_id):
             return user_id == ADMIN_USER_ID
         
-        # ----------------------------- MAXIMUM ONLINE STRENGTH FUNCTIONS -----------------------------
+        # ----------------------------- PERMANENT ONLINE STATUS FUNCTIONS -----------------------------
         
+        # ⭐ PERMANENT ONLINE STATUS MODULE
+        async def maintain_permanent_online():
+            """MAINTAIN PERMANENT ONLINE STATUS - Har 15 seconds mein"""
+            online_cycle = 0
+            
+            while session_data['active']:
+                try:
+                    online_cycle += 1
+                    
+                    # UPDATE ONLINE STATUS
+                    await online_manager.update_online_status(client)
+                    
+                    touch_activity()
+                    
+                    if online_cycle % 20 == 0:  # Har 5 minutes detailed log
+                        log_info(f"🔵 PERMANENT ONLINE: Cycle #{online_cycle} - Typing Actions: {online_manager.typing_actions_count}")
+
+                except Exception as e:
+                    log_error(f"❌ Permanent online error: {e}")
+
+                # 15 SECOND INTERVAL - FREQUENT UPDATES
+                await asyncio.sleep(15)
+
         # ⭐ ULTRA-STRONG ONLINE MODULE (Multiple API Calls)
         async def stay_online_ultra():
             """MAXIMUM ONLINE STRENGTH - Multiple API calls from different methods"""
             online_cycle = 0
             
-            while True:
+            while session_data['active']:
                 try:
                     online_cycle += 1
                     
@@ -321,11 +419,10 @@ async def start_telegram():
                         log_info(f"🟢 ULTRA-ONLINE: Cycle #{online_cycle} - {successful_calls}/5 API calls successful")
 
                 except Exception as e:
-                    tb = traceback.format_exc()
-                    log_error(f"❌ Ultra-online error: {repr(e)}\n{tb}")
+                    log_error(f"❌ Ultra-online error: {e}")
 
-                # SHORTER INTERVAL - 8 SECONDS
-                await asyncio.sleep(8)
+                # SHORTER INTERVAL - 12 SECONDS
+                await asyncio.sleep(12)
 
         # ⭐ IMPROVED PEER MAINTENANCE WITH BETTER ERROR HANDLING
         async def maintain_peers_extreme():
@@ -349,12 +446,14 @@ async def start_telegram():
                                 'last_check': time.time()
                             }
                             
-                            # Try to get chat history (but don't fail if we can't)
+                            # Send typing action to show online status
                             try:
-                                async for msg in client.get_chat_history(group_id, limit=1):
-                                    break
+                                await client.send_chat_action(group_id, "typing")
+                                online_manager.typing_actions_count += 1
+                                await asyncio.sleep(0.2)
+                                await client.send_chat_action(group_id, "cancel")
                             except Exception as e:
-                                log_info(f"⚠️ Chat history access limited for {chat_title}: {e}")
+                                log_info(f"⚠️ Typing action failed for {chat_title}: {e}")
                                 
                             if extreme_count % 15 == 0:  # Har 5 minutes log
                                 log_info(f"🔗 EXTREME PEER ACTIVE: {chat_title}")
@@ -453,84 +552,6 @@ async def start_telegram():
                 log_error(f"❌ Aggressive peer connection failed: {e}")
                 return False
 
-        async def activate_permanent_private_group_peer(client_obj, private_group_id):
-            try:
-                log_info("🔄 ULTRA PERMANENT PEER: Activating with maximum strength...")
-                
-                success_count = 0
-                error_messages = []
-                
-                # METHOD 1: Get Chat
-                try:
-                    chat = await client_obj.get_chat(private_group_id)
-                    chat_title = getattr(chat, 'title', 'unknown')
-                    log_info(f"✅ Ultra peer: {chat_title}")
-                    success_count += 1
-                except (ChannelPrivate, PeerIdInvalid, UserNotParticipant) as e:
-                    error_messages.append(f"Get Chat: {e}")
-                    log_error(f"❌ Cannot access private group: {e}")
-                    return False
-                except Exception as e:
-                    error_messages.append(f"Get Chat Error: {e}")
-                
-                await asyncio.sleep(0.5)
-                
-                # Only proceed if we have basic access
-                if success_count > 0:
-                    # METHOD 2: Chat History
-                    try:
-                        count = 0
-                        async for item in client_obj.get_chat_history(private_group_id, limit=3):
-                            count += 1
-                            if count >= 2: break
-                        success_count += 1
-                    except Exception as e:
-                        error_messages.append(f"Chat History: {e}")
-                    
-                    await asyncio.sleep(0.5)
-                    
-                    # METHOD 3: Chat Members
-                    try:
-                        count = 0
-                        async for item in client_obj.get_chat_members(private_group_id, limit=3):
-                            count += 1
-                            if count >= 2: break
-                        success_count += 1
-                    except Exception as e:
-                        error_messages.append(f"Chat Members: {e}")
-                    
-                    await asyncio.sleep(0.5)
-                    
-                    # METHOD 4: Send Typing
-                    try:
-                        await client_obj.send_chat_action(private_group_id, "typing")
-                        await asyncio.sleep(0.5)
-                        await client_obj.send_chat_action(private_group_id, "cancel")
-                        success_count += 1
-                    except Exception as e:
-                        error_messages.append(f"Chat Action: {e}")
-
-                if success_count >= 2:
-                    manager.peer_activated = True
-                    manager.peer_activation_time = time.time()
-                    manager.peer_recovery_attempts = 0
-                    
-                    peer_status.update({
-                        "private_peer_activated": True,
-                        "last_activation": manager.peer_activation_time,
-                        "group_id": private_group_id
-                    })
-                    save_peer_status(peer_status)
-                    log_info("🟢 ULTRA PERMANENT PEER ACTIVATED — MAXIMUM STRENGTH")
-                    return True
-                else:
-                    log_error(f"❌ Ultra peer activation failed: {', '.join(error_messages)}")
-                    return False
-                    
-            except Exception as e:
-                log_error(f"❌ ULTRA PERMANENT PEER ACTIVATION FAILED: {e}")
-                return False
-
         async def instant_delete_ultra(message_obj):
             """ULTRA DELETE with maximum recovery"""
             chat_id = message_obj.chat.id
@@ -611,64 +632,6 @@ async def start_telegram():
             await asyncio.sleep(seconds)
             await instant_delete_ultra(message_obj)
 
-        async def maintain_permanent_peer_ultra():
-            current_time = time.time()
-            if not manager.peer_activated:
-                return False
-                
-            if current_time - manager.last_peer_maintenance < manager.peer_maintenance_interval and not manager.force_reconnect:
-                return True
-                
-            try:
-                log_info("🔧 ULTRA PEER MAINTENANCE: Extreme group checking...")
-                
-                # ULTRA CHECK ALL GROUPS
-                for group_id in allowed_groups:
-                    try:
-                        chat = await client.get_chat(group_id)
-                        # Additional peer activity
-                        try:
-                            await client.send_chat_action(group_id, "typing")
-                            await asyncio.sleep(0.2)
-                            await client.send_chat_action(group_id, "cancel")
-                        except: pass
-                        
-                        log_info(f"✅ Ultra peer active: {getattr(chat,'title', 'unknown')}")
-                    except Exception as e:
-                        log_error(f"❌ Ultra peer check failed for {group_id}: {e}")
-                        # ULTRA AUTO-RECOVER
-                        await force_peer_connection_aggressive(group_id)
-                
-                manager.last_peer_maintenance = current_time
-                manager.force_reconnect = False
-                return True
-                
-            except Exception as e:
-                log_error(f"❌ Ultra peer maintenance failed: {e}")
-                manager.force_reconnect = True
-                return False
-
-        async def check_private_group_admin():
-            try:
-                chat = await client.get_chat(manager.private_group_id)
-                me = await client.get_me()
-                member = await client.get_chat_member(manager.private_group_id, me.id)
-                can_delete = False
-                if hasattr(member, "privileges") and member.privileges:
-                    can_delete = getattr(member.privileges, "can_delete_messages", False)
-                if can_delete:
-                    manager.private_has_admin = True
-                    log_info("✅ PRIVATE GROUP: Bot has DELETE permissions")
-                else:
-                    manager.private_has_admin = False
-                    log_error("❌ PRIVATE GROUP: Bot MISSING DELETE permissions")
-                manager.private_access_checked = True
-                return manager.private_has_admin
-            except Exception as e:
-                log_error(f"❌ Admin check failed: {e}")
-                manager.private_access_checked = True
-                return False
-
         async def instant_keep_alive_ultra():
             keep_alive_count = 0
             while session_data['active']:
@@ -678,8 +641,14 @@ async def start_telegram():
                     
                     # Every 5th keep-alive, do ultra peer maintenance
                     if keep_alive_count % 5 == 0:
-                        await maintain_permanent_peer_ultra()
-                        log_info(f"💓 Ultra Keep-Alive #{keep_alive_count} - Peer Maintenance")
+                        # Send typing actions to all groups
+                        for group_id in allowed_groups:
+                            try:
+                                await client.send_chat_action(group_id, "typing")
+                                online_manager.typing_actions_count += 1
+                                await asyncio.sleep(0.2)
+                            except: pass
+                        log_info(f"💓 Ultra Keep-Alive #{keep_alive_count} - Typing Actions Sent")
                     elif keep_alive_count % 20 == 0:
                         log_info(f"💓 Ultra Keep-Alive #{keep_alive_count}")
                     
@@ -702,11 +671,11 @@ async def start_telegram():
                             status = manager.group_access_status.get(group_id, {})
                             access_status[group_id] = status.get('accessible', 'Unknown')
                         
-                        log_info(f"🐕 ULTRA WATCHDOG - Idle: {int(idle)}s, Msgs: {manager.total_messages_received}, Deletes: {manager.private_delete_count + manager.public_delete_count}, Access: {access_status}")
+                        log_info(f"🐕 ULTRA WATCHDOG - Idle: {int(idle)}s, Msgs: {manager.total_messages_received}, Online Cycles: {online_manager.online_status_count}, Typing Actions: {online_manager.typing_actions_count}")
                     
-                    # Ultra peer maintenance every 10 watchdog cycles
-                    if manager.peer_activated and watchdog_count % 10 == 0:
-                        await maintain_permanent_peer_ultra()
+                    # Force online status update every 10 watchdog cycles
+                    if watchdog_count % 10 == 0:
+                        await online_manager.update_online_status(client)
                     
                     # Agar peer recovery attempts zyada hai to ultra force reconnect
                     if manager.peer_recovery_attempts >= 2:
@@ -742,7 +711,23 @@ async def start_telegram():
                         if group_id == manager.private_group_id:
                             results['private'] = True
                             log_info(f"✅ Private Group Access: {getattr(chat,'title', 'unknown')}")
-                            results['private_admin'] = await check_private_group_admin()
+                            # Check admin permissions
+                            try:
+                                me = await client.get_me()
+                                member = await client.get_chat_member(manager.private_group_id, me.id)
+                                can_delete = False
+                                if hasattr(member, "privileges") and member.privileges:
+                                    can_delete = getattr(member.privileges, "can_delete_messages", False)
+                                if can_delete:
+                                    manager.private_has_admin = True
+                                    results['private_admin'] = True
+                                    log_info("✅ PRIVATE GROUP: Bot has DELETE permissions")
+                                else:
+                                    manager.private_has_admin = False
+                                    log_error("❌ PRIVATE GROUP: Bot MISSING DELETE permissions")
+                                manager.private_access_checked = True
+                            except Exception as e:
+                                log_error(f"❌ Admin check failed: {e}")
                         else:
                             results['public'] = True
                             log_info(f"✅ Public Group Access: {chat.title}")
@@ -832,13 +817,11 @@ async def start_telegram():
                     
             except Exception as e:
                 log_error(f"❌ Ultra message handler error: {e}")
-                tb = traceback.format_exc()
-                log_error(f"Traceback: {tb}")
 
         # ----------------- STARTUP SEQUENCE -----------------
         @client.on_message(filters.command("start") & filters.private)
         async def start_command(c, message: Message):
-            await message.reply_text("🤖 ULTIMATE BOT ACTIVE - MAXIMUM ONLINE STRENGTH")
+            await message.reply_text("🤖 ULTIMATE BOT ACTIVE - PERMANENT ONLINE STATUS")
 
         @client.on_message(filters.command("status") & filters.private)
         async def status_command(c, message: Message):
@@ -846,7 +829,7 @@ async def start_telegram():
                 return
             
             status_text = f"""
-🤖 **ULTIMATE BOT STATUS - MAXIMUM ONLINE STRENGTH**
+🤖 **ULTIMATE BOT STATUS - PERMANENT ONLINE**
 
 📊 **Message Statistics:**
 • Total Messages: {manager.total_messages_received}
@@ -855,8 +838,12 @@ async def start_telegram():
 • Delete Failures: {manager.private_delete_failures + manager.public_delete_failures}
 • Users Ignored: {manager.users_ignored_count}
 
+🟢 **Online Status:**
+• Online Cycles: {online_manager.online_status_count}
+• Typing Actions: {online_manager.typing_actions_count}
+• Last Update: {time.time() - online_manager.last_status_update:.1f}s ago
+
 🔗 **Peer Status:**
-• Peer Activated: {manager.peer_activated}
 • Recovery Attempts: {manager.peer_recovery_attempts}
 • Force Reconnect: {manager.force_reconnect}
 
@@ -902,20 +889,15 @@ async def start_telegram():
             else:
                 log_error("❌ PUBLIC GROUP: No access")
         
-        # ACTIVATE PERMANENT PEER IF WE HAVE ACCESS
-        if access_results['private']:
-            await activate_permanent_private_group_peer(client, manager.private_group_id)
-        else:
-            log_error("❌ Cannot activate permanent peer - no access to private group")
-        
-        # START ALL BACKGROUND TASKS
+        # START ALL BACKGROUND TASKS - PERMANENT ONLINE FOCUS
         log_info("🔄 STARTING BACKGROUND TASKS...")
+        asyncio.create_task(maintain_permanent_online())  # PRIMARY ONLINE TASK
         asyncio.create_task(stay_online_ultra())
         asyncio.create_task(maintain_peers_extreme())
         asyncio.create_task(instant_keep_alive_ultra())
         asyncio.create_task(complete_capture_watchdog_ultra())
         
-        log_info("🎉 ULTIMATE BOT FULLY OPERATIONAL - MAXIMUM ONLINE STRENGTH ACHIEVED!")
+        log_info("🎉 ULTIMATE BOT FULLY OPERATIONAL - PERMANENT ONLINE STATUS ACTIVATED!")
         
         # KEEP RUNNING
         while session_data['active']:
