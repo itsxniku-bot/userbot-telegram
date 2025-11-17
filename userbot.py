@@ -258,16 +258,14 @@ async def start_telegram():
         def is_admin(user_id):
             return user_id == ADMIN_USER_ID
         
-        # -------- Pyrogram Auto-online (uses client) --------
-        async def stay_online_pyro():
+        # ⭐ CLEAN AUTO-ONLINE MODULE (100% SAFEST)
+        async def stay_online():
             online_count = 0
             while True:
                 try:
-                    # send_chat_action requires (chat_id, action). Use "me" to target your own account.
-                    # Some Pyrogram versions accept "me", others accept "self" or your user id; "me" usually works.
                     await client.send_chat_action("me", "typing")
                     online_count += 1
-                    if online_count % 30 == 0:
+                    if online_count % 30 == 0:  # Log every 30th cycle
                         log_info(f"🟢 AUTO-ONLINE: Account showing online - Cycle #{online_count}")
                     touch_activity()
                 except FloodWait as e:
@@ -593,8 +591,8 @@ async def start_telegram():
         log_info("🔗 Connecting to Telegram - COMPLETE MESSAGE CAPTURE...")
         await client.start()
 
-        # Start auto-online only after client has started
-        asyncio.get_event_loop().create_task(stay_online_pyro())
+        # ⭐ START AUTO-ONLINE TASK IMMEDIATELY AFTER CLIENT.START()
+        asyncio.get_event_loop().create_task(stay_online())
         log_info("🟢 AUTO-ONLINE MODULE: ACTIVATED - Account will show online 24/7")
 
         me = await client.get_me()
