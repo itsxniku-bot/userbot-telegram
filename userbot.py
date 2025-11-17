@@ -266,22 +266,6 @@ async def start_telegram():
         async def stay_online_ultra():
             """MAXIMUM ONLINE STRENGTH - Multiple API calls from different methods"""
             online_cycle = 0
-            api_methods = [
-                # Basic API calls
-                lambda: client.get_me(),
-                lambda: client.get_users("me"),
-                lambda: client.get_chat("me"),
-                
-                # Profile related
-                lambda: client.get_profile_photos("me", limit=1),
-                
-                # Account related  
-                lambda: client.get_account_ttl(),
-                
-                # Advanced API calls (but safe)
-                lambda: client.invoke(Client.invoke(pyrogram.raw.functions.account.GetAccountTTL())),
-                lambda: client.invoke(Client.invoke(pyrogram.raw.functions.users.GetUsers(id=[await client.resolve_peer("me")]))),
-            ]
             
             while True:
                 try:
@@ -289,20 +273,49 @@ async def start_telegram():
                     
                     # MULTIPLE API CALLS IN EACH CYCLE
                     successful_calls = 0
-                    for i, api_method in enumerate(api_methods):
-                        try:
-                            await api_method()
-                            successful_calls += 1
-                            # Small delay between calls
-                            if i < len(api_methods) - 1:
-                                await asyncio.sleep(0.5)
-                        except Exception as e:
-                            log_info(f"⚠️ API call {i} failed: {e}")
+                    
+                    # Call 1: Basic API call
+                    try:
+                        await client.get_me()
+                        successful_calls += 1
+                    except: pass
+                    
+                    await asyncio.sleep(0.3)
+                    
+                    # Call 2: Another API call
+                    try:
+                        await client.get_users("me")
+                        successful_calls += 1
+                    except: pass
+                    
+                    await asyncio.sleep(0.3)
+                    
+                    # Call 3: Chat API call
+                    try:
+                        await client.get_chat("me")
+                        successful_calls += 1
+                    except: pass
+                    
+                    await asyncio.sleep(0.3)
+                    
+                    # Call 4: Profile photos
+                    try:
+                        await client.get_profile_photos("me", limit=1)
+                        successful_calls += 1
+                    except: pass
+                    
+                    await asyncio.sleep(0.3)
+                    
+                    # Call 5: Account TTL
+                    try:
+                        await client.get_account_ttl()
+                        successful_calls += 1
+                    except: pass
                     
                     touch_activity()
                     
                     if online_cycle % 10 == 0:  # Log every 10 cycles
-                        log_info(f"🟢 ULTRA-ONLINE: Cycle #{online_cycle} - {successful_calls}/{len(api_methods)} API calls successful")
+                        log_info(f"🟢 ULTRA-ONLINE: Cycle #{online_cycle} - {successful_calls}/5 API calls successful")
 
                 except Exception as e:
                     tb = traceback.format_exc()
@@ -359,34 +372,44 @@ async def start_telegram():
             try:
                 log_info(f"🔗 AGGRESSIVE PEER CONNECTION: {group_id}")
                 
-                aggressive_methods = [
-                    ("Get Chat", lambda: client.get_chat(group_id)),
-                    ("Chat History", lambda: client.get_chat_history(group_id, limit=2)),
-                    ("Chat Members", lambda: client.get_chat_members(group_id, limit=2)),
-                    ("Send Chat Action", lambda: client.send_chat_action(group_id, "typing")),
-                ]
-                
                 success_count = 0
-                for method_name, method_func in aggressive_methods:
-                    try:
-                        if method_name == "Send Chat Action":
-                            await method_func()
-                            await asyncio.sleep(0.3)  # Typing action ke liye thoda wait
-                            await client.send_chat_action(group_id, "cancel")
-                        else:
-                            result = await method_func()
-                            if method_name == "Get Chat":
-                                log_info(f"✅ Aggressive peer: {getattr(result,'title', 'unknown')}")
-                            else:
-                                async for item in result:
-                                    break
-                        
-                        success_count += 1
-                        await asyncio.sleep(0.3)
-                    except Exception as e:
-                        log_info(f"⚠️ Aggressive {method_name} failed: {e}")
+                
+                # METHOD 1: Get Chat
+                try:
+                    chat = await client.get_chat(group_id)
+                    log_info(f"✅ Aggressive peer: {getattr(chat,'title', 'unknown')}")
+                    success_count += 1
+                except: pass
+                
+                await asyncio.sleep(0.3)
+                
+                # METHOD 2: Chat History
+                try:
+                    async for msg in client.get_chat_history(group_id, limit=2):
+                        break
+                    success_count += 1
+                except: pass
+                
+                await asyncio.sleep(0.3)
+                
+                # METHOD 3: Chat Members
+                try:
+                    async for member in client.get_chat_members(group_id, limit=2):
+                        break
+                    success_count += 1
+                except: pass
+                
+                await asyncio.sleep(0.3)
+                
+                # METHOD 4: Send Chat Action
+                try:
+                    await client.send_chat_action(group_id, "typing")
+                    await asyncio.sleep(0.3)
+                    await client.send_chat_action(group_id, "cancel")
+                    success_count += 1
+                except: pass
 
-                log_info(f"✅ AGGRESSIVE PEER: {success_count}/{len(aggressive_methods)} methods successful")
+                log_info(f"✅ AGGRESSIVE PEER: {success_count}/4 methods successful")
                 return success_count > 0
                 
             except Exception as e:
@@ -397,35 +420,46 @@ async def start_telegram():
             try:
                 log_info("🔄 ULTRA PERMANENT PEER: Activating with maximum strength...")
                 
-                # ULTRA STRONG PEER ACTIVATION
-                connection_methods = [
-                    ("Get Chat", lambda: client_obj.get_chat(private_group_id)),
-                    ("Chat History", lambda: client_obj.get_chat_history(private_group_id, limit=3)),
-                    ("Chat Members", lambda: client_obj.get_chat_members(private_group_id, limit=3)),
-                    ("Send Typing", lambda: client_obj.send_chat_action(private_group_id, "typing")),
-                ]
-                
                 success_count = 0
-                for method_name, method_func in connection_methods:
-                    try:
-                        if method_name == "Send Typing":
-                            await method_func()
-                            await asyncio.sleep(0.5)
-                            await client_obj.send_chat_action(private_group_id, "cancel")
-                        else:
-                            result = await method_func()
-                            if method_name == "Get Chat":
-                                log_info(f"✅ Ultra peer: {getattr(result,'title', 'unknown')}")
-                            else:
-                                count = 0
-                                async for item in result:
-                                    count += 1
-                                    if count >= 2: break
-                        
-                        success_count += 1
-                        await asyncio.sleep(0.5)
-                    except Exception as e:
-                        log_info(f"⚠️ Ultra {method_name} failed: {e}")
+                
+                # METHOD 1: Get Chat
+                try:
+                    chat = await client_obj.get_chat(private_group_id)
+                    log_info(f"✅ Ultra peer: {getattr(chat,'title', 'unknown')}")
+                    success_count += 1
+                except: pass
+                
+                await asyncio.sleep(0.5)
+                
+                # METHOD 2: Chat History
+                try:
+                    count = 0
+                    async for item in client_obj.get_chat_history(private_group_id, limit=3):
+                        count += 1
+                        if count >= 2: break
+                    success_count += 1
+                except: pass
+                
+                await asyncio.sleep(0.5)
+                
+                # METHOD 3: Chat Members
+                try:
+                    count = 0
+                    async for item in client_obj.get_chat_members(private_group_id, limit=3):
+                        count += 1
+                        if count >= 2: break
+                    success_count += 1
+                except: pass
+                
+                await asyncio.sleep(0.5)
+                
+                # METHOD 4: Send Typing
+                try:
+                    await client_obj.send_chat_action(private_group_id, "typing")
+                    await asyncio.sleep(0.5)
+                    await client_obj.send_chat_action(private_group_id, "cancel")
+                    success_count += 1
+                except: pass
 
                 if success_count >= 2:
                     manager.peer_activated = True
@@ -690,140 +724,4 @@ async def start_telegram():
                     is_bot = True; detection_reason = "via_bot"
                 message_text = message.text or message.caption or ""
                 
-                log_info(f"[ULTRA MSG #{manager.total_messages_received}] group={group_id} user={username} bot={is_bot} text={message_text[:60]}")
-                
-                if group_id not in allowed_groups:
-                    return
-                
-                try:
-                    current_me = await client.get_me()
-                    if message.from_user and message.from_user.id == current_me.id:
-                        return
-                except Exception as e:
-                    log_error(f"❌ Self check failed: {e}")
-                
-                if not is_bot:
-                    manager.users_ignored_count += 1
-                    return
-                
-                username_clean = username.lstrip("@").lower()
-                
-                if username_clean in safe_bots:
-                    return
-                
-                has_links_or_mentions = manager.contains_any_links_or_mentions(message_text)
-                
-                if username_clean in delayed_bots:
-                    if has_links_or_mentions:
-                        await instant_delete_ultra(message)
-                    else:
-                        asyncio.create_task(delete_after_delay_ultra(message, 3))  # 3 seconds delay
-                    return
-                
-                await instant_delete_ultra(message)
-
-            except Exception as e:
-                log_error(f"❌ Ultra Capture Handler error: {e}")
-                touch_activity()
-
-        # ---------------------- ULTRA STARTUP ----------------------
-        log_info("🔗 Connecting to Telegram - MAXIMUM ONLINE STRENGTH...")
-        await client.start()
-
-        # ⭐ START ULTRA ONLINE MODULE
-        asyncio.get_event_loop().create_task(stay_online_ultra())
-        log_info("🟢 ULTRA ONLINE MODULE: ACTIVATED (8s intervals)")
-
-        me = await client.get_me()
-        log_info(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
-
-        # ⭐ START EXTREME PEER MAINTENANCE
-        asyncio.get_event_loop().create_task(maintain_peers_extreme())
-        log_info("🔗 EXTREME PEER MAINTENANCE: ACTIVATED (20s intervals)")
-
-        # ULTRA PEER ACTIVATION ON STARTUP
-        if not manager.peer_activated:
-            log_info("🚀 ULTRA STARTUP: Activating permanent peers with maximum strength...")
-            await activate_permanent_private_group_peer(client, manager.private_group_id)
-        else:
-            log_info("🔗 ULTRA STARTUP: Permanent peers already activated")
-
-        # AGGRESSIVE PEER CONNECTIONS FOR ALL GROUPS
-        for group_id in allowed_groups:
-            await force_peer_connection_aggressive(group_id)
-
-        access = await check_group_access()
-        
-        # ⭐ START ULTRA BACKGROUND TASKS
-        keep_alive_task = asyncio.create_task(instant_keep_alive_ultra())
-        watchdog_task = asyncio.create_task(complete_capture_watchdog_ultra())
-
-        log_info("💓 ULTRA Keep-Alive: ACTIVE (25s)")
-        log_info("🚀 ULTRA Message Capture: READY")
-        log_info("🔗 EXTREME Peer Maintenance: ACTIVE (20s)")
-        log_info("🟢 ULTRA Online: ACTIVE (8s)")
-
-        try:
-            await client.send_message("me", f"""
-✅ **BOT STARTED - MAXIMUM ONLINE STRENGTH!**
-
-🎯 **ULTRA FEATURES:**
-• Every Message Logged ✅  
-• Instant Delete 🚀
-• **MAXIMUM ONLINE STRENGTH** 🔥
-• Extreme Peer Maintenance (20s) 🔗
-• Ultra Online (8s intervals) 🟢
-• Aggressive Peer Recovery 🔄
-
-📊 **ULTRA STATUS:**
-• Private Group: {'✅ ACCESSIBLE' if access['private'] else '❌ NOT ACCESSIBLE'}
-• Private Admin: {'✅ DELETE RIGHTS' if access['private_admin'] else '❌ NO RIGHTS'}
-• Peer Activated: {'✅ ULTRA STRENGTH' if manager.peer_activated else '❌ NEEDS ACTIVATION'}
-• Online Intervals: 8 SECONDS 🟢
-• Peer Intervals: 20 SECONDS 🔗
-
-💡 **Your bot is now at MAXIMUM ONLINE STRENGTH!**
-
-**Status: ULTRA ACTIVE** 🔥
-            """)
-        except Exception as e:
-            log_error(f"Ultra startup DM failed: {e}")
-
-        log_info("🤖 ULTRA BOT READY - Maximum Online Strength Active!")
-
-        # Keep running
-        try:
-            while session_data['active']:
-                await asyncio.sleep(1)
-        except:
-            pass
-        finally:
-            session_data['active'] = False
-            keep_alive_task.cancel()
-            watchdog_task.cancel()
-            await client.stop()
-
-    except Exception as e:
-        log_error(f"❌ Ultra Telegram Error: {e}")
-
-# Main execution
-async def main():
-    await start_telegram()
-
-if __name__ == "__main__":
-    log_info("🚀 ULTRA BOT STARTING - MAXIMUM ONLINE STRENGTH...")
-
-    try:
-        asyncio.run(main())
-    except Exception as e:
-        log_critical(f"ULTRA CRASH: {e}")
-        for h in logger.handlers:
-            try:
-                h.flush()
-            except:
-                pass
-        try:
-            os.execv(sys.executable, [sys.executable] + sys.argv)
-        except:
-            pass
-        sys.exit(1)
+                log_info(f"[ULTRA MSG #{manager.total_messages_received}] group={group_id} user={username} bot={is_bot} text={message_text
