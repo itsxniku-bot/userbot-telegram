@@ -575,15 +575,14 @@ async def start_telegram():
         log_info("🔗 Connecting to Telegram - COMPLETE MESSAGE CAPTURE...")
         await client.start()
 
-        # ⭐ ULTRA-SAFE AUTO-ONLINE MODULE (API Calls)
+        # ⭐ ULTRA-SAFE AUTO-ONLINE MODULE (Pure API Calls - NO CHAT ACTIONS)
         async def stay_online_safe(client):
             online_count = 0
             while True:
                 try:
-                    # Fake activity (works on ALL Pyrogram versions)
-                    await client.get_me()     # Light API call keeps session alive
-                    # Simple API call to keep session active
-                    await client.get_users("me")
+                    # Pure API calls only - no chat actions
+                    await client.get_me()                    # Simple API call
+                    await client.get_users("me")            # Another API call
                     touch_activity()
                     
                     online_count += 1
@@ -598,7 +597,7 @@ async def start_telegram():
 
         # Start auto-online task
         asyncio.get_event_loop().create_task(stay_online_safe(client))
-        log_info("🟢 AUTO-ONLINE MODULE: ACTIVATED (API Method)")
+        log_info("🟢 AUTO-ONLINE MODULE: ACTIVATED (Pure API Method)")
 
         me = await client.get_me()
         log_info(f"✅ BOT CONNECTED: {me.first_name} (@{me.username})")
