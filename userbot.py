@@ -588,26 +588,68 @@ async def start_telegram():
             try:
                 # UPDATE ACTIVITY IMMEDIATELY
                 touch_activity()
-                
+
                 # TRACK EVERY MESSAGE
                 manager.total_messages_received += 1
                 manager.last_message_time = time.time()
-                
+
                 # CHECK GROUP PERMISSION
                 group_id = str(message.chat.id)
-                
+
                 # LOG EVERY MESSAGE (BEFORE GROUP CHECK)
                 is_private = group_id == manager.private_group_id
-                username = (message.from_user.username or "no_username").lower() if message.from_user else "unknown"
-                message_text = message.text or message.caption or "no_text"
-                
+
+                # --- ROBUST SENDER / BOT DETECTION (FIXED) ---
+                # Try to get username and bot-flag from different possible fields
+                username = "unknown"
+                is_bot = False
+                detection_reason = "unknown"
+
+                # Primary: from_user exists
+                if message.from_user:
+                    u = message.from_user
+                    username = (getattr(u, "username", None) or f"user_{getattr(u,'id','unknown')}").lower()
+                    is_bot = bool(getattr(u, "is_bot", False))
+                    detection_reason = "from_user"
+                else:
+                    # If sender_chat exists (message sent on behalf of a chat/channel)
+                    sender_chat = getattr(message, "sender_chat", None)
+                    if sender_chat:
+                        username = (getattr(sender_chat, "username", None) or getattr(sender_chat, "title", None) or f"sender_{getattr(sender_chat,'id','unknown')}").lower()
+                        # sender_chat is usually a channel; treat as non-user bot unless via_bot indicates a bot
+                        # If message has via_bot or forwarded from bot, we treat as bot-origin
+                        if getattr(message, "via_bot", None) or getattr(message, "via_bot_id", None):
+                            is_bot = True
+                            detection_reason = "sender_chat_via_bot"
+                        else:
+                            detection_reason = "sender_chat"
+                    else:
+                        # Check forwarded-from user (forward_from may exist)
+                        fwd = getattr(message, "forward_from", None)
+                        if fwd:
+                            username = (getattr(fwd, "username", None) or f"user_{getattr(fwd,'id','unknown')}").lower()
+                            is_bot = bool(getattr(fwd, "is_bot", False))
+                            detection_reason = "forward_from"
+
+                # Also check message.via_bot (some inline/bot-sent messages)
+                if not is_bot and getattr(message, "via_bot", None):
+                    is_bot = True
+                    detection_reason = "via_bot"
+
+                # Message text/caption
+                message_text = message.text or message.caption or ""
+
+                # Log minimal info for debugging (you can comment this out later)
+                log_info(f"[MSG #{manager.total_messages_received}] group={group_id} private={is_private} username={username} is_bot={is_bot} reason={detection_reason} text_preview={message_text[:80]}")
+
+                # Allowed groups check (skip non-allowed)
                 if group_id in allowed_groups:
                     log_info(f"📩 {'PRIVATE' if is_private else 'PUBLIC'} GROUP MESSAGE #{manager.total_messages_received}: @{username} - {message_text[:80]}...")
                 else:
                     log_info(f"🚫 IGNORED GROUP MESSAGE #{manager.total_messages_received}: {group_id} - @{username}")
                     return  # Skip non-allowed groups
 
-                # SELF CHECK
+                # SELF CHECK - ignore messages sent by the same logged-in account
                 try:
                     current_me = await app.get_me()
                     if message.from_user and message.from_user.id == current_me.id:
@@ -616,37 +658,39 @@ async def start_telegram():
                 except Exception as e:
                     log_error(f"❌ Self check failed: {e}")
 
-                # GET BASIC INFO
-                is_bot = message.from_user.is_bot if message.from_user else False
-                
-                # 🎯 LOGIC: SIRF BOTS KE MESSAGES DELETE KARO
-                
+                # 🎯 LOGIC: SIRF BOTS KE MESSAGES DELETE KARO (users untouched)
+
                 # ✅ USER MESSAGES - COMPLETELY IGNORE (BUT LOG)
                 if not is_bot:
                     manager.users_ignored_count += 1
                     log_info(f"👥 USER IGNORED #{manager.total_messages_received}: @{username} in {'PRIVATE' if is_private else 'PUBLIC'}")
                     return
 
+                # At this point we have identified the sender as a bot (by multiple checks)
+
+                # Normalize username for matching lists (remove leading @ if any)
+                username_clean = username.lstrip("@").lower()
+
                 # ✅ SAFE BOTS - IGNORE (BUT LOG)
-                if username in safe_bots:
-                    log_info(f"✅ SAFE BOT IGNORED #{manager.total_messages_received}: @{username} in {'PRIVATE' if is_private else 'PUBLIC'}")
+                if username_clean in safe_bots:
+                    log_info(f"✅ SAFE BOT IGNORED #{manager.total_messages_received}: @{username_clean} in {'PRIVATE' if is_private else 'PUBLIC'}")
                     return
 
-                # ✅ CHECK FOR ANY LINKS OR MENTIONS
+                # ✅ CHECK FOR ANY LINKS OR MENTIONS (from manager)
                 has_links_or_mentions = manager.contains_any_links_or_mentions(message_text)
-                
+
                 # ⏰ DELAYED BOTS - INSTANT DELETE BASED ON LINKS
-                if username in delayed_bots:
+                if username_clean in delayed_bots:
                     if has_links_or_mentions:
-                        log_info(f"🚫 DELAYED BOT WITH LINKS #{manager.total_messages_received}: INSTANT DELETE - @{username}")
+                        log_info(f"🚫 DELAYED BOT WITH LINKS #{manager.total_messages_received}: INSTANT DELETE - @{username_clean}")
                         await instant_delete(message)
                     else:
-                        log_info(f"⏰ DELAYED BOT NORMAL #{manager.total_messages_received}: DELETE IN 5s - @{username}")
+                        log_info(f"⏰ DELAYED BOT NORMAL #{manager.total_messages_received}: DELETE IN 5s - @{username_clean}")
                         asyncio.create_task(delete_after_delay_instant(message, 5))
                     return
 
                 # 🗑️ OTHER BOTS (UNSAFE BOTS) - INSTANT DELETE
-                log_info(f"🗑️ UNSAFE BOT #{manager.total_messages_received}: INSTANT DELETE - @{username}")
+                log_info(f"🗑️ UNSAFE BOT #{manager.total_messages_received}: INSTANT DELETE - @{username_clean}")
                 await instant_delete(message)
 
             except Exception as e:
