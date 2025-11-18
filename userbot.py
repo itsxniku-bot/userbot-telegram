@@ -1,11 +1,11 @@
-print("🔥 ULTIMATE BOT STARTING - TEST MODE...")
+print("🔥 ULTIMATE BOT STARTING - STABLE VERSION...")
 
 import asyncio
 import multiprocessing
 import re
 import traceback
 from flask import Flask
-from pyrogram import Client, filters
+from pyrogram import Client, filters, idle
 from pyrogram.types import Message
 from pyrogram.errors import FloodWait, ChannelPrivate, PeerIdInvalid, UserNotParticipant
 import threading
@@ -84,9 +84,11 @@ def save_peer_status(status):
     except:
         pass
 
-# ✅ TEMPORARY FIX: SIRF TEST GROUP RAKHO JAHAN ACCESS HO
-# Apna khud ka test group ID yahan dalo
-allowed_groups = set()  # Start with empty set
+# ✅ SAFER GROUP LOADING: Load existing groups from file
+try:
+    allowed_groups = load_data(ALLOWED_GROUPS_FILE, default={"-1002382070176", "-1002497459144"})
+except Exception:
+    allowed_groups = {"-1002382070176", "-1002497459144"}
 
 safe_bots = load_data(SAFE_BOTS_FILE)
 delayed_bots = load_data(DELAYED_BOTS_FILE)
@@ -177,12 +179,23 @@ def touch_activity():
     global last_activity
     last_activity = time.time()
 
-# 🔥 SIMPLIFIED BOT MANAGER
+# Initialize client globally for safer access
+client = Client(
+    "ultimate_bot",
+    api_id=22294121,
+    api_hash="0f7fa7216b26e3f52699dc3c5a560d2a",
+    session_string="AQFULmkANrpQWKdmd5cy7VgvL2DA9KATYlSUq5PSoJ5K1easAzrA_p5fxgFRVEUyABixgFmrCGtF9x_KvrQUoAWdeQ1dGqYggCnST6nMPBipTv7GIgwU_w1kewukwsWPMUbWdos0VI7CtH1HYwW7wz3VQ2_hvtdwQCDRHsIxpwek3IcSXP-hpt8vz_8Z4NYf8uUiIwZCSJluef3vGSh7TLOfekcrjVcRd_2h59kBuGgV7DzyJxZwx8eyNJOyhpYQnlExnd24CnELB6ZNYObYBH6xnE2Rgo97YGN1WPbd9Ra8oQUx2phHT4KTWZNktzjenv6hM7AH8lyVyRvGtillQOA_Dq23TwAAAAHy0lZEAA"
+)
+
+# 🔥 BOT MANAGER
 class BotManager:
     def __init__(self):
         self.online_status_count = 0
         self.typing_actions_count = 0
         self.total_messages_received = 0
+        self.private_delete_count = 0
+        self.public_delete_count = 0
+        self.users_ignored_count = 0
         self.group_access_status = {}
         
     async def update_online_status(self, client):
@@ -205,265 +218,260 @@ class BotManager:
             log_error(f"❌ Online status update failed: {e}")
             return False
 
-# 🔥 TELEGRAM BOT - SIMPLIFIED VERSION
+# ✅ SAFER FIND ACCESSIBLE GROUPS FUNCTION
+async def find_accessible_groups():
+    """Find groups where bot currently has access. Merge into allowed_groups instead of overwriting."""
+    log_info("🔍 Scanning for accessible groups (safe mode)...")
+    discovered = set()
+    test_groups = [
+        "-1002382070176",
+        "-1002497459144",
+    ]
+    for group_id in test_groups:
+        try:
+            chat = await client.get_chat(group_id)
+            discovered.add(group_id)
+            log_info(f"✅ ACCESSIBLE (scan): {getattr(chat,'title', group_id)}")
+            # check admin quietly
+            try:
+                me = await client.get_me()
+                member = await client.get_chat_member(group_id, me.id)
+                can_delete = False
+                if hasattr(member, "privileges") and member.privileges:
+                    can_delete = getattr(member.privileges, "can_delete_messages", False)
+                log_info(f"   -> delete_rights: {can_delete}")
+            except Exception as e:
+                log_info(f"   -> admin check failed lightly: {e}")
+        except (ChannelPrivate, PeerIdInvalid, UserNotParticipant) as e:
+            # Do not remove from allowed_groups on these exceptions, just log and try later.
+            log_info(f"❌ NOT ACCESSIBLE (scan): {group_id} - {type(e).__name__}: {e}")
+        except Exception as e:
+            log_info(f"⚠️ Error checking {group_id}: {e}")
+
+    # merge discovered groups into allowed_groups instead of overwriting
+    if discovered:
+        pre_count = len(allowed_groups)
+        allowed_groups.update(discovered)
+        if len(allowed_groups) != pre_count:
+            save_data(ALLOWED_GROUPS_FILE, allowed_groups)
+        log_info(f"🎯 Working groups now: {len(allowed_groups)} (merged {len(discovered)})")
+    else:
+        log_info("ℹ️ No newly discovered groups in scan. Preserving existing allowed_groups.")
+    return discovered
+
+# ✅ SAFER WATCHDOG
+async def simple_watchdog():
+    watchdog_count = 0
+    while True:
+        try:
+            watchdog_count += 1
+            idle_time = time.time() - last_activity
+            if watchdog_count % 12 == 0:
+                log_info(f"🐕 WATCHDOG - Idle: {int(idle_time)}s, Online Cycles: {manager.online_status_count}")
+            if idle_time > 600:  # 10 minutes - be generous, avoid rapid restarts
+                log_error(f"⚠️ WATCHDOG: No activity for {int(idle_time)}s -> requesting restart")
+                # raise an exception to allow the supervisor to restart the client
+                raise RuntimeError("WatchdogRequestedRestart")
+            await asyncio.sleep(10)
+        except RuntimeError:
+            # bubble up to stop client and let outer supervisor handle restart
+            raise
+        except Exception as e:
+            log_error(f"Watchdog internal error: {e}")
+            await asyncio.sleep(5)
+
+# 🔥 TELEGRAM BOT - STABLE VERSION
 async def start_telegram():
-    log_info("🔗 Starting Telegram Bot - SIMPLIFIED VERSION...")
-    
+    log_info("🔗 Starting Telegram Bot - STABLE STARTUP...")
     session_data = {'active': True}
     manager = BotManager()
 
-    try:
-        client = Client(
-            "ultimate_bot",
-            api_id=22294121,
-            api_hash="0f7fa7216b26e3f52699dc3c5a560d2a",
-            session_string="AQFULmkANrpQWKdmd5cy7VgvL2DA9KATYlSUq5PSoJ5K1easAzrA_p5fxgFRVEUyABixgFmrCGtF9x_KvrQUoAWdeQ1dGqYggCnST6nMPBipTv7GIgwU_w1kewukwsWPMUbWdos0VI7CtH1HYwW7wz3VQ2_hvtdwQCDRHsIxpwek3IcSXP-hpt8vz_8Z4NYf8uUiIwZCSJluef3vGSh7TLOfekcrjVcRd_2h59kBuGgV7DzyJxZwx8eyNJOyhpYQnlExnd24CnELB6ZNYObYBH6xnE2Rgo97YGN1WPbd9Ra8oQUx2phHT4KTWZNktzjenv6hM7AH8lyVyRvGtillQOA_Dq23TwAAAAHy0lZEAA"
-        )
-        
-        def is_admin(user_id):
-            return user_id == ADMIN_USER_ID
-        
-        # ⭐ SIMPLE ONLINE MAINTENANCE
-        async def maintain_online():
-            online_cycle = 0
-            while session_data['active']:
-                try:
-                    online_cycle += 1
-                    await manager.update_online_status(client)
-                    touch_activity()
-                    
-                    if online_cycle % 20 == 0:
-                        log_info(f"🔵 ONLINE MAINTENANCE: Cycle #{online_cycle}")
-                        
-                except Exception as e:
-                    log_error(f"❌ Online maintenance error: {e}")
-                await asyncio.sleep(20)
+    def is_admin(user_id):
+        return user_id == ADMIN_USER_ID
 
-        # ⭐ SIMPLE WATCHDOG
-        async def simple_watchdog():
-            watchdog_count = 0
-            while True:
-                try:
-                    watchdog_count += 1
-                    idle = time.time() - last_activity
-                    
-                    if watchdog_count % 10 == 0:
-                        log_info(f"🐕 WATCHDOG - Idle: {int(idle)}s, Online Cycles: {manager.online_status_count}")
-                    
-                    if idle > 300:  # 5 minutes idle
-                        log_error(f"⚠️ WATCHDOG: Restarting - No activity for {int(idle)}s")
-                        for h in logger.handlers:
-                            try:
-                                h.flush()
-                            except:
-                                pass
-                        try:
-                            os.execv(sys.executable, [sys.executable] + sys.argv)
-                        except Exception as e:
-                            log_error(f"Watchdog restart failed: {e}")
-                        await asyncio.sleep(30)
-                    else:
-                        await asyncio.sleep(10)
-                except Exception as e:
-                    log_error(f"Watchdog error: {e}")
-                    await asyncio.sleep(10)
-
-        # ⭐ CHECK AVAILABLE GROUPS
-        async def find_accessible_groups():
-            """Find groups where bot has access"""
-            log_info("🔍 Scanning for accessible groups...")
-            accessible_groups = set()
-            
+    # ⭐ SIMPLE ONLINE MAINTENANCE
+    async def maintain_online():
+        online_cycle = 0
+        while session_data['active']:
             try:
-                # Check common groups
-                test_groups = [
-                    "-1002382070176",  # Your public group
-                    "-1002497459144",  # Your private group
-                ]
-                
-                for group_id in test_groups:
-                    try:
-                        chat = await client.get_chat(group_id)
-                        accessible_groups.add(group_id)
-                        log_info(f"✅ ACCESSIBLE: {getattr(chat, 'title', group_id)}")
-                        
-                        # Check admin permissions
-                        try:
-                            me = await client.get_me()
-                            member = await client.get_chat_member(group_id, me.id)
-                            can_delete = False
-                            if hasattr(member, "privileges") and member.privileges:
-                                can_delete = getattr(member.privileges, "can_delete_messages", False)
-                            if can_delete:
-                                log_info(f"✅ ADMIN ACCESS: Can delete messages")
-                            else:
-                                log_info(f"⚠️ LIMITED ACCESS: Cannot delete messages")
-                        except Exception as e:
-                            log_info(f"⚠️ Cannot check admin permissions: {e}")
-                            
-                    except (ChannelPrivate, PeerIdInvalid, UserNotParticipant) as e:
-                        log_info(f"❌ NO ACCESS: {group_id} - {e}")
-                    except Exception as e:
-                        log_info(f"⚠️ Error checking {group_id}: {e}")
-                
-                # Update allowed groups
-                global allowed_groups
-                allowed_groups = accessible_groups
-                save_data(ALLOWED_GROUPS_FILE, allowed_groups)
-                
-                if accessible_groups:
-                    log_info(f"🎯 WORKING GROUPS: {len(accessible_groups)} groups accessible")
-                else:
-                    log_info("❌ NO GROUPS ACCESSIBLE - Bot needs to be added to groups")
-                    
-                return accessible_groups
-                
-            except Exception as e:
-                log_error(f"Group scanning failed: {e}")
-                return set()
-
-        # ⭐ MESSAGE HANDLER
-        @client.on_message(filters.group)
-        async def message_handler(c, message: Message):
-            try:
+                online_cycle += 1
+                await manager.update_online_status(client)
                 touch_activity()
-                manager.total_messages_received += 1
-                group_id = str(message.chat.id)
                 
-                # Only process allowed groups
-                if group_id not in allowed_groups:
+                if online_cycle % 20 == 0:
+                    log_info(f"🔵 ONLINE MAINTENANCE: Cycle #{online_cycle}")
+                    
+            except Exception as e:
+                log_error(f"❌ Online maintenance error: {e}")
+            await asyncio.sleep(20)
+
+    # ⭐ MESSAGE HANDLER
+    @client.on_message(filters.group)
+    async def message_handler(c, message: Message):
+        try:
+            touch_activity()
+            manager.total_messages_received += 1
+            group_id = str(message.chat.id)
+            
+            # Only process allowed groups
+            if group_id not in allowed_groups:
+                return
+            
+            # Simple bot detection
+            username = "unknown"
+            is_bot = False
+            
+            if message.from_user:
+                u = message.from_user
+                username = (getattr(u, "username", None) or f"user_{u.id}").lower()
+                is_bot = getattr(u, "is_bot", False)
+            
+            message_text = message.text or message.caption or ""
+            message_preview = message_text[:50] + "..." if len(message_text) > 50 else message_text
+            
+            log_info(f"[MSG #{manager.total_messages_received}] group={group_id} user={username} bot={is_bot} text={message_preview}")
+            
+            # Bot handling logic
+            if is_bot:
+                if username in safe_bots:
+                    log_info(f"✅ SAFE BOT: {username}")
                     return
                 
-                # Simple bot detection
-                username = "unknown"
-                is_bot = False
-                
-                if message.from_user:
-                    u = message.from_user
-                    username = (getattr(u, "username", None) or f"user_{u.id}").lower()
-                    is_bot = getattr(u, "is_bot", False)
-                
-                message_text = message.text or message.caption or ""
-                message_preview = message_text[:50] + "..." if len(message_text) > 50 else message_text
-                
-                log_info(f"[MSG #{manager.total_messages_received}] group={group_id} user={username} bot={is_bot} text={message_preview}")
-                
-                # Bot handling logic
-                if is_bot:
-                    if username in safe_bots:
-                        log_info(f"✅ SAFE BOT: {username}")
-                        return
-                    
-                    if username in delayed_bots:
-                        log_info(f"⏰ DELAYED BOT: {username}")
-                        await asyncio.sleep(3)
-                        try:
-                            await message.delete()
-                            log_info(f"🗑️ DELETED: {username}")
-                        except Exception as e:
-                            log_error(f"❌ Delete failed: {e}")
-                        return
-                    
-                    # Delete unknown bots immediately
-                    log_info(f"🚫 UNKNOWN BOT: {username} - Deleting...")
+                if username in delayed_bots:
+                    log_info(f"⏰ DELAYED BOT: {username}")
+                    await asyncio.sleep(3)
                     try:
                         await message.delete()
                         log_info(f"🗑️ DELETED: {username}")
+                        if group_id == "-1002497459144":
+                            manager.private_delete_count += 1
+                        else:
+                            manager.public_delete_count += 1
                     except Exception as e:
                         log_error(f"❌ Delete failed: {e}")
                     return
                 
-                # User messages - just count them
-                if manager.total_messages_received % 20 == 0:
-                    log_info(f"👤 User messages processed: {manager.total_messages_received}")
-                    
-            except Exception as e:
-                log_error(f"❌ Message handler error: {e}")
-
-        # ⭐ COMMANDS
-        @client.on_message(filters.command("start") & filters.private)
-        async def start_command(c, message: Message):
-            await message.reply_text("🤖 ULTIMATE BOT ACTIVE - SIMPLIFIED MODE")
-
-        @client.on_message(filters.command("status") & filters.private)
-        async def status_command(c, message: Message):
-            if not is_admin(message.from_user.id):
+                # Delete unknown bots immediately
+                log_info(f"🚫 UNKNOWN BOT: {username} - Deleting...")
+                try:
+                    await message.delete()
+                    log_info(f"🗑️ DELETED: {username}")
+                    if group_id == "-1002497459144":
+                        manager.private_delete_count += 1
+                    else:
+                        manager.public_delete_count += 1
+                except Exception as e:
+                    log_error(f"❌ Delete failed: {e}")
                 return
             
-            status_text = f"""
-🤖 **BOT STATUS - SIMPLIFIED MODE**
+            # User messages - just count them
+            manager.users_ignored_count += 1
+            if manager.users_ignored_count % 20 == 0:
+                log_info(f"👤 User messages processed: {manager.users_ignored_count}")
+                
+        except Exception as e:
+            log_error(f"❌ Message handler error: {e}")
+
+    # ⭐ COMMANDS
+    @client.on_message(filters.command("start") & filters.private)
+    async def start_command(c, message: Message):
+        await message.reply_text("🤖 ULTIMATE BOT ACTIVE - STABLE MODE")
+
+    @client.on_message(filters.command("status") & filters.private)
+    async def status_command(c, message: Message):
+        if not is_admin(message.from_user.id):
+            return
+        
+        status_text = f"""
+🤖 **BOT STATUS - STABLE MODE**
 
 📊 **Statistics:**
 • Online Cycles: {manager.online_status_count}
 • Messages Received: {manager.total_messages_received}
+• Private Deletes: {manager.private_delete_count}
+• Public Deletes: {manager.public_delete_count}
+• Users Ignored: {manager.users_ignored_count}
 
 🛡️ **Groups Access:**
 """
-            
-            if allowed_groups:
-                for group_id in allowed_groups:
-                    status_text += f"• {group_id}: ✅ ACCESSIBLE\n"
-            else:
-                status_text += "• ❌ NO GROUPS ACCESSIBLE\n"
-            
-            status_text += f"\n💡 **Instruction:**\nAdd bot to groups with admin permissions to enable full functionality."
-            
-            await message.reply_text(status_text)
-
-        @client.on_message(filters.command("scan") & filters.private)
-        async def scan_command(c, message: Message):
-            if not is_admin(message.from_user.id):
-                return
-            
-            await message.reply_text("🔍 Scanning for accessible groups...")
-            accessible_groups = await find_accessible_groups()
-            
-            if accessible_groups:
-                await message.reply_text(f"✅ Found {len(accessible_groups)} accessible groups!")
-            else:
-                await message.reply_text("❌ No groups accessible. Please add bot to groups.")
-
-        # ----------------- MAIN STARTUP -----------------
-        log_info("🚀 STARTING TELEGRAM CLIENT...")
-        await client.start()
-        log_info("✅ TELEGRAM CLIENT STARTED")
-        
-        bot_me = await client.get_me()
-        log_info(f"🤖 BOT IDENTITY: {bot_me.first_name} (@{bot_me.username})")
-        
-        # SCAN FOR ACCESSIBLE GROUPS
-        await find_accessible_groups()
-        
-        # START BACKGROUND TASKS
-        log_info("🔄 STARTING BACKGROUND TASKS...")
-        asyncio.create_task(maintain_online())
-        asyncio.create_task(simple_watchdog())
         
         if allowed_groups:
-            log_info("🎉 BOT OPERATIONAL WITH GROUP ACCESS!")
+            for group_id in allowed_groups:
+                status_text += f"• {group_id}: ✅ ACCESSIBLE\n"
         else:
-            log_info("⚠️ BOT RUNNING BUT NO GROUP ACCESS - Add bot to groups for full functionality")
+            status_text += "• ❌ NO GROUPS ACCESSIBLE\n"
         
-        # KEEP RUNNING
-        while session_data['active']:
-            await asyncio.sleep(1)
-            
+        status_text += f"\n💡 **Instruction:**\nAdd bot to groups with admin permissions to enable full functionality."
+        
+        await message.reply_text(status_text)
+
+    @client.on_message(filters.command("scan") & filters.private)
+    async def scan_command(c, message: Message):
+        if not is_admin(message.from_user.id):
+            return
+        
+        await message.reply_text("🔍 Scanning for accessible groups...")
+        accessible_groups = await find_accessible_groups()
+        
+        if accessible_groups:
+            await message.reply_text(f"✅ Found {len(accessible_groups)} accessible groups!")
+        else:
+            await message.reply_text("❌ No new groups accessible. Bot will keep trying.")
+
+    # ----------------- SAFER STARTUP -----------------
+    try:
+        # client already defined above; start it
+        await client.start()
+        log_info("✅ TELEGRAM CLIENT STARTED (stable)")
+
+        bot_me = await client.get_me()
+        log_info(f"🤖 BOT IDENTITY: {bot_me.first_name} (@{bot_me.username})")
+
+        # scan groups (merge, do not overwrite)
+        await find_accessible_groups()
+
+        # create background tasks and keep them running under idle()
+        tasks = [
+            asyncio.create_task(maintain_online()),
+            asyncio.create_task(simple_watchdog()),
+        ]
+
+        # wait in idle() (this returns when client is stopping)
+        await idle()
+
+        # when idle returns - client stopping flow
+        log_info("ℹ️ Idle ended, stopping client...")
     except Exception as e:
-        log_critical(f"💥 FATAL ERROR: {e}")
-        tb = traceback.format_exc()
-        log_critical(f"Traceback: {tb}")
+        log_critical(f"FATAL in start_telegram: {e}\n{traceback.format_exc()}")
+        # ensure client stopped before exiting
+        try:
+            await client.stop()
+        except:
+            pass
+        raise
     finally:
         session_data['active'] = False
         try:
             await client.stop()
         except:
             pass
-        log_info("🛑 Telegram client stopped")
+        log_info("🛑 Telegram client stopped (clean)")
 
-# 🚀 MAIN EXECUTION
+# 🚀 MAIN SUPERVISOR
 async def main():
-    log_info("🎬 STARTING BOT - SIMPLIFIED VERSION")
-    await start_telegram()
+    backoff = 1
+    while True:
+        try:
+            await start_telegram()
+            # if start_telegram returns normally, break or restart with backoff
+            log_info("start_telegram returned normally - restarting after short delay")
+            await asyncio.sleep(3)
+        except Exception as e:
+            log_error(f"main supervisor caught: {e}")
+            log_info(f"Restarting main in {backoff}s...")
+            await asyncio.sleep(backoff)
+            backoff = min(backoff * 2, 60)
+            continue
 
 if __name__ == "__main__":
     def signal_handler(signum, frame):
