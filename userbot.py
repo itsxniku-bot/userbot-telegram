@@ -106,7 +106,7 @@ save_data(SAFE_BOTS_FILE, safe_bots)
 save_data(DELAYED_BOTS_FILE, delayed_bots)
 
 # YOUR USER ID
-ADMIN_USER_ID =  34632164
+ADMIN_USER_ID =  7943472854
 
 log_info(f"✅ Loaded {len(allowed_groups)} groups, {len(safe_bots)} safe bots, {len(delayed_bots)} delayed bots")
 log_info(f"📡 Peer Status: {peer_status}")
